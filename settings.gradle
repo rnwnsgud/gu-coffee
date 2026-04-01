@@ -1,1 +1,6 @@
 rootProject.name = 'gu-coffee'
+include 'core'
+include 'storage'
+include 'core:core-api'
+findProject(':core:core-api')?.name = 'core-api'
+
