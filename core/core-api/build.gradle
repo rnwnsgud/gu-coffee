@@ -2,8 +2,51 @@ plugins {
     id 'org.springframework.boot'
 }
 
-bootJar { enabled = true }
+bootJar { enabled = false }
+jar { enabled = true }
+
 
 dependencies {
+    implementation(project(":core:core-domain"))
+    implementation(project(":core:core-enum"))
+
+    implementation(project(":support:error"))
+    implementation(project(":support:auth"))
+    implementation(project(":support:web"))
+    implementation(project(":support:pagination"))
+    implementation(project(":support:pg"))
+    implementation(project(":support:event"))
+
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation project(":storage:db-core")
+
+}
+
+ext {
+    snippetsDir = file('build/generated-snippets')
+}
+
+test {
+    outputs.dir snippetsDir
+}
+
+asciidoctor {
+    sourceDir  file('src/main/asciidoc')
+    sources {
+        include 'index.adoc'
+    }
+    attributes 'snippets': snippetsDir
+    inputs.dir snippetsDir
+    dependsOn test
+}
+
+bootJar {
+    dependsOn asciidoctor
+    from ("${asciidoctor.outputDir}") {
+        into 'static/docs'
+    }
 }

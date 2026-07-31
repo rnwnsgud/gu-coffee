@@ -1,0 +1,6 @@
+jar { enabled = true }
+
+dependencies {
+    api("org.springframework.data:spring-data-commons")
+    implementation(project(":support:error"))
+}

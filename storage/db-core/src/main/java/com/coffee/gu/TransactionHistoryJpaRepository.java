@@ -1,0 +1,6 @@
+package com.coffee.gu;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface TransactionHistoryJpaRepository extends JpaRepository<TransactionHistoryEntity, Long> {
+}
