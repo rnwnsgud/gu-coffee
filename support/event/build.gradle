@@ -1,0 +1,6 @@
+jar { enabled = true }
+
+dependencies {
+    api(project(":core:core-enum"))
+    api(project(":support:auth"))
+}

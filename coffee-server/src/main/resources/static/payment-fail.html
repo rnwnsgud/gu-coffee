@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <title>결제 실패</title>
+</head>
+<body>
+    <h1>결제 실패</h1>
+    <p id="result"></p>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const message = urlParams.get('message');
+        const orderId = urlParams.get('orderId');
+
+        document.getElementById('result').innerText = `에러 코드: ${code}\n메시지: ${message}`;
+
+        if (orderId) {
+             fetch(`/v1/payments/fail?orderId=${orderId}&code=${code}&message=${message}`, {
+                method: 'POST'
+            });
+        }
+    </script>
+</body>
+</html>

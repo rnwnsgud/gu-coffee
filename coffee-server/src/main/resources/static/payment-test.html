@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8" />
+    <script src="https://js.tosspayments.com/v1/payment"></script>
+    <title>결제 테스트</title>
+</head>
+<body>
+    <h1>커피 주문 결제 테스트</h1>
+    <button id="payment-button">결제하기</button>
+
+    <script>
+        const clientKey = 'test_ck_E92LAa5PVbNmadYjyvNRV7YmpXyJ'; // 토스페이먼츠 테스트 클라이언트 키
+        const tossPayments = TossPayments(clientKey);
+
+        const button = document.getElementById('payment-button');
+
+        button.addEventListener('click', function () {
+            // 실제 환경에서는 백엔드에서 생성된 orderKey와 실제 결제 금액을 사용해야 합니다.
+            // 여기서는 테스트를 위해 임의의 값을 사용합니다.
+            const orderId = 'ORDER-' + new Date().getTime();
+            const amount = 1000;
+
+            tossPayments.requestPayment('카드', {
+                amount: amount,
+                orderId: orderId,
+                orderName: '아메리카노 외 1건',
+                successUrl: window.location.origin + '/payment-success.html',
+                failUrl: window.location.origin + '/payment-fail.html',
+            });
+        });
+    </script>
+</body>
+</html>

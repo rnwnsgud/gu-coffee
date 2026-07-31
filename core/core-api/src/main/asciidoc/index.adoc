@@ -1,0 +1,99 @@
+= Gu Coffee API Document
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toclevels: 2
+:sectlinks:
+
+== Cart API
+
+=== 장바구니 조회
+==== Request
+include::{snippets}/cart-get/http-request.adoc[]
+include::{snippets}/cart-get/request-headers.adoc[]
+
+==== Response
+include::{snippets}/cart-get/http-response.adoc[]
+include::{snippets}/cart-get/response-fields.adoc[]
+
+=== 장바구니 아이템 추가
+==== Request
+include::{snippets}/cart-add-item/http-request.adoc[]
+include::{snippets}/cart-add-item/request-headers.adoc[]
+include::{snippets}/cart-add-item/request-fields.adoc[]
+
+==== Response
+include::{snippets}/cart-add-item/http-response.adoc[]
+include::{snippets}/cart-add-item/response-fields.adoc[]
+
+=== 장바구니 아이템 수정
+==== Request
+include::{snippets}/cart-modify-item/http-request.adoc[]
+include::{snippets}/cart-modify-item/request-headers.adoc[]
+include::{snippets}/cart-modify-item/path-parameters.adoc[]
+include::{snippets}/cart-modify-item/request-fields.adoc[]
+
+==== Response
+include::{snippets}/cart-modify-item/http-response.adoc[]
+include::{snippets}/cart-modify-item/response-fields.adoc[]
+
+=== 장바구니 아이템 삭제
+==== Request
+include::{snippets}/cart-delete-item/http-request.adoc[]
+include::{snippets}/cart-delete-item/request-headers.adoc[]
+include::{snippets}/cart-delete-item/path-parameters.adoc[]
+
+==== Response
+include::{snippets}/cart-delete-item/http-response.adoc[]
+include::{snippets}/cart-delete-item/response-fields.adoc[]
+
+== Menu API
+
+=== 메뉴 목록 조회 (v1)
+==== Request
+include::{snippets}/menu-list-v1/http-request.adoc[]
+include::{snippets}/menu-list-v1/query-parameters.adoc[]
+
+==== Response
+include::{snippets}/menu-list-v1/http-response.adoc[]
+include::{snippets}/menu-list-v1/response-fields.adoc[]
+
+=== 메뉴 목록 조회 (v2 - Cursor)
+==== Request
+include::{snippets}/menu-list-v2/http-request.adoc[]
+include::{snippets}/menu-list-v2/query-parameters.adoc[]
+
+==== Response
+include::{snippets}/menu-list-v2/http-response.adoc[]
+include::{snippets}/menu-list-v2/response-fields.adoc[]
+
+=== 메뉴 상세 조회
+==== Request
+include::{snippets}/menu-detail/http-request.adoc[]
+include::{snippets}/menu-detail/path-parameters.adoc[]
+
+==== Response
+include::{snippets}/menu-detail/http-response.adoc[]
+include::{snippets}/menu-detail/response-fields.adoc[]
+
+== Coupon API
+
+=== 발급된 쿠폰 목록 조회
+==== Request
+include::{snippets}/coupon-issued-list/http-request.adoc[]
+include::{snippets}/coupon-issued-list/request-headers.adoc[]
+
+==== Response
+include::{snippets}/coupon-issued-list/http-response.adoc[]
+include::{snippets}/coupon-issued-list/response-fields.adoc[]
+
+=== 쿠폰 다운로드
+==== Request
+include::{snippets}/coupon-download/http-request.adoc[]
+include::{snippets}/coupon-download/request-headers.adoc[]
+include::{snippets}/coupon-download/path-parameters.adoc[]
+
+==== Response
+include::{snippets}/coupon-download/http-response.adoc[]
+include::{snippets}/coupon-download/response-fields.adoc[]
