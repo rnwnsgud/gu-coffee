@@ -1,145 +1,151 @@
 # ☕ GU Coffee (`gu-coffee`)
 
-> 커피 주문, 장바구니, 결제(PG 연동), 쿠폰, 스탬프 적립 및 매장 검색 기능을 제공하는 **Spring Boot 기반 멀티 모듈 백엔드 시스템**입니다.
+> **결제 데이터 정합성, 동시성 제어 및 의존성 역전 아키텍처(DIP)를 지향하는 Spring Boot 기반 멀티 모듈 결제·주문 시스템**
 
 ---
 
 ## 📌 목차
-- [1. 프로젝트 개요](#-프로젝트-개요)
-- [2. 기술 스택 (Tech Stack)](#-기술-스택-tech-stack)
-- [3. 멀티 모듈 아키텍처 (Architecture)](#-멀티-모듈-아키텍처-architecture)
-- [4. 주요 기능 및 도메인 (Key Features)](#-주요-기능-및-도메인-key-features)
-- [5. API 엔드포인트 요약](#-api-엔드포인트-요약)
-- [6. 프로젝트 실행 및 빌드 (Getting Started)](#-프로젝트-실행-및-빌드-getting-started)
+- [1. 프로젝트 개요](#1-프로젝트-개요)
+- [2. 핵심 엔지니어링 문제 해결](#2-핵심-엔지니어링-문제-해결)
+- [3. 멀티 모듈 아키텍처](#3-멀티-모듈-아키텍처)
+- [4. 기술 스택](#4-기술-스택)
+- [5. 주요 기능 및 도메인](#5-주요-기능-및-도메인)
+- [6. API 엔드포인트 요약](#6-api-엔드포인트-요약)
+- [7. 프로젝트 실행 및 검증](#7-프로젝트-실행-및-검증)
 
 ---
 
+<a name="1-프로젝트-개요"></a>
 ## 1. 프로젝트 개요
-`gu-coffee`는 커피 프랜차이즈/매장 서비스를 모티브로 한 주문 및 결제 백엔드 시스템입니다.  
-도메인별로 명확히 분리된 **멀티 모듈 구조(Multi-Module Architecture)**를 채택하여 높은 재사용성과 유지보수성을 보장하며, **Toss Payments PG 연동**, **스탬프 적립 및 쿠폰 전환**, **장바구니/주문/결제 플로우** 등의 도메인 로직을 구획화하여 제공합니다.
+
+`gu-coffee`는 커피 오더/결제 서비스의 대용량 트래픽 환경(일 결제 120만 건, 피크 120 RPS)을 가상 비즈니스 규모로 설정하고, **금융/결제 도메인의 동시성 제어, 최종 정합성 보장, 망취소 및 멱등성** 문제를 해결한 백엔드 아키텍처 프로젝트입니다.
 
 ---
 
-## 2. 기술 스택 (Tech Stack)
+<a name="2-핵심-엔지니어링-문제-해결"></a>
+## 2. 핵심 엔지니어링 문제 해결
 
-### Core & Framework
-- **Language**: Java 21
-- **Framework**: Spring Boot 4.0.5
-- **ORM / Persistence**: Spring Data JPA, Hibernate
-- **ID Generation**: Hypersistence TSID (`io.hypersistence:hypersistence-tsid`)
+### 🔒 1. 결제 위·변조 방지 및 Fast-Fail Locking
+* **보안 검증**: 클라이언트의 금액 변조 위험을 차단하기 위해 고유 `orderKey`만 전달받고, 백엔드가 PG사 REST API를 직접 호출해 결제 데이터 대조 검증.
+* **Fast-Fail 비관적 락**: PG 승인 전 `Payment` 레코드의 `READY` 상태에 비관적 락(`PESSIMISTIC_WRITE`)을 점유하여 중복 연타 및 PG 승인 웹훅의 동시 도달 시 불필요한 PG 외부 API 호출을 1ms 내 즉시 차단.
 
-### Build & Tooling
-- **Build System**: Gradle (Multi-Module)
-- **API Docs**: Spring RestDocs (Asciidoctor 4.0.2)
-- **Testing**: JUnit 5, Spring Boot Starter Test
+### 🔄 2. 트랜잭션 보상 (망취소) 및 트랜잭션 아웃박스 패턴
+* **PG 망취소 선택**: 결제 후처리 실패 롤백 시 데이터 정합성을 위해 재시도가 아닌 PG 승인 취소(망취소)를 수행하여 사용자 응답의 명확성 확보.
+* **원자적 아웃박스(Outbox) 기록**: `CancelEvent` 발행 및 `EventLog` 저장을 동일 DB 트랜잭션 내 원자적으로 처리하기 위해 `@Transactional(propagation = Propagation.MANDATORY)` 적용.
 
-### External Integration
-- **PG Integration**: Toss Payments (PG Gateway Router 구현)
+### ⚡ 3. 고립 결제 복구 스케줄러 성능 최적화 (ShedLock ➔ SKIP LOCKED)
+* **병목 발견**: 단일 워커(ShedLock) 방식 사용 시 피크 고립 결제 건수(72건) 처리 시 1건당 평균 218ms, 총 15.7초간 DB 커넥션을 장기 점유하는 병목 확인.
+* **최적화**: `SKIP LOCKED` 기반 소단위 청크(Limit 20) 멀티 워커 분산 구조로 전환하여 DB 커넥션 락 점유 시간을 **4.36초로 72.2% 단축**.
+* **유예 마진 확보**: `updatedAt < NOW - 5분` 조항을 적용하여 유저의 정상 요청이 스케줄러와 경합하지 않도록 유예 시간 확보.
+
+### 🛡️ 4. 스탬프·쿠폰 비동기 발급 멱등성 및 DEAD 레터 관리
+* **멱등성(Idempotency) 보장**: `@Async` 이벤트 환경에서 동시 요청 시 중복 쿠폰 발급을 방지하고자 `EventLog` 기반 `saveIfNotExists` (`INSERT IGNORE`) 메커니즘 구축.
+* **관심사 분리**: `StampEventListener` (비동기 디스패치 전담)와 `StampRewardManager` (`@Transactional` 도메인 전담)로 클래스를 분리하여 AOP 프록시 경계 정립.
+* **DEAD 상태 이관**: 비동기 실패 이벤트 5회 재시도 실패 시 `DEAD` 상태 전환 및 알림 처리 라우팅 구축.
 
 ---
 
-## 3. 멀티 모듈 아키텍처 (Architecture)
+<a name="3-멀티-모듈-아키텍처"></a>
+## 3. 멀티 모듈 아키텍처
 
-프로젝트는 역할과 책임에 따라 계층화된 멀티 모듈로 구성되어 있습니다.
+도메인 모듈을 가운데 두고 **`API (core-api) ──► Domain (core-domain) ◄── DB (db-core)`** 방향으로 의존성이 집중되는 **의존성 역전 원칙(DIP) 기반 Hexagonal / Clean Architecture**를 구현했습니다.
 
 ```text
 gu-coffee
-├── 🚀 coffee-server          # 애플리케이션 메인 실행 모듈 (Spring Boot Main Application)
+├── 🚀 coffee-server          # 메인 애플리케이션 실행 모듈 (Spring Boot Entry Point)
 ├── 🛠️ admin-api              # 관리자 전용 REST API (메뉴/옵션 등록 및 관리)
 │
 ├── 🧠 core                   # 비즈니스 핵심 모듈 그룹
-│   ├── core-api              # 사용자 전용 REST API 컨트롤러
-│   ├── core-domain           # 핵심 비즈니스 도메인 모델, 서비스 및 이벤트
-│   └── core-enum             # 공통 Enum 및 상숫값 정의
+│   ├── core-api              # 사용자 REST API & 서비스 컨트롤러 (core-domain에만 의존)
+│   ├── core-domain           # 순수 비즈니스 도메인 모델, 서비스 인터페이스 & Event (외부 의존성 0)
+│   └── core-enum             # 공통 Enum 및 도메인 상숫값
 │
 ├── 💾 storage                # 영속성 모듈 그룹
-│   └── db-core               # JPA Entity, Repository 및 DB 영속성 레이어
+│   └── db-core               # JPA Entity, QueryDSL, Repository 구현체 (core-domain 인터페이스 구현)
 │
-└── 🔌 support                # 공통 인프라 / 지원 모듈 그룹
+└── 🔌 support                # 공통 인프라 / 서포트 모듈 그룹
     ├── support-auth          # 인증 및 인가 처리
-    ├── support-error         # 예외 처리 및 에러 타입/코드 정의
-    ├── support-event         # 이벤트 발행/수신 레이어
-    ├── support-logging       # 로깅 AOP 및 유틸리티
-    ├── support-monitoring    # 시스템 모니터링
-    ├── support-pagination    # 페이징 및 정렬 지원
-    ├── support-pg            # PG 결제 연동 추상화 및 Toss Payments 구현체
-    └── support-web           # API 공통 응답 포맷(ApiResponse) 및 Web MVC 설정
+    ├── support-error         # 예외 처리 및 공통 ErrorType
+    ├── support-event         # 이벤트 디스패처
+    ├── support-logging       # 로깅 유틸리티
+    ├── support-monitoring    # 시스템 프로메테우스/모니터링
+    ├── support-pagination    # 페이징 유틸리티
+    ├── support-pg            # PG 연동 라우터 및 Toss Payments 구현체
+    └── support-web           # 공통 ApiResponse 포맷 및 Web MVC 설정
 ```
 
 ---
 
-## 4. 주요 기능 및 도메인 (Key Features)
+<a name="4-기술-스택"></a>
+## 4. 기술 스택
 
-### 📋 1. 메뉴 (Menu)
-- 카테고리별 메뉴 목록 조회 및 메뉴 상세 정보 (가격, 영양성분, 선택 옵션그룹) 조회
-- 관리자(Admin) 전용 메뉴/옵션그룹/옵션 생성 및 연결 관리
+### Backend Core & Framework
+- **Java 21**, **Spring Boot 4.0.5**
+- **Spring Data JPA**, **QueryDSL 5.1.0**
+- **Hypersistence TSID** (`io.hypersistence:hypersistence-tsid`) - 분산 PK 생성
 
-### 🛒 2. 장바구니 (Cart)
-- 장바구니 생성, 메뉴/옵션 추가, 수량 수정 및 아이템 삭제
+### Concurrency & Locking
+- JPA Pessimistic Lock (`PESSIMISTIC_WRITE`)
+- Spring Scheduling, MySQL `SKIP LOCKED` Batch Query
+- Event Outbox (`INSERT IGNORE` Idempotency Table)
 
-### 🛍️ 3. 주문 (Order)
-- 바로 주문(Direct Order) 및 장바구니 기반 주문 생성
-- 주문 목록, 주문 상세(Line Items) 및 주문 요약 정보 제공
-
-### 💳 4. 결제 및 PG 연동 (Payment & PG)
-- Toss Payments 결제 승인 및 결제 상태 관리
-- `PaymentGatewayRouter` 패턴을 통한 확장 가능한 PG 연동 구조
-- 결제 할인(쿠폰 적용) 및 결제 이력 관리
-
-### ❌ 5. 주문/결제 취소 (Cancel)
-- 주문 취소 요청 처리 및 PG 결제 자동 취소 연동
-
-### 🎟️ 6. 쿠폰 (Coupon)
-- 사용자 쿠폰 조회, 특정 조건 쿠폰 발급 및 사용 관리
-
-### 🏷️ 7. 스탬프 (Stamp)
-- 음료 주문에 따른 스탬프 적립 및 만료 예정 스탬프 조회
-- 일정 스탬프 달성 시 쿠폰 교환 기능
-
-### 🏬 8. 매장 (Store)
-- 위치 기반 또는 키워드 기반 매장 검색 및 매장 상세 조회
+### Build & Documentation & Testing
+- **Gradle 8.x** (Multi-Module)
+- **Spring RestDocs** (Asciidoctor 4.0.2)
+- **JUnit 5**, **Mockito**, AssertJ
 
 ---
 
-## 5. API 엔드포인트 요약
+<a name="5-주요-기능-및-도메인"></a>
+## 5. 주요 기능 및 도메인
+
+### 💳 결제 (Payment & PG)
+- Toss Payments REST API 직접 조회 기반 결제 금액 대조 검증
+- Fast-Fail Locking 기반 중복 결제 승인 요청 사전 차단
+- 망취소(PG Cancel) 및 아웃박스 정합성 보장 스케줄러
+
+### 🎟️ 스탬프 & 쿠폰 (Stamp & Coupon)
+- 음료 주문 시 스탬프 자동 적립
+- 스탬프 10개 달성 시 비동기 멱등 리워드 쿠폰 자동 발급
+- 결제 취소 시 `USED` 상태 스탬프 역추적 회수 및 연쇄 취소 정책
+
+### 🛒 주문 & 장바구니 & 메뉴 (Order, Cart, Menu)
+- 단일/장바구니 기반 주문 생성 및 TSID 고유 결제 키 생성
+- 카테고리별 메뉴, 옵션그룹, 옵션 상하 구조 관리 (Admin API)
+
+---
+
+<a name="6-api-엔드포인트-요약"></a>
+## 6. API 엔드포인트 요약
 
 ### 👤 사용자 API (`/api/v1`)
 | 분류 | HTTP Method | Endpoint | 설명 |
 | :--- | :--- | :--- | :--- |
 | **System** | `GET` | `/health` | 헬스 체크 |
 | **Menu** | `GET` | `/api/v1/menus` | 메뉴 및 카테고리 조회 |
-| **Cart** | `POST` | `/api/v1/carts` | 장바구니 생성 및 아이템 관리 |
-| **Order** | `POST` | `/api/v1/orders` | 주문 생성 (직접/장바구니) |
+| **Cart** | `POST` | `/api/v1/carts` | 장바구니 생성 및 관리 |
+| **Order** | `POST` | `/api/v1/orders` | 주문 생성 |
 | **Payment** | `POST` | `/api/v1/payments` | 결제 승인 요청 |
 | **Cancel** | `POST` | `/api/v1/cancels` | 주문 및 결제 취소 요청 |
-| **Coupon** | `GET` / `POST` | `/api/v1/coupons` | 쿠폰 목록/발급/사용 |
-| **Stamp** | `GET` / `POST` | `/api/v1/stamps` | 스탬프 조회 및 쿠폰 교환 |
-| **Store** | `GET` | `/api/v1/stores` | 매장 검색 및 정보 조회 |
-
-### 🛠️ 관리자 API (`/admin/v1`)
-| 분류 | HTTP Method | Endpoint | 설명 |
-| :--- | :--- | :--- | :--- |
-| **Menu Admin** | `POST` | `/admin/v1/menu` | 메뉴 생성 |
-| **Option Group** | `POST` | `/admin/v1/menu/option-group` | 옵션 그룹 생성 |
-| **Option** | `POST` | `/admin/v1/menu/option` | 옵션 생성 |
-| **Menu-Option** | `POST` | `/admin/v1/menu/menu-option-group` | 메뉴에 옵션 그룹 매핑 |
+| **Coupon** | `GET` / `POST` | `/api/v1/coupons` | 쿠폰 조회 및 발급 |
+| **Stamp** | `GET` | `/api/v1/stamps` | 스탬프 조회 |
+| **Store** | `GET` | `/api/v1/stores` | 매장 위치/키워드 검색 |
 
 ---
 
-## 6. 프로젝트 실행 및 빌드 (Getting Started)
+<a name="7-프로젝트-실행-및-검증"></a>
+## 7. 프로젝트 실행 및 검증
 
-### 사전 요구 사항
-- Java 21 이상
-- Gradle 8.x 이상 (Gradle Wrapper 포함)
-
-### 빌드 (Build)
+### 빌드 및 테스트 실행
 ```bash
+# 전체 단위 / 통합 테스트 실행
+./gradlew test
+
+# 프로젝트 빌드
 ./gradlew clean build
 ```
 
-### 애플리케이션 실행 (Run)
+### 애플리케이션 실행
 ```bash
 ./gradlew :coffee-server:bootRun
 ```
-
----
