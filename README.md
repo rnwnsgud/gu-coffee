@@ -41,7 +41,7 @@ gu-coffee
 │   └── db-core               # JPA Entity, QueryDSL, Repository 구현체 (core-domain 인터페이스 구현)
 │
 └── 🔌 support                # 공통 인프라 / 서포트 모듈 그룹
-    ├── support-auth          # 인증 및 인가 처리
+    ├── support-auth          # Principal 기반 주체 객체
     ├── support-error         # 예외 처리 및 공통 ErrorType
     ├── support-event         # 이벤트 디스패처
     ├── support-logging       # 로깅 유틸리티
@@ -61,9 +61,11 @@ gu-coffee
 - **Spring Data JPA**, **QueryDSL 5.1.0**
 - **Hypersistence TSID** (`io.hypersistence:hypersistence-tsid`) - 분산 PK 생성
 
-### Database & Security
+### Concurrency & Locking & Persistence
+- JPA Pessimistic Lock (`PESSIMISTIC_WRITE`)
+- Spring Scheduling, MySQL `SKIP LOCKED` Batch Query
+- Event Outbox (`INSERT IGNORE` Idempotency Table)
 - **MySQL**, **H2 Database**
-- Spring Security, JWT (Auth)
 
 ### Build & Documentation & Testing
 - **Gradle 8.x** (Multi-Module)
@@ -134,7 +136,7 @@ gu-coffee
 
 ### 빌드 및 테스트 실행
 ```bash
-# 전체 단위 / 통합 테스트 실행미
+# 전체 단위 / 통합 테스트 실행
 ./gradlew test
 
 # 프로젝트 빌드
