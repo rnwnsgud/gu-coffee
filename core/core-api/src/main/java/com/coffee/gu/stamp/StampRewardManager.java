@@ -6,6 +6,7 @@ import com.coffee.gu.StampEarnEvent;
 import com.coffee.gu.coupon.Coupon;
 import com.coffee.gu.coupon.IssuedCoupon;
 import com.coffee.gu.coupon.IssuedCouponRepository;
+import com.coffee.gu.store.Store;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,17 +31,19 @@ public class StampRewardManager {
         this.stampRecorder = stampRecorder;
     }
 
-    public void reward(Principal principal, String orderKey, Long stampQuantity, LocalDateTime expiredAt) {
-        if (stampQuantity <= 0) return;
+    public Store reward(Principal principal, String orderKey, Long stampQuantity, LocalDateTime expiredAt, LocalDateTime now, Long storeId) {
+        if (stampQuantity <= 0) return null;
         List<Stamp> stamps = LongStream.range(0, stampQuantity)
                 .mapToObj(i -> Stamp.create(principal, orderKey, expiredAt))
                 .toList();
         stampRepository.saveAll(stamps);
+        return stampRecorder.recordEarn(principal, storeId, stampQuantity, now, expiredAt);
     }
 
     @Transactional
     public void stampToCouponWithIdempotency(StampEarnEvent event) {
-        if (isDuplicated(event)) return;
+        boolean isFirstEvent = eventLogRepository.saveIfNotExists(event);
+        if (!isFirstEvent) return;
         StampRewardPlan plan = stampRewardPlanner.plan(event);
         if (plan.isEmpty()) return;
         useStamps(plan);
@@ -48,10 +51,6 @@ public class StampRewardManager {
         stampRecorder.recordStampCouponUsages(plan);
         stampRecorder.recordUse(event, plan.getCouponIssueCount());
         eventLogRepository.publish(event);
-    }
-
-    private boolean isDuplicated(StampEarnEvent event) {
-        return !eventLogRepository.saveUniqueEvent(event);
     }
 
     private void useStamps(StampRewardPlan plan) {

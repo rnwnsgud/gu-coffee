@@ -41,10 +41,6 @@ public class StampRevertPlan {
         return stampsToCancel;
     }
 
-    public List<Stamp> getUsedStamps() {
-        return usedStamps;
-    }
-
     public List<IssuedCoupon> getRewardCouponsToCancel() {
         return rewardCouponsToCancel;
     }
