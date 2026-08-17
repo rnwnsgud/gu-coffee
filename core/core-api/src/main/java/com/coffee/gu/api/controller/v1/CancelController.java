@@ -24,7 +24,8 @@ public class CancelController {
     @PostMapping("/v1/cancel")
     public ApiResponse<?> cancelOrder(Principal principal, CancelRequest request) {
         Order order = orderService.getOrder(request.orderKey(), OrderState.PAID);
-        cancelService.cancel(order, principal);
+        order.validateOwner(principal);
+        cancelService.cancel(order);
         return ApiResponse.success();
     }
 }

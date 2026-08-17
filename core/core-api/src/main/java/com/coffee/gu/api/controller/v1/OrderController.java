@@ -7,12 +7,12 @@ import com.coffee.gu.api.controller.v1.response.order.CreateOrderResponse;
 import com.coffee.gu.api.controller.v1.response.order.OrderCheckoutResponse;
 import com.coffee.gu.api.controller.v1.response.order.OrderListResponse;
 import com.coffee.gu.api.controller.v1.response.order.OrderResponse;
+import com.coffee.gu.auth.Authenticated;
 import com.coffee.gu.cart.Cart;
 import com.coffee.gu.cart.CartService;
 import com.coffee.gu.coupon.IssuedCoupon;
 import com.coffee.gu.coupon.IssuedCouponService;
 import com.coffee.gu.order.Order;
-import com.coffee.gu.order.OrderLine;
 import com.coffee.gu.order.OrderService;
 import com.coffee.gu.order.OrderSummary;
 import com.coffee.gu.enums.OrderState;
@@ -35,7 +35,7 @@ public class OrderController {
     }
 
     @PostMapping("/v1/orders")
-    public ApiResponse<CreateOrderResponse> createOrder(Principal principal,
+    public ApiResponse<CreateOrderResponse> createOrder(@Authenticated Principal principal,
                                                         @RequestBody CreateOrderRequest request) {
         String orderKey = orderService.create(request.toNewOrder(principal));
         return ApiResponse.success(new CreateOrderResponse(orderKey));
@@ -43,7 +43,7 @@ public class OrderController {
 
     @PostMapping("/v1/cart-orders")
     public ApiResponse<CreateOrderResponse> createOrderFromCart(
-            Principal principal,
+            @Authenticated Principal principal,
             @RequestBody CreateOrderFromCartRequest request) {
         Cart cart = cartService.getCart(principal);
         String orderKey = orderService.create(cart.toNewOrder(request.cartItemIds(), request.storeId()));
@@ -51,22 +51,24 @@ public class OrderController {
     }
 
     @GetMapping("/v1/orders/{orderKey}/checkout")
-    public ApiResponse<OrderCheckoutResponse> getOrderForCheckout(Principal principal, @PathVariable String orderKey) {
+    public ApiResponse<OrderCheckoutResponse> getOrderForCheckout(@Authenticated Principal principal, @PathVariable String orderKey) {
         Order order = orderService.getOrder(orderKey, OrderState.CREATED);
+        order.validateOwner(principal);
         List<IssuedCoupon> issuedCoupons = issuedCouponService.getIssuedCouponsForCheckout(principal, order);
         return ApiResponse.success(OrderCheckoutResponse.of(order, issuedCoupons));
     }
 
     @GetMapping("/v1/orders")
-    public ApiResponse<List<OrderListResponse>> getOrders(Principal principal) {
+    public ApiResponse<List<OrderListResponse>> getOrders(@Authenticated Principal principal) {
         List<OrderSummary> orders = orderService.getPaidOrders(principal);
-    return ApiResponse.success(OrderListResponse.from(orders));
+        return ApiResponse.success(OrderListResponse.from(orders));
     }
 
     @GetMapping("/v1/orders/{orderKey}")
-    public ApiResponse<OrderResponse> getOrder(Principal principal,
-                                               @PathVariable String orderKey) {
+    public ApiResponse<OrderResponse> getOrder(@Authenticated Principal principal,
+                                                @PathVariable String orderKey) {
         Order order = orderService.getOrder(orderKey, OrderState.PAID);
+        order.validateOwner(principal);
         return ApiResponse.success(OrderResponse.from(order));
     }
 }

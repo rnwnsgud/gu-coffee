@@ -1,11 +1,14 @@
 package com.coffee.gu.order;
 
+import com.coffee.gu.CoreException;
+import com.coffee.gu.ErrorType;
 import com.coffee.gu.Principal;
 import com.coffee.gu.enums.OrderState;
 import io.hypersistence.tsid.TSID;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 public class Order {
     private String key;
@@ -48,6 +51,12 @@ public class Order {
 
     public void canceled() {
         this.state = OrderState.CANCELED;
+    }
+
+    public void validateOwner(Principal principal) {
+        if (!Objects.equals(this.principal, principal)) {
+            throw new CoreException(ErrorType.NOT_FOUND_DATA, null);
+        }
     }
 
     public String getKey() {
