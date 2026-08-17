@@ -64,7 +64,7 @@ class PaymentControllerTest extends RestDocsTest {
         // given
         CreatePaymentRequest request = new CreatePaymentRequest("order-key", null);
         OrderLine orderLine = new OrderLine(1L, "order-key", 1L, "Coffee", "img", "desc", 1L, BigDecimal.valueOf(2000), BigDecimal.valueOf(2000), true);
-        Order order = new Order("order-key", "Coffee", Principal.user("1L"), 1L, BigDecimal.valueOf(2000), OrderState.CREATED, List.of(orderLine));
+        Order order = new Order("order-key", "Coffee", Principal.user("1"), 1L, BigDecimal.valueOf(2000), OrderState.CREATED, List.of(orderLine));
 
         given(orderService.getOrder(eq("order-key"), eq(OrderState.CREATED))).willReturn(order);
         given(issuedCouponService.getIssuedCouponsForCheckout(any(), any())).willReturn(List.of());
@@ -99,16 +99,22 @@ class PaymentControllerTest extends RestDocsTest {
     @DisplayName("결제 승인 API")
     void confirm() throws Exception {
         // given
-        Order order = new Order("order-key", "Coffee", Principal.user("1L"), 1L, BigDecimal.valueOf(2000), OrderState.PAID, List.of());
+        Order order = new Order("order-key", "Coffee", Principal.user("1"), 1L, BigDecimal.valueOf(2000), OrderState.PAID, List.of());
         given(orderService.getOrder(eq(order.getKey()))).willReturn(order);
         given(paymentService.approvePayment(any())).willReturn(PaymentApprovalResult.approved("order-key", "payment-key", OffsetDateTime.now()));
 
         // when & then
         mockMvc.perform(post("/v1/payments/confirm")
+                        .header("Gu-Coffee-com.coffee.gu.Principal-Id", "U1")
+                        .header("Gu-Coffee-com.coffee.gu.Principal-Type", "USER")
                         .queryParam("orderId", "order-key"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andDo(document("payment-confirm",
+                        requestHeaders(
+                                headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                                headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입")
+                        ),
                         queryParameters(
                                 parameterWithName("orderId").description("주문 키")
                         ),
@@ -124,17 +130,23 @@ class PaymentControllerTest extends RestDocsTest {
     @DisplayName("결제 실패 콜백 API")
     void fail() throws Exception {
         // given
-        Order order = new Order("order-key", "Coffee", Principal.user("1L"), 1L, BigDecimal.valueOf(2000), OrderState.PAID, List.of());
+        Order order = new Order("order-key", "Coffee", Principal.user("1"), 1L, BigDecimal.valueOf(2000), OrderState.PAID, List.of());
         given(orderService.getOrder(eq(order.getKey()))).willReturn(order);
 
         // when & then
         mockMvc.perform(post("/v1/payments/fail")
+                        .header("Gu-Coffee-com.coffee.gu.Principal-Id", "U1")
+                        .header("Gu-Coffee-com.coffee.gu.Principal-Type", "USER")
                         .queryParam("orderId", "order-key")
                         .queryParam("code", "PAY_PROCESS_CANCELED")
                         .queryParam("message", "사용자가 결제를 취소했습니다"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andDo(document("payment-fail",
+                        requestHeaders(
+                                headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                                headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입")
+                        ),
                         queryParameters(
                                 parameterWithName("orderId").description("주문 키"),
                                 parameterWithName("code").description("실패 코드"),

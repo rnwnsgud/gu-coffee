@@ -99,7 +99,7 @@ public class AsyncTransactionDemo {
         }
     }
 
-    public static record DemoEvent(String message) {}
+    public record DemoEvent(String message) {}
 
     @Component
     public static class DemoListener {

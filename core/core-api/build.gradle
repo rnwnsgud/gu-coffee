@@ -24,6 +24,8 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation project(":storage:db-core")
 
+    testImplementation 'net.javacrumbs.shedlock:shedlock-spring:5.16.0'
+    testImplementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.16.0'
 }
 
 ext {
