@@ -3,6 +3,7 @@ package com.coffee.gu.event;
 import com.coffee.gu.Event;
 import com.coffee.gu.EventLog;
 import com.coffee.gu.EventLogRepository;
+import com.coffee.gu.enums.EventLogStatus;
 import com.coffee.gu.enums.EventLogTarget;
 
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -30,8 +31,9 @@ public class EventLogRepositoryImpl implements EventLogRepository {
         this.jsonMapper = jsonMapper;
     }
 
+    // 동일한 이벤트가 중복수신 되는건 예외가 아니라 정상 멱등 처리
     @Override
-    public boolean saveUniqueEvent(Event event) {
+    public boolean saveIfNotExists(Event event) {
         try {
             String payload = jsonMapper.writeValueAsString(event);
             eventLogJpaRepository.save(EventLogEntity.create(event.getEventId(), event.getEventType(), payload));
@@ -47,6 +49,7 @@ public class EventLogRepositoryImpl implements EventLogRepository {
         jpaQueryFactory
                 .update(eventLogEntity)
                 .set(eventLogEntity.isPublished, true)
+                .set(eventLogEntity.status, EventLogStatus.SUCCESS)
                 .set(eventLogEntity.publishedAt, LocalDateTime.now())
                 .where(eventLogEntity.id.eq(event.getEventId()))
                 .execute();
@@ -58,18 +61,44 @@ public class EventLogRepositoryImpl implements EventLogRepository {
         jpaQueryFactory
                 .update(eventLogEntity)
                 .set(eventLogEntity.isPublished, true)
+                .set(eventLogEntity.status, EventLogStatus.SUCCESS)
                 .set(eventLogEntity.publishedAt, LocalDateTime.now())
                 .where(eventLogEntity.id.in(eventIds))
                 .execute();
     }
 
+    @Transactional
+    @Override
+    public void increaseRetryCount(String eventId) {
+        jpaQueryFactory
+                .update(eventLogEntity)
+                .set(eventLogEntity.retryCount, eventLogEntity.retryCount.add(1))
+                .where(eventLogEntity.id.eq(eventId))
+                .execute();
+    }
+
+    @Transactional
+    @Override
+    public void markAsDead(String eventId) {
+        jpaQueryFactory
+                .update(eventLogEntity)
+                .set(eventLogEntity.status, EventLogStatus.DEAD)
+                .where(eventLogEntity.id.eq(eventId))
+                .execute();
+    }
+
     @Override
     public List<EventLog> getUnpublishedEventLogs(EventLogTarget eventLogTarget) {
+        LocalDateTime createdBefore = LocalDateTime.now().minusMinutes(5);
         return jpaQueryFactory
                 .select(eventLogEntity)
                 .from(eventLogEntity)
                 .where(eventLogEntity.isPublished.isFalse())
-                .where(eventLogEntity.eventLogTarget.eq(eventLogTarget))
+                .where(eventLogEntity.status.ne(EventLogStatus.DEAD).or(eventLogEntity.status.isNull()))
+                .where(
+                        eventLogEntity.eventLogTarget.eq(eventLogTarget),
+                        eventLogEntity.createdAt.before(createdBefore)
+                )
                 .limit(1000)
                 .orderBy(eventLogEntity.createdAt.asc())
                 .fetch()
@@ -77,5 +106,4 @@ public class EventLogRepositoryImpl implements EventLogRepository {
                 .map(EventLogEntity::toModel)
                 .toList();
     }
-    
 }
