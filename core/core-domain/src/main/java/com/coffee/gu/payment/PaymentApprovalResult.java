@@ -33,7 +33,7 @@ public class PaymentApprovalResult {
         );
     }
 
-    public static PaymentApprovalResult alReadyApproved(String orderKey, String paymentKey, OffsetDateTime approvedAt) {
+    public static PaymentApprovalResult alreadyApproved(String orderKey, String paymentKey, OffsetDateTime approvedAt) {
         return new PaymentApprovalResult(
                 orderKey,
                 paymentKey,
@@ -41,6 +41,18 @@ public class PaymentApprovalResult {
                 OrderState.PAID,
                 true,
                 approvedAt
+        );
+    }
+
+    public static PaymentApprovalResult fromExisting(Payment payment) {
+        OrderState orderState = (payment.getState() == PaymentState.SUCCESS) ? OrderState.PAID : OrderState.CREATED;
+        return new PaymentApprovalResult(
+                payment.getOrderKey(),
+                payment.getExternalPaymentKey(),
+                payment.getState(),
+                orderState,
+                true,
+                payment.getPaidAt()
         );
     }
 

@@ -31,7 +31,7 @@ public class PaymentReader {
                 .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND_DATA, null));
     }
 
-    public List<Payment> getPendingPayments() {
-        return paymentRepository.getPendingPayments();
+    public List<Payment> getPendingPayments(int limit) {
+        return paymentRepository.getPendingPayments(limit);
     }
 }

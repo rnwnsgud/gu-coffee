@@ -33,11 +33,12 @@ public class PaymentEntity extends BaseEntity {
     private PaymentMethod method;
     private OffsetDateTime paidAt; // pg사, 카드사는 결제가 승인된 시점을 기준으로 수수료를 떼고 가맹점 계좌로 입금
     private String approveCode; // 카드사의 승인코드
+    private int retryCount;
 
     public PaymentEntity() {}
 
     public PaymentEntity(String principalKey, PrincipalType principalType, String orderKey, BigDecimal originalAmount, Long issuedCouponId, BigDecimal couponDiscount, BigDecimal paidAmount, PaymentState state,
-                         String externalPaymentKey, PaymentMethod method, OffsetDateTime paidAt, String approveCode) {
+                         String externalPaymentKey, PaymentMethod method, OffsetDateTime paidAt, String approveCode, int retryCount) {
         this.principalKey = principalKey;
         this.principalType = principalType;
         this.orderKey = orderKey;
@@ -50,11 +51,12 @@ public class PaymentEntity extends BaseEntity {
         this.method = method;
         this.paidAt = paidAt;
         this.approveCode = approveCode;
+        this.retryCount = retryCount;
     }
 
 
     public static PaymentEntity from(Payment payment) {
-        return new PaymentEntity(
+        PaymentEntity entity = new PaymentEntity(
                 payment.getPrincipal().getKey(),
                 payment.getPrincipal().getType(),
                 payment.getOrderKey(),
@@ -66,9 +68,11 @@ public class PaymentEntity extends BaseEntity {
                 payment.getExternalPaymentKey(),
                 payment.getMethod(),
                 payment.getPaidAt(),
-                payment.getApproveCode()
+                payment.getApproveCode(),
+                payment.getRetryCount()
         );
-
+        entity.id = payment.getId();
+        return entity;
     }
 
     public Payment toModel() {
@@ -84,7 +88,9 @@ public class PaymentEntity extends BaseEntity {
                 this.externalPaymentKey,
                 this.method,
                 this.paidAt,
-                this.approveCode
+                this.approveCode,
+                this.getCreatedAt(),
+                this.retryCount
         );
     }
 
@@ -126,5 +132,9 @@ public class PaymentEntity extends BaseEntity {
 
     public String getExternalPaymentKey() {
         return externalPaymentKey;
+    }
+
+    public int getRetryCount() {
+        return retryCount;
     }
 }

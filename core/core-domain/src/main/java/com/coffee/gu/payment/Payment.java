@@ -6,6 +6,8 @@ import com.coffee.gu.enums.PaymentState;
 import com.coffee.gu.order.Order;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 
 public class Payment {
@@ -21,8 +23,10 @@ public class Payment {
     private PaymentMethod method;
     private OffsetDateTime paidAt;
     private String approveCode;
+    private LocalDateTime createdAt;
+    private int retryCount;
 
-    public Payment(Long id, Principal principal, String orderKey, BigDecimal originalAmount, Long issuedCouponId, BigDecimal couponDiscount, BigDecimal amount, PaymentState state, String externalPaymentKey, PaymentMethod method, OffsetDateTime paidAt, String approveCode) {
+    public Payment(Long id, Principal principal, String orderKey, BigDecimal originalAmount, Long issuedCouponId, BigDecimal couponDiscount, BigDecimal amount, PaymentState state, String externalPaymentKey, PaymentMethod method, OffsetDateTime paidAt, String approveCode, LocalDateTime createdAt, int retryCount) {
         this.id = id;
         this.principal = principal;
         this.orderKey = orderKey;
@@ -35,6 +39,8 @@ public class Payment {
         this.method = method;
         this.paidAt = paidAt;
         this.approveCode = approveCode;
+        this.createdAt = createdAt;
+        this.retryCount = retryCount;
     }
 
     public static Payment create(Order order, PaymentDiscount paymentDiscount) {
@@ -47,7 +53,8 @@ public class Payment {
                 paymentDiscount.couponDiscount(),
                 paymentDiscount.getPaidAmount(),
                 PaymentState.READY,
-                null, null, null, null
+                null, null, null, null,
+                null, 0
         );
     }
 
@@ -67,8 +74,37 @@ public class Payment {
         return state == PaymentState.SUCCESS;
     }
 
+    public Boolean isReady() {
+        return state == PaymentState.READY;
+    }
+
+    public Boolean isFailed() {
+        return state == PaymentState.FAILED;
+    }
+
     public void fail() {
         this.state = PaymentState.FAILED;
+    }
+
+    public void increaseRetryCount() {
+        this.retryCount++;
+    }
+
+    public boolean isRetryLimitExceeded(int maxLimit) {
+        return this.retryCount >= maxLimit;
+    }
+
+    public int getRetryCount() {
+        return retryCount;
+    }
+
+    public Boolean isExpired(Duration timeout) {
+        if (createdAt == null) return false;
+        return LocalDateTime.now().isAfter(createdAt.plus(timeout));
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
     }
 
     public Boolean hasAppliedCoupon() {
@@ -118,7 +154,6 @@ public class Payment {
     public PaymentState getState() {
         return state;
     }
-
 
     public Principal getPrincipal() {
         return principal;

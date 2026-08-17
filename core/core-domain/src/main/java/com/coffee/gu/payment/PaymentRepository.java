@@ -9,5 +9,5 @@ public interface PaymentRepository {
     Payment save(Payment payment);
     Optional<Payment> findByIdWithLock(Long id);
     Optional<Payment> findByOrderKeyWithLock(String orderKey);
-    List<Payment> getPendingPayments();
+    List<Payment> getPendingPayments(int limit);
 }
