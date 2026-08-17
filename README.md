@@ -1,54 +1,31 @@
 # ☕ GU Coffee (`gu-coffee`)
 
-> **결제 데이터 정합성, 동시성 제어 및 의존성 역전 아키텍처(DIP)를 지향하는 Spring Boot 기반 멀티 모듈 결제·주문 시스템**
+> **Spring Boot 기반 커피 주문 & 결제 시스템 멀티 모듈 백엔드 프로젝트**
 
 ---
 
 ## 📌 목차
 - [1. 프로젝트 개요](#1-프로젝트-개요)
-- [2. 핵심 엔지니어링 문제 해결](#2-핵심-엔지니어링-문제-해결)
-- [3. 멀티 모듈 아키텍처](#3-멀티-모듈-아키텍처)
-- [4. 기술 스택](#4-기술-스택)
-- [5. 주요 기능 및 도메인](#5-주요-기능-및-도메인)
-- [6. API 엔드포인트 요약](#6-api-엔드포인트-요약)
-- [7. 프로젝트 실행 및 검증](#7-프로젝트-실행-및-검증)
+- [2. 멀티 모듈 아키텍처](#2-멀티-모듈-아키텍처)
+- [3. 기술 스택](#3-기술-스택)
+- [4. 주요 기능 및 도메인](#4-주요-기능-및-도메인)
+- [5. API 엔드포인트 요약](#5-api-엔드포인트-요약)
+- [6. 프로젝트 실행 및 빌드](#6-프로젝트-실행-및-빌드)
 
 ---
 
 <a name="1-프로젝트-개요"></a>
 ## 1. 프로젝트 개요
 
-`gu-coffee`는 커피 오더/결제 서비스의 대용량 트래픽 환경(일 결제 120만 건, 피크 120 RPS)을 가상 비즈니스 규모로 설정하고, **금융/결제 도메인의 동시성 제어, 최종 정합성 보장, 망취소 및 멱등성** 문제를 해결한 백엔드 아키텍처 프로젝트입니다.
+`gu-coffee`는 커피 프랜차이즈 오더/결제 서비스를 모티브로 구축된 백엔드 시스템입니다.  
+도메인별로 역할과 책임을 명확히 분리한 **멀티 모듈 아키텍처(Multi-Module Architecture)**를 채택하였으며, **Toss Payments PG 결제 승인 및 취소 연동**, **스탬프 적립 및 리워드 쿠폰 전환**, **장바구니/주문/결제 처리** 및 **매장 검색** 기능을 제공합니다.
 
 ---
 
-<a name="2-핵심-엔지니어링-문제-해결"></a>
-## 2. 핵심 엔지니어링 문제 해결
+<a name="2-멀티-모듈-아키텍처"></a>
+## 2. 멀티 모듈 아키텍처
 
-### 🔒 1. 결제 위·변조 방지 및 Fast-Fail Locking
-* **보안 검증**: 클라이언트의 금액 변조 위험을 차단하기 위해 고유 `orderKey`만 전달받고, 백엔드가 PG사 REST API를 직접 호출해 결제 데이터 대조 검증.
-* **Fast-Fail 비관적 락**: PG 승인 전 `Payment` 레코드의 `READY` 상태에 비관적 락(`PESSIMISTIC_WRITE`)을 점유하여 중복 연타 및 PG 승인 웹훅의 동시 도달 시 불필요한 PG 외부 API 호출을 1ms 내 즉시 차단.
-
-### 🔄 2. 트랜잭션 보상 (망취소) 및 트랜잭션 아웃박스 패턴
-* **PG 망취소 선택**: 결제 후처리 실패 롤백 시 데이터 정합성을 위해 재시도가 아닌 PG 승인 취소(망취소)를 수행하여 사용자 응답의 명확성 확보.
-* **원자적 아웃박스(Outbox) 기록**: `CancelEvent` 발행 및 `EventLog` 저장을 동일 DB 트랜잭션 내 원자적으로 처리하기 위해 `@Transactional(propagation = Propagation.MANDATORY)` 적용.
-
-### ⚡ 3. 고립 결제 복구 스케줄러 성능 최적화 (ShedLock ➔ SKIP LOCKED)
-* **병목 발견**: 단일 워커(ShedLock) 방식 사용 시 피크 고립 결제 건수(72건) 처리 시 1건당 평균 218ms, 총 15.7초간 DB 커넥션을 장기 점유하는 병목 확인.
-* **최적화**: `SKIP LOCKED` 기반 소단위 청크(Limit 20) 멀티 워커 분산 구조로 전환하여 DB 커넥션 락 점유 시간을 **4.36초로 72.2% 단축**.
-* **유예 마진 확보**: `updatedAt < NOW - 5분` 조항을 적용하여 유저의 정상 요청이 스케줄러와 경합하지 않도록 유예 시간 확보.
-
-### 🛡️ 4. 스탬프·쿠폰 비동기 발급 멱등성 및 DEAD 레터 관리
-* **멱등성(Idempotency) 보장**: `@Async` 이벤트 환경에서 동시 요청 시 중복 쿠폰 발급을 방지하고자 `EventLog` 기반 `saveIfNotExists` (`INSERT IGNORE`) 메커니즘 구축.
-* **관심사 분리**: `StampEventListener` (비동기 디스패치 전담)와 `StampRewardManager` (`@Transactional` 도메인 전담)로 클래스를 분리하여 AOP 프록시 경계 정립.
-* **DEAD 상태 이관**: 비동기 실패 이벤트 5회 재시도 실패 시 `DEAD` 상태 전환 및 알림 처리 라우팅 구축.
-
----
-
-<a name="3-멀티-모듈-아키텍처"></a>
-## 3. 멀티 모듈 아키텍처
-
-도메인 모듈을 가운데 두고 **`API (core-api) ──► Domain (core-domain) ◄── DB (db-core)`** 방향으로 의존성이 집중되는 **의존성 역전 원칙(DIP) 기반 Hexagonal / Clean Architecture**를 구현했습니다.
+도메인 모듈을 가운데 두고 **`API (core-api) ──► Domain (core-domain) ◄── DB (db-core)`** 방향으로 의존성이 수렴하는 **의존성 역전 원칙(DIP) 기반 아키텍처**를 적용했습니다.
 
 ```text
 gu-coffee
@@ -76,18 +53,17 @@ gu-coffee
 
 ---
 
-<a name="4-기술-스택"></a>
-## 4. 기술 스택
+<a name="3-기술-스택"></a>
+## 3. 기술 스택
 
-### Backend Core & Framework
+### Core & Framework
 - **Java 21**, **Spring Boot 4.0.5**
 - **Spring Data JPA**, **QueryDSL 5.1.0**
 - **Hypersistence TSID** (`io.hypersistence:hypersistence-tsid`) - 분산 PK 생성
 
-### Concurrency & Locking
-- JPA Pessimistic Lock (`PESSIMISTIC_WRITE`)
-- Spring Scheduling, MySQL `SKIP LOCKED` Batch Query
-- Event Outbox (`INSERT IGNORE` Idempotency Table)
+### Database & Security
+- **MySQL**, **H2 Database**
+- Spring Security, JWT (Auth)
 
 ### Build & Documentation & Testing
 - **Gradle 8.x** (Multi-Module)
@@ -96,27 +72,39 @@ gu-coffee
 
 ---
 
-<a name="5-주요-기능-및-도메인"></a>
-## 5. 주요 기능 및 도메인
+<a name="4-주요-기능-및-도메인"></a>
+## 4. 주요 기능 및 도메인
 
-### 💳 결제 (Payment & PG)
-- Toss Payments REST API 직접 조회 기반 결제 금액 대조 검증
-- Fast-Fail Locking 기반 중복 결제 승인 요청 사전 차단
-- 망취소(PG Cancel) 및 아웃박스 정합성 보장 스케줄러
+### 📋 1. 메뉴 (Menu)
+- 카테고리별 메뉴 목록, 메뉴 상세(가격, 선택 옵션그룹) 조회
+- 관리자(Admin) 전용 메뉴/옵션그룹/옵션 생성 및 매핑 관리
 
-### 🎟️ 스탬프 & 쿠폰 (Stamp & Coupon)
-- 음료 주문 시 스탬프 자동 적립
-- 스탬프 10개 달성 시 비동기 멱등 리워드 쿠폰 자동 발급
-- 결제 취소 시 `USED` 상태 스탬프 역추적 회수 및 연쇄 취소 정책
+### 🛒 2. 장바구니 (Cart)
+- 장바구니 생성, 메뉴/옵션 추가, 수량 변경 및 아이템 삭제
 
-### 🛒 주문 & 장바구니 & 메뉴 (Order, Cart, Menu)
+### 🛍️ 3. 주문 (Order)
 - 단일/장바구니 기반 주문 생성 및 TSID 고유 결제 키 생성
-- 카테고리별 메뉴, 옵션그룹, 옵션 상하 구조 관리 (Admin API)
+- 주문 목록, 주문 상세 라인 아이템(OrderLine) 관리
+
+### 💳 4. 결제 및 PG 연동 (Payment & PG)
+- Toss Payments 결제 승인 및 검증
+- PG 결제 할인(쿠폰 적용) 및 결제 상태/거래 내역 관리
+
+### ❌ 5. 주문/결제 취소 (Cancel)
+- 주문 취소 요청 처리 및 PG 결제 자동 취소 연동
+
+### 🎟️ 6. 스탬프 & 쿠폰 (Stamp & Coupon)
+- 음료 주문 시 스탬프 자동 적립
+- 스탬프 10개 달성 시 리워드 쿠폰 자동 발급
+- 결제 취소 시 스탬프 역추적 회수 및 쿠폰 취소 연쇄 처리
+
+### 🏬 7. 매장 (Store)
+- 위치 기반 또는 키워드 기반 매장 검색 및 상세 정보 조회
 
 ---
 
-<a name="6-api-엔드포인트-요약"></a>
-## 6. API 엔드포인트 요약
+<a name="5-api-엔드포인트-요약"></a>
+## 5. API 엔드포인트 요약
 
 ### 👤 사용자 API (`/api/v1`)
 | 분류 | HTTP Method | Endpoint | 설명 |
@@ -131,14 +119,22 @@ gu-coffee
 | **Stamp** | `GET` | `/api/v1/stamps` | 스탬프 조회 |
 | **Store** | `GET` | `/api/v1/stores` | 매장 위치/키워드 검색 |
 
+### 🛠️ 관리자 API (`/admin/v1`)
+| 분류 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Menu Admin** | `POST` | `/admin/v1/menu` | 메뉴 생성 |
+| **Option Group** | `POST` | `/admin/v1/menu/option-group` | 옵션 그룹 생성 |
+| **Option** | `POST` | `/admin/v1/menu/option` | 옵션 생성 |
+| **Menu-Option** | `POST` | `/admin/v1/menu/menu-option-group` | 메뉴에 옵션 그룹 매핑 |
+
 ---
 
-<a name="7-프로젝트-실행-및-검증"></a>
-## 7. 프로젝트 실행 및 검증
+<a name="6-프로젝트-실행-및-빌드"></a>
+## 6. 프로젝트 실행 및 빌드
 
 ### 빌드 및 테스트 실행
 ```bash
-# 전체 단위 / 통합 테스트 실행
+# 전체 단위 / 통합 테스트 실행미
 ./gradlew test
 
 # 프로젝트 빌드
