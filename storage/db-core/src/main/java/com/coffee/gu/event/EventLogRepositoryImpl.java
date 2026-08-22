@@ -31,7 +31,6 @@ public class EventLogRepositoryImpl implements EventLogRepository {
         this.jsonMapper = jsonMapper;
     }
 
-    // 동일한 이벤트가 중복수신 되는건 예외가 아니라 정상 멱등 처리
     @Override
     public boolean saveIfNotExists(Event event) {
         try {

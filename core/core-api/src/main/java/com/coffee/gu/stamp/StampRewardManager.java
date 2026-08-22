@@ -35,15 +35,13 @@ public class StampRewardManager {
         if (stampQuantity <= 0) return null;
         List<Stamp> stamps = LongStream.range(0, stampQuantity)
                 .mapToObj(i -> Stamp.create(principal, orderKey, expiredAt))
-                .toList();
+        		.toList();
         stampRepository.saveAll(stamps);
         return stampRecorder.recordEarn(principal, storeId, stampQuantity, now, expiredAt);
     }
 
     @Transactional
     public void stampToCouponWithIdempotency(StampEarnEvent event) {
-        boolean isFirstEvent = eventLogRepository.saveIfNotExists(event);
-        if (!isFirstEvent) return;
         StampRewardPlan plan = stampRewardPlanner.plan(event);
         if (plan.isEmpty()) return;
         useStamps(plan);
@@ -65,9 +63,4 @@ public class StampRewardManager {
         issuedCoupons = issuedCouponRepository.saveAll(issuedCoupons);
         plan.assignIssuedCoupons(issuedCoupons);
     }
-
-
-
-
-
 }
