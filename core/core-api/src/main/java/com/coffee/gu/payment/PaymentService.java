@@ -1,9 +1,8 @@
 package com.coffee.gu.payment;
 
-
 import com.coffee.gu.*;
+import com.coffee.gu.event.OutboxEventPublisher;
 import com.coffee.gu.order.Order;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,17 +13,15 @@ public class PaymentService {
     private final PaymentCompleter paymentCompleter;
     private final PaymentManager paymentManager;
     private final PaymentReader paymentReader;
-    private final EventLogRepository eventLogRepository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventPublisher outboxEventPublisher;
 
-    public PaymentService(PaymentGatewayProcessor paymentGatewayProcessor, PaymentPreparer paymentPreparer, PaymentCompleter paymentCompleter, PaymentManager paymentManager, PaymentReader paymentReader, EventLogRepository eventLogRepository, ApplicationEventPublisher eventPublisher) {
+    public PaymentService(PaymentGatewayProcessor paymentGatewayProcessor, PaymentPreparer paymentPreparer, PaymentCompleter paymentCompleter, PaymentManager paymentManager, PaymentReader paymentReader, OutboxEventPublisher outboxEventPublisher) {
         this.paymentGatewayProcessor = paymentGatewayProcessor;
         this.paymentPreparer = paymentPreparer;
         this.paymentCompleter = paymentCompleter;
         this.paymentManager = paymentManager;
         this.paymentReader = paymentReader;
-        this.eventLogRepository = eventLogRepository;
-        this.eventPublisher = eventPublisher;
+        this.outboxEventPublisher = outboxEventPublisher;
     }
 
     public Long createPayment(Order order, PaymentDiscount paymentDiscount) {
@@ -41,8 +38,7 @@ public class PaymentService {
             return paymentCompleter.complete(order, payment.getId(), pgConfirmResult);
         } catch (Exception e) {
             CancelEvent event = new CancelEvent(order.getKey());
-            eventLogRepository.saveIfNotExists(event);
-            eventPublisher.publishEvent(event);
+            outboxEventPublisher.publishOutboxEvent(event);
             return PaymentApprovalResult.failed(order.getKey(), payment.getExternalPaymentKey(), payment.getPaidAt());
         }
     }

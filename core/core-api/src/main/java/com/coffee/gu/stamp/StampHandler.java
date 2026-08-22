@@ -2,25 +2,24 @@ package com.coffee.gu.stamp;
 
 import com.coffee.gu.*;
 
+import com.coffee.gu.event.OutboxEventPublisher;
 import com.coffee.gu.order.Order;
 import com.coffee.gu.order.OrderLine;
 import com.coffee.gu.store.Store;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-
 
 @Component
 public class StampHandler {
     private final StampRewardManager stampRewardManager;
     private final StampRevertManager stampRevertManager;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxEventPublisher outboxEventPublisher;
 
-    public StampHandler(StampRewardManager stampRewardManager, StampRevertManager stampRevertManager, ApplicationEventPublisher eventPublisher) {
+    public StampHandler(StampRewardManager stampRewardManager, StampRevertManager stampRevertManager, OutboxEventPublisher outboxEventPublisher) {
         this.stampRewardManager = stampRewardManager;
         this.stampRevertManager = stampRevertManager;
-        this.eventPublisher = eventPublisher;
+        this.outboxEventPublisher = outboxEventPublisher;
     }
 
     public void reward(Order order) {
@@ -35,7 +34,8 @@ public class StampHandler {
             String orderKey = order.getKey();
             Long storeId = order.getStoreId();
             Store store = stampRewardManager.reward(principal, orderKey, stampEligibleQuantity, expiredAt, now, storeId);
-            eventPublisher.publishEvent(new StampEarnEvent(principal, storeId, store.getName()));
+            StampEarnEvent event = new StampEarnEvent(principal, storeId, store.getName());
+            outboxEventPublisher.publishOutboxEvent(event);
         }
     }
 
@@ -46,5 +46,4 @@ public class StampHandler {
     public void revert(Order order) {
         stampRevertManager.revert(order);
     }
-
 }
