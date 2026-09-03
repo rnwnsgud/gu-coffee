@@ -3,6 +3,8 @@ package com.coffee.gu;
 import com.coffee.gu.order.Order;
 import com.coffee.gu.payment.Payment;
 import com.coffee.gu.enums.TransactionType;
+import com.coffee.gu.transaction.TransactionHistory;
+import com.coffee.gu.transaction.TransactionHistoryRepository;
 
 import org.springframework.stereotype.Component;
 

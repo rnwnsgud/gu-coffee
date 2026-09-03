@@ -2,6 +2,7 @@ package com.coffee.gu;
 
 import com.coffee.gu.enums.PrincipalType;
 import com.coffee.gu.enums.TransactionType;
+import com.coffee.gu.transaction.TransactionHistory;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;

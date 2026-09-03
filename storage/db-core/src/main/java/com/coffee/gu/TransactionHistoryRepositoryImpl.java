@@ -1,5 +1,7 @@
 package com.coffee.gu;
 
+import com.coffee.gu.transaction.TransactionHistory;
+import com.coffee.gu.transaction.TransactionHistoryRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
