@@ -9,8 +9,8 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 
-class Payment(
-    val id: Long? = null,
+class Payment @JvmOverloads constructor(
+    val id: Long = 0,
     val principal: Principal,
     val orderKey: String,
     val originalAmount: BigDecimal,
@@ -36,6 +36,8 @@ class Payment(
 
     val hasAppliedCoupon: Boolean
         get() = issuedCouponId != null && issuedCouponId > 0
+
+    fun hasAppliedCoupon(): Boolean = hasAppliedCoupon
 
     fun success(
         externalPaymentKey: String,
@@ -75,7 +77,6 @@ class Payment(
         @JvmStatic
         fun create(order: Order, paymentDiscount: PaymentDiscount): Payment {
             return Payment(
-                id = null,
                 principal = order.principal,
                 orderKey = order.key,
                 originalAmount = order.totalPrice,

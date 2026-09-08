@@ -1,6 +1,7 @@
 package com.coffee.gu.stamp
 
-class StampExpiringSoonCount(
+@JvmRecord
+data class StampExpiringSoonCount(
     val principalKey: String,
     val count: Long,
 )

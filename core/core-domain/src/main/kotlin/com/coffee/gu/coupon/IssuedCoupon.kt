@@ -2,6 +2,7 @@ package com.coffee.gu.coupon
 
 import com.coffee.gu.Principal
 import com.coffee.gu.enums.IssuedCouponState
+import java.time.LocalDateTime
 
 class IssuedCoupon(
     val id: Long = 0,
@@ -11,6 +12,8 @@ class IssuedCoupon(
 ) {
     val isUsed: Boolean
         get() = state == IssuedCouponState.USED
+
+    fun getExpiredAt(): LocalDateTime = coupon.expiredAt
 
     fun use() {
         this.state = IssuedCouponState.USED
@@ -31,7 +34,7 @@ class IssuedCoupon(
                 id = 0,
                 principal = principal,
                 state = IssuedCouponState.DOWNLOADED,
-                coupon = coupon
+                coupon = coupon,
             )
         }
     }

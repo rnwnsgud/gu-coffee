@@ -35,8 +35,8 @@ class PaymentRepositorySkipLockTest {
     @DisplayName("getPendingPayments 호출 시 다른 트랜잭션이 락을 쥔 레코드는 대기 없이 스킵(SKIP LOCKED)한다")
     void testGetPendingPaymentsSkipLock() throws Exception {
         // given
-        Payment p1 = new Payment(null, Principal.user("U1"), "ORDER-SKIP-1", BigDecimal.valueOf(10000), null, BigDecimal.ZERO, BigDecimal.valueOf(10000), PaymentState.PENDING_PG, "PAY-KEY-1", PaymentMethod.CARD, null, null, LocalDateTime.now().minusMinutes(10), 0);
-        Payment p2 = new Payment(null, Principal.user("U2"), "ORDER-SKIP-2", BigDecimal.valueOf(20000), null, BigDecimal.ZERO, BigDecimal.valueOf(20000), PaymentState.PENDING_PG, "PAY-KEY-2", PaymentMethod.CARD, null, null, LocalDateTime.now().minusMinutes(10), 0);
+        Payment p1 = new Payment(0L, Principal.user("U1"), "ORDER-SKIP-1", BigDecimal.valueOf(10000), null, BigDecimal.ZERO, BigDecimal.valueOf(10000), PaymentState.PENDING_PG, "PAY-KEY-1", PaymentMethod.CARD, null, null, LocalDateTime.now().minusMinutes(10), 0);
+        Payment p2 = new Payment(0L, Principal.user("U2"), "ORDER-SKIP-2", BigDecimal.valueOf(20000), null, BigDecimal.ZERO, BigDecimal.valueOf(20000), PaymentState.PENDING_PG, "PAY-KEY-2", PaymentMethod.CARD, null, null, LocalDateTime.now().minusMinutes(10), 0);
 
         paymentRepository.save(p1);
         paymentRepository.save(p2);

@@ -5,7 +5,7 @@ import com.coffee.gu.coupon.Coupon
 import com.coffee.gu.coupon.IssuedCoupon
 import java.time.LocalDateTime
 
-class StampRewardPlan(
+class StampRewardPlan @JvmOverloads constructor(
     val principal: Principal,
     val couponIssueCount: Long,
     val stampUseCount: Long,

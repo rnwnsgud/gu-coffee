@@ -4,6 +4,7 @@ plugins {
     kotlin("plugin.spring")
     kotlin("plugin.jpa")
     id("io.spring.dependency-management")
+    kotlin("kapt")
 }
 
 tasks.jar {
@@ -24,4 +25,11 @@ dependencies {
     annotationProcessor("com.querydsl:querydsl-apt:5.1.0:jakarta")
     annotationProcessor("jakarta.annotation:jakarta.annotation-api")
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
+    kapt("com.querydsl:querydsl-apt:5.1.0:jakarta")
+    kapt("jakarta.annotation:jakarta.annotation-api")
+    kapt("jakarta.persistence:jakarta.persistence-api")
+    testImplementation(kotlin("test"))
+}
+repositories {
+    mavenCentral()
 }

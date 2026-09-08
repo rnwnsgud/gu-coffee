@@ -2,12 +2,12 @@ package com.coffee.gu
 
 import java.time.LocalDateTime
 
-
-class Page<T>(
+@JvmRecord
+data class Page<T>(
     val content: List<T>,
     val hasNext: Boolean,
     val nextCursor: LocalDateTime? = null,
-    val nextLastId: Long? = null
+    val nextLastId: Long? = null,
 ) {
 
     fun <R> map(transform: (T) -> R): Page<R> {
@@ -16,11 +16,13 @@ class Page<T>(
     }
 
     companion object {
+        @JvmStatic
+        @JvmOverloads
         fun <E> of(
             items: List<E>,
             pageSize: Int,
             cursorExtractor: ((E) -> LocalDateTime)? = null,
-            idExtractor: ((E) -> Long)? = null
+            idExtractor: ((E) -> Long)? = null,
         ): Page<E> {
             val hasNext = items.size > pageSize
             val content = if (hasNext) items.subList(0, pageSize) else items

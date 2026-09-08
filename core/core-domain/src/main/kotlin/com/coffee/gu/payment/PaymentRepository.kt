@@ -1,9 +1,9 @@
 package com.coffee.gu.payment
 
 interface PaymentRepository {
-    fun findByOrderKey(orderKey: String): Payment?
+    fun findByOrderKey(orderKey: String): Payment
     fun save(payment: Payment): Payment
-    fun findByIdWithLock(id: Long): Payment?
-    fun findByOrderKeyWithLock(orderKey: String): Payment?
+    fun findByIdWithLock(id: Long): Payment
+    fun findByOrderKeyWithLock(orderKey: String): Payment
     fun getPendingPayments(limit: Int): List<Payment>
 }

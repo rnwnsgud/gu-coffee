@@ -28,7 +28,7 @@ public class AsyncTxTestPublisher {
     @Transactional
     public CompletableFuture<Boolean> publishStandardAsyncEventInTransaction(String orderKey) {
         Payment payment = new Payment(
-                null, Principal.user("U100"), orderKey, BigDecimal.TEN, null, BigDecimal.ZERO, BigDecimal.TEN,
+                0L, Principal.user("U100"), orderKey, BigDecimal.TEN, null, BigDecimal.ZERO, BigDecimal.TEN,
                 PaymentState.PENDING_PG, "PAY-KEY-" + orderKey, PaymentMethod.CARD, null, null, LocalDateTime.now(), 0
         );
         paymentRepository.save(payment);
@@ -48,7 +48,7 @@ public class AsyncTxTestPublisher {
     @Transactional
     public CompletableFuture<Boolean> publishTransactionalAsyncEventInTransaction(String orderKey) {
         Payment payment = new Payment(
-                null, Principal.user("U100"), orderKey, BigDecimal.TEN, null, BigDecimal.ZERO, BigDecimal.TEN,
+                0L, Principal.user("U100"), orderKey, BigDecimal.TEN, null, BigDecimal.ZERO, BigDecimal.TEN,
                 PaymentState.PENDING_PG, "PAY-KEY-" + orderKey, PaymentMethod.CARD, null, null, LocalDateTime.now(), 0
         );
         paymentRepository.save(payment);

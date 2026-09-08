@@ -2,8 +2,12 @@ package com.coffee.gu
 
 class OffsetLimit(
     val offset: Int,
-    val limit: Int
+    val limit: Int,
 ) {
+    fun limit(): Int = limit
+    fun offset(): Int = offset
+    fun withLimit(newLimit: Int): OffsetLimit = OffsetLimit(offset, newLimit)
+
     companion object {
         private const val MAX_LIMIT = 100
     }

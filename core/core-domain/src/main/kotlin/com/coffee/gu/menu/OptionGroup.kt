@@ -5,4 +5,7 @@ class OptionGroup(
     val name: String,
     val isExclusive: Boolean,
     val isRequired: Boolean,
-)
+) {
+    fun getExclusive(): Boolean = isExclusive
+    fun getRequired(): Boolean = isRequired
+}

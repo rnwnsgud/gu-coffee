@@ -1,14 +1,14 @@
 package com.coffee.gu.menu
 
-class Nutrition(
-    val capacity: Double?,
-    val caffeine: Double?,
-    val calories: Double?,
-    val sodium: Double?,
-    val carbohydrate: Double?,
-    val sugar: Double?,
-    val fat: Double?,
-    val saturatedFat: Double?,
-    val protein: Double?,
-) {
-}
+@JvmRecord
+data class Nutrition(
+    val capacity: Double? = null,
+    val caffeine: Double? = null,
+    val calories: Double? = null,
+    val sodium: Double? = null,
+    val carbohydrate: Double? = null,
+    val sugar: Double? = null,
+    val fat: Double? = null,
+    val saturatedFat: Double? = null,
+    val protein: Double? = null,
+)

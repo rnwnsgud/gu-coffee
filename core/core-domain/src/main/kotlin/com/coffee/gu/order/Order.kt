@@ -24,8 +24,16 @@ class Order(
         this.state = OrderState.PAID
     }
 
+    fun paid() {
+        pay()
+    }
+
     fun cancel() {
         this.state = OrderState.CANCELED
+    }
+
+    fun canceled() {
+        cancel()
     }
 
     fun validateOwner(principal: Principal) {
@@ -33,6 +41,7 @@ class Order(
     }
 
     companion object {
+        @JvmStatic
         fun create(name: String, principal: Principal, storeId: Long, totalPrice: BigDecimal): Order {
             return Order(
                 key = TSID.Factory.getTsid().toString(),
@@ -41,7 +50,7 @@ class Order(
                 storeId = storeId,
                 totalPrice = totalPrice,
                 state = OrderState.CREATED,
-                lines = emptyList()
+                lines = emptyList(),
             )
         }
     }

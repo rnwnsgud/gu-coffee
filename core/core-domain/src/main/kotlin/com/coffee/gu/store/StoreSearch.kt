@@ -1,6 +1,7 @@
 package com.coffee.gu.store
 
-class StoreSearch(
+@JvmRecord
+data class StoreSearch(
     val latitude: Double,
     val longitude: Double,
     val radiusKm: Double,

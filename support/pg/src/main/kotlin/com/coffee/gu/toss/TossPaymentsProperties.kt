@@ -4,6 +4,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties(prefix = "payment.toss")
 class TossPaymentsProperties(
-    val secretKey: String,
-    val baseUrl: String
+    val secretKey: String = "",
+    val baseUrl: String = "",
 )

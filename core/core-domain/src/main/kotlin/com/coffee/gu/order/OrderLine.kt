@@ -2,30 +2,32 @@ package com.coffee.gu.order
 
 import java.math.BigDecimal
 
-class OrderLine(
+class OrderLine @JvmOverloads constructor(
     val id: Long? = null,
     val orderKey: String,
     val menuId: Long,
     val menuName: String,
-    val imageUrl: String,
-    val description: String,
+    val imageUrl: String? = null,
+    val description: String? = null,
     val quantity: Long,
     val unitPrice: BigDecimal,
     val totalPrice: BigDecimal,
     val isStampEligible: Boolean,
 ) {
+    fun getIsStampEligible(): Boolean = isStampEligible
+
     companion object {
         @JvmStatic
         fun create(
             orderKey: String,
             menuId: Long,
             menuName: String,
-            imageUrl: String,
-            description: String,
+            imageUrl: String?,
+            description: String?,
             quantity: Long,
             unitPrice: BigDecimal,
             totalPrice: BigDecimal,
-            isStampEligible: Boolean
+            isStampEligible: Boolean,
         ): OrderLine = OrderLine(
             id = null,
             orderKey = orderKey,
@@ -36,7 +38,7 @@ class OrderLine(
             quantity = quantity,
             unitPrice = unitPrice,
             totalPrice = totalPrice,
-            isStampEligible = isStampEligible
+            isStampEligible = isStampEligible,
         )
     }
 }

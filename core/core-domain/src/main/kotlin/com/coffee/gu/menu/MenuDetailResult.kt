@@ -1,6 +1,7 @@
 package com.coffee.gu.menu
 
-class MenuDetailResult(
+@JvmRecord
+data class MenuDetailResult(
     val menu: Menu,
     val optionGroups: List<OptionGroup> = emptyList(),
     val options: List<Option> = emptyList(),

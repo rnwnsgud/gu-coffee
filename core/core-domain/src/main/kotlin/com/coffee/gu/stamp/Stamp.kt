@@ -3,14 +3,15 @@ package com.coffee.gu.stamp
 import com.coffee.gu.Principal
 import com.coffee.gu.enums.StampState
 import java.time.LocalDateTime
+import java.time.LocalTime
 
 class Stamp(
     val id: Long = 0,
     val orderKey: String,
     val principal: Principal,
     var state: StampState,
-    val createdAt: LocalDateTime = LocalDateTime.now(),
-    val expiredAt: LocalDateTime? = null,
+    val createdAt: LocalDateTime,
+    val expiredAt: LocalDateTime,
 ) {
     fun use() {
         this.state = StampState.USED
@@ -21,21 +22,22 @@ class Stamp(
     }
 
     companion object {
-        const val EXPIRY_ALARM_DAYS = 30
-        const val EXPIRY_DAYS = 180
+        const val EXPIRY_ALARM_DAYS = 30L
+        const val EXPIRY_DAYS = 180L
 
         @JvmStatic
         fun create(
             principal: Principal,
             orderKey: String,
-            expiredAt: LocalDateTime?,
+            now : LocalDateTime = LocalDateTime.now(),
         ): Stamp {
             return Stamp(
                 id = 0,
                 orderKey = orderKey,
                 principal = principal,
                 state = StampState.EARNED,
-                expiredAt = expiredAt,
+                createdAt = now,
+                expiredAt = now.plusDays(EXPIRY_DAYS).toLocalDate().atTime(LocalTime.MAX)
             )
         }
     }

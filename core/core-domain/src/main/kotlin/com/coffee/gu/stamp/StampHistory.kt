@@ -16,12 +16,14 @@ class StampHistory(
 ) {
     companion object {
         @JvmStatic
+        @JvmOverloads
         fun createEarnHistory(
             principal: Principal,
             storeId: Long,
             storeName: String,
             quantity: Long,
-            expiredAt: LocalDateTime?,
+            recordedAt: LocalDateTime = LocalDateTime.now(),
+            expiredAt: LocalDateTime? = null,
         ): StampHistory {
             return StampHistory(
                 id = 0,
@@ -30,6 +32,7 @@ class StampHistory(
                 storeId = storeId,
                 storeName = storeName,
                 quantity = quantity,
+                recordedAt = recordedAt,
                 expiredAt = expiredAt,
             )
         }

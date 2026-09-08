@@ -2,7 +2,7 @@ package com.coffee.gu.order
 
 import com.coffee.gu.menu.Menu
 
-class OrderMenus (
+class OrderMenus(
     val menuMap: Map<Long, Menu>,
 ) {
     fun getByMenuId(menuId: Long): Menu? {
@@ -16,7 +16,7 @@ class OrderMenus (
     companion object {
         @JvmStatic
         fun from(menus: List<Menu>): OrderMenus {
-            return OrderMenus(menus.associateBy { it.id })
+            return OrderMenus(menus.associateBy { it.id ?: 0L })
         }
     }
 }

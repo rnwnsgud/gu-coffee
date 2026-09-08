@@ -16,6 +16,9 @@ class StampRevertPlan(
     val hasUsedRewardCoupon: Boolean
         get() = rewardCouponsToCancel.any { it.isUsed }
 
+    fun hasRewardCouponsToCancel(): Boolean = hasRewardCouponsToCancel
+    fun hasUsedRewardCoupon(): Boolean = hasUsedRewardCoupon
+
     fun cancelStampCount(): Int {
         return stampsToCancel.size
     }

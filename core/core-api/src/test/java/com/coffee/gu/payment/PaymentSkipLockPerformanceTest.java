@@ -42,7 +42,7 @@ class PaymentSkipLockPerformanceTest {
         String prefix = UUID.randomUUID().toString().substring(0, 8);
         for (int i = 0; i < batchSize; i++) {
             Payment p = new Payment(
-                    null,
+                    0L,
                     Principal.user("USER-" + prefix + "-" + i),
                     "ORDER-PERF-" + prefix + "-" + i,
                     BigDecimal.valueOf(10000),

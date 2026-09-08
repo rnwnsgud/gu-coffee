@@ -12,7 +12,8 @@ class EventLog(
     val payload: String,
     val isPublished: Boolean,
     val status: EventLogStatus = EventLogStatus.PENDING,
-    val retryCount: Int = 0,
+    @get:JvmName("getRetryCount")
+    val retryCount: Int? = 0,
     val createdAt: LocalDateTime,
-    val publishedAt: LocalDateTime? = null
+    val publishedAt: LocalDateTime? = null,
 )

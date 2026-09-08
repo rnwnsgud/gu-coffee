@@ -14,6 +14,8 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import java.util.Objects;
+
 @Component
 public class CartReader {
 
@@ -41,13 +43,13 @@ public class CartReader {
     public Optional<CartItem> findByPrincipalAndMenuId(Principal principal, Long menuId) {
         Optional<CartItem> cartItem = cartItemRepository.findByPrincipalIncludingDeleted(principal.getKey());
         if (cartItem.isEmpty()) return cartItem;
-        return cartItem.filter(item -> item.getMenu().getId().equals(menuId));
+        return cartItem.filter(item -> Objects.equals(item.getMenu().getId(), menuId));
     }
 
     public CartItem getByPrincipalAndId(Principal principal, Long cartItemId) {
         List<CartItem> cartItems = findByPrincipal(principal);
         return cartItems.stream()
-                .filter(item -> item.getId().equals(cartItemId))
+                .filter(item -> Objects.equals(item.getId(), cartItemId))
                 .findFirst()
                 .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND_DATA, null));
     }

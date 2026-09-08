@@ -1,6 +1,7 @@
 package com.coffee.gu.store
 
-class SalesInformation(
+@JvmRecord
+data class SalesInformation(
     val location: StoreLocation,
     val hours: List<SalesHour> = emptyList(),
     val phoneNumber: String,

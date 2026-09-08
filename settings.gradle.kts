@@ -1,6 +1,7 @@
 pluginManagement {
     plugins {
         kotlin("plugin.spring") version "2.2.21"
+        kotlin("kapt") version "2.2.21"
     }
 }
 rootProject.name = "gu-coffee"
