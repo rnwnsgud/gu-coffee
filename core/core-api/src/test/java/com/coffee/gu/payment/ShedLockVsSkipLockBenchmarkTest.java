@@ -60,7 +60,7 @@ class ShedLockVsSkipLockBenchmarkTest {
         TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
         for (int i = 0; i < count; i++) {
             Payment p = new Payment(
-                    null,
+                    0L,
                     Principal.user("USER-" + prefix + "-" + i),
                     "ORDER-BENCH-" + prefix + "-" + i,
                     BigDecimal.valueOf(10000),

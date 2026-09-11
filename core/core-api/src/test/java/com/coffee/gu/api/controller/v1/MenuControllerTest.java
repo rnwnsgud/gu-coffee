@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -80,7 +81,7 @@ class MenuControllerTest extends RestDocsTest {
         // given
         Menu menu = new Menu(1L, "Americano", MenuType.DRINK, new Price(BigDecimal.valueOf(1000), BigDecimal.valueOf(2000)), null, null, null);
         Page<Menu> page = new Page<>(List.of(menu), false, null, null);
-        given(menuService.findMenus(eq(1L), anyInt(), any(), any())).willReturn(page);
+        given(menuService.findMenus(eq(1L), anyInt(), any(LocalDateTime.class), anyLong())).willReturn(page);
 
         // when & then
         mockMvc.perform(get("/v2/menus")

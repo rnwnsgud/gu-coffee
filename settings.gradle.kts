@@ -1,0 +1,25 @@
+pluginManagement {
+    plugins {
+        kotlin("plugin.spring") version "2.2.21"
+        kotlin("kapt") version "2.2.21"
+    }
+}
+rootProject.name = "gu-coffee"
+
+include("coffee-server")
+include("core")
+include("core:core-api")
+include("core:core-enum")
+include("core:core-domain")
+include("admin-api")
+include("storage")
+include("storage:db-core")
+include("support")
+include("support:logging")
+include("support:monitoring")
+include("support:error")
+include("support:auth")
+include("support:web")
+include("support:pagination")
+include("support:pg")
+include("support:event")

@@ -71,7 +71,7 @@ class PaymentRecoveryLatencyTest {
         StoreLocation location = new StoreLocation("인천 부평구", 37.5, 127.0);
         SalesInformation salesInfo = new SalesInformation(location, List.of(), "032-123-4567");
         BusinessInformation busiInfo = new BusinessInformation("홍길동", "구커피 부평점", "123-45-67890", "인천 부평구");
-        Store store = storeRepository.save(new Store(null, "부평점", "BP01", StoreStatus.OPEN, salesInfo, busiInfo));
+        Store store = storeRepository.save(new Store(0L, "부평점", "BP01", StoreStatus.OPEN, salesInfo, busiInfo));
 
         for (int i = 0; i < targetCount; i++) {
             String orderKey = "ORDER-LATENCY-" + prefix + "-" + i;
@@ -83,7 +83,7 @@ class PaymentRecoveryLatencyTest {
             orderRepository.create(order);
 
             paymentRepository.save(new Payment(
-                    null,
+                    0L,
                     user,
                     orderKey,
                     amount,

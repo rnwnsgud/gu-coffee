@@ -5,7 +5,9 @@ import com.coffee.gu.ErrorType;
 import com.coffee.gu.Principal;
 import com.coffee.gu.menu.Menu;
 import com.coffee.gu.menu.MenuFinder;
+import com.coffee.gu.menu.Price;
 import com.coffee.gu.enums.MenuType;
+import java.math.BigDecimal;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -53,7 +55,7 @@ class CartServiceTest {
         void it_returns_cart_with_items() {
             // given
             Principal principal = createPrincipal();
-            Menu menu = new Menu(100L, "Coffee", MenuType.DRINK,null, null, null, null);
+            Menu menu = new Menu(100L, "Coffee", MenuType.DRINK, new Price(BigDecimal.ZERO, BigDecimal.ZERO), null, null, null);
             CartItem cartItem = new CartItem(1L, menu, 2L, false);
             
             given(cartReader.findByPrincipal(principal)).willReturn(List.of(cartItem));
@@ -92,7 +94,7 @@ class CartServiceTest {
             // given
             Principal principal = createPrincipal();
             AddCartItem addCartItem = new AddCartItem(100L, 1L);
-            given(cartReader.findByPrincipalAndMenuId(principal, 100L)).willReturn(Optional.empty());
+            given(cartReader.findByPrincipalAndMenuId(principal, 100L)).willReturn(null);
             given(cartItemManager.addCartItem(eq(principal), eq(addCartItem), any())).willReturn(1L);
 
             // when
@@ -114,7 +116,8 @@ class CartServiceTest {
             // given
             Principal principal = createPrincipal();
             ModifyCartItem modifyCartItem = new ModifyCartItem(1L, 5L);
-            CartItem cartItem = new CartItem(1L, null, 1L, false);
+            Menu menu = new Menu(1L, "Coffee", MenuType.DRINK, new Price(BigDecimal.ZERO, BigDecimal.ZERO), null, null, null);
+            CartItem cartItem = new CartItem(1L, menu, 1L, false);
 
             given(cartReader.getByPrincipalAndId(principal, 1L)).willReturn(cartItem);
 
