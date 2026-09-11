@@ -14,8 +14,6 @@ import com.coffee.gu.order.OrderReader;
 import com.coffee.gu.payment.Payment;
 import com.coffee.gu.payment.PaymentCompleter;
 import com.coffee.gu.payment.PaymentGatewayProcessor;
-import com.coffee.gu.payment.PaymentManager;
-import com.coffee.gu.payment.PaymentReader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,7 +37,7 @@ import static org.mockito.Mockito.verify;
 class PaymentRecoverSchedulerTest {
 
     @Mock
-    private PaymentReader paymentReader;
+    private PaymentRecoveryProcessor paymentRecoveryProcessor;
 
     @Mock
     private OrderReader orderReader;
@@ -49,9 +47,6 @@ class PaymentRecoverSchedulerTest {
 
     @Mock
     private PaymentCompleter paymentCompleter;
-
-    @Mock
-    private PaymentManager paymentManager;
 
     @Mock
     private CancelService cancelService;
@@ -88,7 +83,7 @@ class PaymentRecoverSchedulerTest {
     @DisplayName("PG사 결제 상태가 DONE인 경우 추가 승인요청 없이 결제를 완료 처리한다")
     void schedule_WhenPgPaymentStatusIsDone_ShouldCompleteWithoutApprovePayment() {
         // given
-        given(paymentReader.getPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(pendingPayment));
+        given(paymentRecoveryProcessor.claimPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(pendingPayment));
         given(orderReader.getByOrderKey("ORDER-REC-1")).willReturn(order);
         given(paymentGatewayProcessor.getPGPayment("ORDER-REC-1"))
                 .willReturn(new PGPayment("PAY-KEY-1", "ORDER-REC-1", BigDecimal.valueOf(10000), PaymentGatewayStatus.DONE));
@@ -105,7 +100,7 @@ class PaymentRecoverSchedulerTest {
     @DisplayName("PG사 결제 상태가 READY인 경우 유저 이탈로 간주하고 주문을 취소 처리한다")
     void schedule_WhenPgPaymentStatusIsReady_ShouldCancelOrder() {
         // given
-        given(paymentReader.getPendingPayments(20)).willReturn(List.of(pendingPayment));
+        given(paymentRecoveryProcessor.claimPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(pendingPayment));
         given(orderReader.getByOrderKey("ORDER-REC-1")).willReturn(order);
         given(paymentGatewayProcessor.getPGPayment("ORDER-REC-1"))
                 .willReturn(new PGPayment("PAY-KEY-1", "ORDER-REC-1", BigDecimal.valueOf(10000), PaymentGatewayStatus.READY));
@@ -122,7 +117,7 @@ class PaymentRecoverSchedulerTest {
     @DisplayName("PG사 결제 상태가 ABORTED인 경우 주문 및 결제를 취소 처리한다")
     void schedule_WhenPgPaymentStatusIsAborted_ShouldCancelOrder() {
         // given
-        given(paymentReader.getPendingPayments(20)).willReturn(List.of(pendingPayment));
+        given(paymentRecoveryProcessor.claimPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(pendingPayment));
         given(orderReader.getByOrderKey("ORDER-REC-1")).willReturn(order);
         given(paymentGatewayProcessor.getPGPayment("ORDER-REC-1"))
                 .willReturn(new PGPayment("PAY-KEY-1", "ORDER-REC-1", BigDecimal.valueOf(10000), PaymentGatewayStatus.ABORTED));
@@ -155,7 +150,7 @@ class PaymentRecoverSchedulerTest {
                 0
         );
 
-        given(paymentReader.getPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(expiredPayment));
+        given(paymentRecoveryProcessor.claimPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(expiredPayment));
         given(orderReader.getByOrderKey("ORDER-EXPIRED")).willReturn(order);
 
         // when
@@ -167,10 +162,10 @@ class PaymentRecoverSchedulerTest {
     }
 
     @Test
-    @DisplayName("PG 승인 처리 중 예외 발생 시 cancel 대신 touch를 호출하여 재시도 백오프를 적용한다")
-    void schedule_WhenExceptionOccurs_ShouldTouchPaymentToBackoff() {
+    @DisplayName("PG 승인 처리 중 예외 발생 시 processor.handleRetry를 호출하여 재시도 백오프를 적용한다")
+    void schedule_WhenExceptionOccurs_ShouldCallHandleRetry() {
         // given
-        given(paymentReader.getPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(pendingPayment));
+        given(paymentRecoveryProcessor.claimPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(pendingPayment));
         given(orderReader.getByOrderKey("ORDER-REC-1")).willReturn(order);
         given(paymentGatewayProcessor.getPGPayment("ORDER-REC-1"))
                 .willThrow(new RuntimeException("PG Connection Failed"));
@@ -179,42 +174,39 @@ class PaymentRecoverSchedulerTest {
         scheduler.schedule();
 
         // then
-        verify(paymentManager).save(pendingPayment);
+        verify(paymentRecoveryProcessor).handleRetry(eq(pendingPayment), eq(5));
         verify(cancelService, never()).cancel(any());
     }
 
     @Test
-    @DisplayName("재시도 횟수가 5회 이상 누적되면 강제로 FAILED 상태로 전환한다")
-    void schedule_WhenRetryCountExceedsLimit_ShouldMarkAsFailed() {
+    @DisplayName("만료된 결제건 취소 시 예외가 발생하면 processor.handleExpireFail을 호출한다")
+    void schedule_WhenExpiredCancelThrowsException_ShouldCallHandleExpireFail() {
         // given
-        Payment retryPayment = new Payment(
-                3L,
+        Payment expiredPayment = new Payment(
+                2L,
                 Principal.user("U1"),
-                "ORDER-RETRY",
+                "ORDER-EXPIRED",
                 BigDecimal.valueOf(10000),
                 null,
                 BigDecimal.ZERO,
                 BigDecimal.valueOf(10000),
                 PaymentState.PENDING_PG,
-                "PAY-KEY-3",
+                "PAY-KEY-2",
                 PaymentMethod.CARD,
                 null,
                 null,
-                LocalDateTime.now().minusMinutes(10),
-                4 // 현재 4회 실패
+                LocalDateTime.now().minusMinutes(40),
+                0
         );
 
-        given(paymentReader.getPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(retryPayment));
-        given(orderReader.getByOrderKey("ORDER-RETRY")).willReturn(order);
-        given(paymentGatewayProcessor.getPGPayment("ORDER-RETRY"))
-                .willThrow(new RuntimeException("PG Connection Failed"));
+        given(paymentRecoveryProcessor.claimPendingPayments(PaymentRecoverScheduler.LIMIT)).willReturn(List.of(expiredPayment));
+        given(orderReader.getByOrderKey("ORDER-EXPIRED")).willReturn(order);
+        org.mockito.Mockito.doThrow(new RuntimeException("Cancel failed")).when(cancelService).cancel(order);
 
         // when
         scheduler.schedule();
 
         // then
-        org.junit.jupiter.api.Assertions.assertEquals(PaymentState.FAILED, retryPayment.getState());
-        org.junit.jupiter.api.Assertions.assertEquals(5, retryPayment.getRetryCount());
-        verify(paymentManager).save(retryPayment);
+        verify(paymentRecoveryProcessor).handleExpireFail(expiredPayment);
     }
 }

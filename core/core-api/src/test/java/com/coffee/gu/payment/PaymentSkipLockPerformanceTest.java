@@ -67,7 +67,7 @@ class PaymentSkipLockPerformanceTest {
         // Worker 1: n개 PENDING_PG 건에 대해 FOR UPDATE SKIP LOCKED 락을 쥐고 대기
         Future<List<Payment>> worker1Future = executor.submit(() -> {
             TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-            List<Payment> lockedPayments = paymentRepository.getPendingPayments(batchSize);
+            List<Payment> lockedPayments = paymentRepository.claimPendingPayments(batchSize);
             worker1LockAcquiredLatch.countDown();
 
             worker2DoneLatch.await(5, TimeUnit.SECONDS);
@@ -77,11 +77,11 @@ class PaymentSkipLockPerformanceTest {
 
         worker1LockAcquiredLatch.await(3, TimeUnit.SECONDS);
 
-        // Worker 2: 동시 진입하여 getPendingPayments() 실행 시 락 대기 없이 즉시 Non-blocking 수행
+        // Worker 2: 동시 진입하여 claimPendingPayments() 실행 시 락 대기 없이 즉시 Non-blocking 수행
         long startTime = System.currentTimeMillis();
         Future<List<Payment>> worker2Future = executor.submit(() -> {
             TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-            List<Payment> result = paymentRepository.getPendingPayments(batchSize);
+            List<Payment> result = paymentRepository.claimPendingPayments(batchSize);
             transactionManager.commit(status);
             return result;
         });

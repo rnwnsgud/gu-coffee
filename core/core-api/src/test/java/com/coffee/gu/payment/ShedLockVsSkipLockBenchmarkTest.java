@@ -113,7 +113,7 @@ class ShedLockVsSkipLockBenchmarkTest {
                     try {
                         while (true) {
                             TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-                            List<Payment> pending = paymentRepository.getPendingPayments(20);
+                            List<Payment> pending = paymentRepository.claimPendingPayments(20);
                             if (pending.isEmpty()) {
                                 transactionManager.commit(status);
                                 break;
@@ -129,7 +129,8 @@ class ShedLockVsSkipLockBenchmarkTest {
                         lock.get().unlock();
                     }
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                e.printStackTrace();
             } finally {
                 endLatch.countDown();
             }
@@ -144,7 +145,7 @@ class ShedLockVsSkipLockBenchmarkTest {
                     try {
                         while (true) {
                             TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-                            List<Payment> pending = paymentRepository.getPendingPayments(20);
+                            List<Payment> pending = paymentRepository.claimPendingPayments(20);
                             if (pending.isEmpty()) {
                                 transactionManager.commit(status);
                                 break;
@@ -202,7 +203,7 @@ class ShedLockVsSkipLockBenchmarkTest {
                 startLatch.await();
                 while (true) {
                     TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-                    List<Payment> pending = paymentRepository.getPendingPayments(20);
+                    List<Payment> pending = paymentRepository.claimPendingPayments(20);
                     if (pending.isEmpty()) {
                         transactionManager.commit(status);
                         break;
@@ -226,7 +227,7 @@ class ShedLockVsSkipLockBenchmarkTest {
                 startLatch.await();
                 while (true) {
                     TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-                    List<Payment> pending = paymentRepository.getPendingPayments(20);
+                    List<Payment> pending = paymentRepository.claimPendingPayments(20);
                     if (pending.isEmpty()) {
                         transactionManager.commit(status);
                         break;

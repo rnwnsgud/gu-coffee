@@ -20,9 +20,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.annotation.DirtiesContext;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class PaymentRepositorySkipLockTest {
 
     @Autowired
@@ -31,8 +36,16 @@ class PaymentRepositorySkipLockTest {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.update("DELETE FROM payment");
+    }
+
     @Test
-    @DisplayName("getPendingPayments 호출 시 다른 트랜잭션이 락을 쥔 레코드는 대기 없이 스킵(SKIP LOCKED)한다")
+    @DisplayName("claimPendingPayments 호출 시 다른 트랜잭션이 락을 쥔 레코드는 대기 없이 스킵(SKIP LOCKED)한다")
     void testGetPendingPaymentsSkipLock() throws Exception {
         // given
         Payment p1 = new Payment(0L, Principal.user("U1"), "ORDER-SKIP-1", BigDecimal.valueOf(10000), null, BigDecimal.ZERO, BigDecimal.valueOf(10000), PaymentState.PENDING_PG, "PAY-KEY-1", PaymentMethod.CARD, null, null, LocalDateTime.now().minusMinutes(10), 0);
@@ -45,10 +58,10 @@ class PaymentRepositorySkipLockTest {
         CountDownLatch tx1LockedLatch = new CountDownLatch(1);
         CountDownLatch tx2FinishLatch = new CountDownLatch(1);
 
-        // Tx1: getPendingPayments()를 통해 P1, P2 레코드에 FOR UPDATE SKIP LOCKED 락을 잡음
+        // Tx1: claimPendingPayments()를 통해 P1, P2 레코드에 FOR UPDATE SKIP LOCKED 락을 잡음
         Future<List<Payment>> tx1Future = executor.submit(() -> {
             TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-            List<Payment> lockedPayments = paymentRepository.getPendingPayments(2);
+            List<Payment> lockedPayments = paymentRepository.claimPendingPayments(2);
             tx1LockedLatch.countDown();
 
             tx2FinishLatch.await(5, TimeUnit.SECONDS);
@@ -58,11 +71,11 @@ class PaymentRepositorySkipLockTest {
 
         tx1LockedLatch.await(3, TimeUnit.SECONDS);
 
-        // Tx2: 다른 트랜잭션에서 getPendingPayments() 실행 ➔ 대기 없이 Tx1이 잡은 레코드를 스킵
+        // Tx2: 다른 트랜잭션에서 claimPendingPayments() 실행 ➔ 대기 없이 Tx1이 잡은 레코드를 스킵
         long startTime = System.currentTimeMillis();
         Future<List<Payment>> tx2Future = executor.submit(() -> {
             TransactionStatus status = transactionManager.getTransaction(new DefaultTransactionDefinition());
-            List<Payment> result = paymentRepository.getPendingPayments(2);
+            List<Payment> result = paymentRepository.claimPendingPayments(2);
             transactionManager.commit(status);
             return result;
         });

@@ -7,21 +7,17 @@ import com.coffee.gu.enums.PaymentMethod
 import com.coffee.gu.order.OrderReader
 import com.coffee.gu.payment.PaymentCompleter
 import com.coffee.gu.payment.PaymentGatewayProcessor
-import com.coffee.gu.payment.PaymentManager
-import com.coffee.gu.payment.PaymentReader
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
 import java.time.OffsetDateTime
 
 @Component
 class PaymentRecoverScheduler(
-    private val paymentReader: PaymentReader,
+    private val paymentRecoveryProcessor: PaymentRecoveryProcessor,
     private val orderReader: OrderReader,
     private val paymentGatewayProcessor: PaymentGatewayProcessor,
     private val paymentCompleter: PaymentCompleter,
-    private val paymentManager: PaymentManager,
     private val cancelService: CancelService,
 ) {
     companion object {
@@ -30,17 +26,16 @@ class PaymentRecoverScheduler(
     }
 
     @Scheduled(cron = "0 * * * * *")
-    @Transactional
     fun schedule() {
-        for (pendingPayment in paymentReader.getPendingPayments(LIMIT)) {
+        val pendingPayments = paymentRecoveryProcessor.claimPendingPayments(LIMIT)
+        for (pendingPayment in pendingPayments) {
             val order = orderReader.getByOrderKey(pendingPayment.orderKey)
 
             if (pendingPayment.isExpired(Duration.ofMinutes(30))) {
                 try {
                     cancelService.cancel(order)
                 } catch (e: Exception) {
-                    pendingPayment.fail()
-                    paymentManager.save(pendingPayment)
+                    paymentRecoveryProcessor.handleExpireFail(pendingPayment)
                 }
                 continue
             }
@@ -60,11 +55,7 @@ class PaymentRecoverScheduler(
                     cancelService.cancel(order)
                 }
             } catch (e: Exception) {
-                pendingPayment.increaseRetryCount()
-                if (pendingPayment.isRetryLimitExceeded(MAX_RETRY_COUNT)) {
-                    pendingPayment.fail()
-                }
-                paymentManager.save(pendingPayment)
+                paymentRecoveryProcessor.handleRetry(pendingPayment, MAX_RETRY_COUNT)
             }
         }
     }

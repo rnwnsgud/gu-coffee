@@ -18,7 +18,7 @@ class PaymentReader(
         return paymentRepository.findByOrderKeyWithLock(orderKey)
     }
 
-    fun getPendingPayments(limit: Int): List<Payment> {
-        return paymentRepository.getPendingPayments(limit)
+    fun claimPendingPayments(limit: Int): List<Payment> {
+        return paymentRepository.claimPendingPayments(limit)
     }
 }
