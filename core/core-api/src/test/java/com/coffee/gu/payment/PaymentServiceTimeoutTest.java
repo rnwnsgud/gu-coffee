@@ -1,6 +1,5 @@
 package com.coffee.gu.payment;
 
-import com.coffee.gu.CancelEvent;
 import com.coffee.gu.PGConfirmResult;
 import com.coffee.gu.PGPayment;
 import com.coffee.gu.PaymentGatewayCancel;
@@ -10,7 +9,6 @@ import com.coffee.gu.Principal;
 import com.coffee.gu.enums.OrderState;
 import com.coffee.gu.enums.PaymentMethod;
 import com.coffee.gu.enums.PaymentState;
-import com.coffee.gu.event.OutboxEventPublisher;
 import com.coffee.gu.order.Order;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -50,9 +48,6 @@ class PaymentServiceTimeoutTest {
 
     @Mock
     private PaymentReader paymentReader;
-
-    @Mock
-    private OutboxEventPublisher outboxEventPublisher;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -139,7 +134,6 @@ class PaymentServiceTimeoutTest {
         assertThat(result.getOrderState()).isEqualTo(OrderState.PAID);
         verify(paymentCompleter).complete(eq(order), eq(1L), any(PGConfirmResult.class));
         verify(paymentCompleter, never()).failProcess(any(), any(), any(), any());
-        verify(outboxEventPublisher, never()).publishOutboxEvent(any());
     }
 
     @Test
@@ -210,6 +204,8 @@ class PaymentServiceTimeoutTest {
                 .willThrow(new RuntimeException("SocketTimeoutException: Read timed out"));
         given(paymentGatewayProcessor.cancelPayment(any(PaymentGatewayCancel.class)))
                 .willThrow(new RuntimeException("Cancel network error")); // 망취소 API 호출마저 실패
+        given(paymentCompleter.compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any()))
+                .willReturn(PaymentApprovalResult.failed("ORDER-TIMEOUT-1", "PAY-KEY-1", OffsetDateTime.now()));
 
         // when
         PaymentApprovalResult result = paymentService.approvePayment(order);
@@ -218,9 +214,47 @@ class PaymentServiceTimeoutTest {
         assertThat(result.getPaymentState()).isEqualTo(PaymentState.FAILED);
         // 망취소 시도 확인
         verify(paymentGatewayProcessor).cancelPayment(any(PaymentGatewayCancel.class));
-        // 망취소 실패 시 Outbox 보상 이벤트 발행 확인
-        verify(outboxEventPublisher).publishOutboxEvent(any(CancelEvent.class));
-        // 결제 실패 처리 확인 (500 에러 없이 정돈된 FAILED 응답 반환)
-        verify(paymentCompleter).failProcess(eq(order), eq(preparedPayment), eq("NETWORK_TIMEOUT"), any());
+        // 망취소 실패 시 원자적 보상 트랜잭션 호출 확인
+        verify(paymentCompleter).compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any());
+        verify(paymentCompleter, never()).failProcess(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("시나리오 4: PG 승인은 성공했으나 complete 내부 로직 예외 발생 시, 원자적 보상 트랜잭션(compensateApprovalFailure)을 호출한다")
+    void approvePayment_WhenCompleteThrowsException_ShouldCompensateApprovalFailure() {
+        // given
+        Payment preparedPayment = new Payment(
+                1L,
+                Principal.user("U1"),
+                "ORDER-TIMEOUT-1",
+                BigDecimal.valueOf(3000),
+                null,
+                BigDecimal.ZERO,
+                BigDecimal.valueOf(3000),
+                PaymentState.PENDING_PG,
+                "PAY-KEY-1",
+                PaymentMethod.CARD,
+                null,
+                null,
+                LocalDateTime.now(),
+                0
+        );
+
+        given(paymentReader.getByOrderKey("ORDER-TIMEOUT-1")).willReturn(payment);
+        given(paymentGatewayProcessor.getPGPayment("ORDER-TIMEOUT-1")).willReturn(initialPgPayment);
+        given(paymentPreparer.prepare(order, initialPgPayment)).willReturn(preparedPayment);
+        given(paymentGatewayProcessor.approvePayment(any(PaymentGatewayConfirm.class)))
+                .willReturn(PGConfirmResult.success("ORDER-TIMEOUT-1", "PAY-KEY-1", PaymentMethod.CARD, "APPR-1", OffsetDateTime.now()));
+        given(paymentCompleter.complete(eq(order), eq(1L), any(PGConfirmResult.class)))
+                .willThrow(new RuntimeException("Coupon expired exception"));
+        given(paymentCompleter.compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any()))
+                .willReturn(PaymentApprovalResult.failed("ORDER-TIMEOUT-1", "PAY-KEY-1", OffsetDateTime.now()));
+
+        // when
+        PaymentApprovalResult result = paymentService.approvePayment(order);
+
+        // then
+        assertThat(result.getPaymentState()).isEqualTo(PaymentState.FAILED);
+        verify(paymentCompleter).compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any());
     }
 }

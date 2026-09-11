@@ -13,7 +13,11 @@ class CancelValidator(
     private val stampRevertManager: StampRevertManager,
 ) {
     fun validate(order: Order, payment: Payment) {
-        if (payment.state != PaymentState.SUCCESS) throw CoreException(ErrorType.PAYMENT_INVALID_STATE)
+        val isCancellableState = payment.state == PaymentState.SUCCESS ||
+            (payment.state == PaymentState.FAILED && !payment.externalPaymentKey.isNullOrBlank())
+        if (!isCancellableState) {
+            throw CoreException(ErrorType.PAYMENT_INVALID_STATE)
+        }
         stampRevertManager.validateRevertable(order)
     }
 }

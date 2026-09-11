@@ -1,13 +1,10 @@
 package com.coffee.gu.payment
 
-import com.coffee.gu.CancelEvent
 import com.coffee.gu.PGConfirmResult
 import com.coffee.gu.PGPayment
 import com.coffee.gu.PaymentGatewayCancel
 import com.coffee.gu.PaymentGatewayConfirm
 import com.coffee.gu.PaymentGatewayStatus
-import com.coffee.gu.enums.PaymentMethod
-import com.coffee.gu.event.OutboxEventPublisher
 import com.coffee.gu.order.Order
 import org.springframework.stereotype.Service
 import java.time.OffsetDateTime
@@ -19,7 +16,6 @@ class PaymentService(
     private val paymentCompleter: PaymentCompleter,
     private val paymentManager: PaymentManager,
     private val paymentReader: PaymentReader,
-    private val outboxEventPublisher: OutboxEventPublisher,
 ) {
     fun createPayment(order: Order, paymentDiscount: PaymentDiscount): Long {
         return paymentManager.createPayment(order, paymentDiscount)
@@ -40,12 +36,11 @@ class PaymentService(
         return try {
             paymentCompleter.complete(order, payment.id, pgConfirmResult)
         } catch (e: Exception) {
-            val event = CancelEvent(order.key)
-            outboxEventPublisher.publishOutboxEvent(event)
-            PaymentApprovalResult.failed(
-                order.key,
-                payment.externalPaymentKey ?: "",
-                payment.paidAt ?: OffsetDateTime.now()
+            paymentCompleter.compensateApprovalFailure(
+                order,
+                payment.id,
+                pgConfirmResult.paymentKey,
+                e.message ?: "결제 승인 후 내부 완료 처리 실패"
             )
         }
     }
@@ -71,16 +66,26 @@ class PaymentService(
                 PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", OffsetDateTime.now())
             }
         } catch (inquiryEx: Exception) {
-            try {
+            val cancelFailed = try {
                 paymentGatewayProcessor.cancelPayment(
                     PaymentGatewayCancel(pgPayment.paymentKey, "승인 응답 및 상태 조회 타임아웃에 따른 자동 망취소")
                 )
+                false
             } catch (cancelEx: Exception) {
-                val event = CancelEvent(order.key)
-                outboxEventPublisher.publishOutboxEvent(event)
+                true
             }
-            paymentCompleter.failProcess(order, payment, "NETWORK_TIMEOUT", "승인 및 상태 조회 네트워크 타임아웃")
-            PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", OffsetDateTime.now())
+
+            if (cancelFailed) {
+                paymentCompleter.compensateApprovalFailure(
+                    order,
+                    payment.id,
+                    pgPayment.paymentKey,
+                    "승인 및 상태 조회 네트워크 타임아웃 (자동 망취소 실패)"
+                )
+            } else {
+                paymentCompleter.failProcess(order, payment, "NETWORK_TIMEOUT", "승인 및 상태 조회 네트워크 타임아웃")
+                PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", OffsetDateTime.now())
+            }
         }
     }
 

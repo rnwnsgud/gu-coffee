@@ -56,8 +56,12 @@ class Payment @JvmOverloads constructor(
         this.state = PaymentState.PENDING_PG
     }
 
-    fun fail() {
+    @JvmOverloads
+    fun fail(externalPaymentKey: String? = null) {
         this.state = PaymentState.FAILED
+        if (!externalPaymentKey.isNullOrBlank()) {
+            this.externalPaymentKey = externalPaymentKey
+        }
     }
 
     fun increaseRetryCount() {
