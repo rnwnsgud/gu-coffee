@@ -43,17 +43,4 @@ class PaymentController(
         val result = paymentService.approvePayment(order)
         return ApiResponse.success(PaymentResponse(result.paymentState))
     }
-
-    @PostMapping("/v1/payments/fail")
-    fun fail(
-        @Authenticated principal: Principal,
-        @RequestParam("orderId") orderId: String,
-        @RequestParam("code") code: String,
-        @RequestParam("message") message: String,
-    ): ApiResponse<Unit> {
-        val order = orderService.getOrder(orderId)
-        order.validateOwner(principal)
-        paymentService.fail(order, code, message)
-        return ApiResponse.success()
-    }
 }

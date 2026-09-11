@@ -17,7 +17,7 @@ data class PGConfirmResult(
         fun success(
             orderId: String,
             paymentKey: String,
-            paymentMethod: PaymentMethod,
+            paymentMethod: PaymentMethod?,
             approveCode: String?,
             approvedAt: OffsetDateTime?,
         ): PGConfirmResult = PGConfirmResult(

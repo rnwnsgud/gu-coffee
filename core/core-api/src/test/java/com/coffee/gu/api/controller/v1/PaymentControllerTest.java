@@ -126,37 +126,4 @@ class PaymentControllerTest extends RestDocsTest {
                 ));
     }
 
-    @Test
-    @DisplayName("결제 실패 콜백 API")
-    void fail() throws Exception {
-        // given
-        Order order = new Order("order-key", "Coffee", Principal.user("1"), 1L, BigDecimal.valueOf(2000), OrderState.PAID, List.of());
-        given(orderService.getOrder(eq(order.getKey()))).willReturn(order);
-
-        // when & then
-        mockMvc.perform(post("/v1/payments/fail")
-                        .header("Gu-Coffee-com.coffee.gu.Principal-Id", "U1")
-                        .header("Gu-Coffee-com.coffee.gu.Principal-Type", "USER")
-                        .queryParam("orderId", "order-key")
-                        .queryParam("code", "PAY_PROCESS_CANCELED")
-                        .queryParam("message", "사용자가 결제를 취소했습니다"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SUCCESS"))
-                .andDo(document("payment-fail",
-                        requestHeaders(
-                                headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                                headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입")
-                        ),
-                        queryParameters(
-                                parameterWithName("orderId").description("주문 키"),
-                                parameterWithName("code").description("실패 코드"),
-                                parameterWithName("message").description("실패 메시지")
-                        ),
-                        responseFields(
-                                fieldWithPath("status").description("응답 상태"),
-                                fieldWithPath("data").description("응답 데이터 (null)"),
-                                fieldWithPath("error").description("에러 정보")
-                        )
-                ));
-    }
 }
