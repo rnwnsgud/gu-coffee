@@ -7,8 +7,8 @@ import java.time.LocalDateTime
 
 class StampRewardPlan @JvmOverloads constructor(
     val principal: Principal,
-    val couponIssueCount: Long,
-    val stampUseCount: Long,
+    val couponIssueCount: Int,
+    val stampUseCount: Int,
     val stampsToUse: List<Stamp>,
     var issuedCoupons: List<IssuedCoupon> = emptyList(),
 ) {

@@ -1,7 +1,6 @@
 package com.coffee.gu.cart
 
-@JvmRecord
-data class AddCartItem(
+class AddCartItem(
     val menuId: Long,
     val quantity: Long,
 )

@@ -58,7 +58,6 @@ class MenuRepositoryImpl(
         return entities.map { it.toModel() }
     }
 
-    // todo 모든 리포지토리에 대해 EntityStatus.ACTIVE 가 적용되야 하는지 여부 확인
     override fun findById(menuId: Long): Menu {
         return jpaQueryFactory
             .selectFrom(menuEntity)

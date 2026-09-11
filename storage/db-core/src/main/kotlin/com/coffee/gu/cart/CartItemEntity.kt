@@ -3,6 +3,7 @@ package com.coffee.gu.cart
 import com.coffee.gu.BaseEntity
 import com.coffee.gu.Principal
 import com.coffee.gu.enums.PrincipalType
+import com.coffee.gu.menu.Menu
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -24,10 +25,10 @@ class CartItemEntity @JvmOverloads constructor(
     var quantity: Long,
 ) : BaseEntity() {
 
-    fun toModel(): CartItem {
-        return CartItem.createUnresolved(
+    fun toModel(menu: Menu): CartItem {
+        return CartItem(
             id = id,
-            menuId = menuId,
+            menu = menu,
             quantity = quantity,
             isDeleted = isDeleted,
         )
@@ -37,12 +38,18 @@ class CartItemEntity @JvmOverloads constructor(
         @JvmStatic
         fun of(cartItem: CartItem, principal: Principal): CartItemEntity {
             return CartItemEntity(
-                id = cartItem.id ?: 0L,
+                id = cartItem.id,
                 principalKey = principal.key,
                 principalType = principal.type,
-                menuId = cartItem.menu?.id ?: 0L,
+                menuId = cartItem.menu.id,
                 quantity = cartItem.quantity,
-            )
+            ).apply {
+                if (cartItem.isDeleted) {
+                    delete()
+                } else {
+                    active()
+                }
+            }
         }
     }
 }

@@ -6,7 +6,7 @@ import java.time.LocalDateTime
 class StampHistoryItem(
     val type: StampHistoryType,
     val displayDate: LocalDateTime,
-    val quantity: Long,
+    val quantity: Int,
     val storeName: String,
     val expiredAt: LocalDateTime?,
 ) {

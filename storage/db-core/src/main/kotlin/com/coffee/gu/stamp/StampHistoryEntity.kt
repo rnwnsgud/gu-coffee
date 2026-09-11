@@ -26,7 +26,7 @@ class StampHistoryEntity @JvmOverloads constructor(
     val type: StampHistoryType,
     val storeId: Long,
     val storeName: String,
-    val quantity: Long,
+    val quantity: Int,
     val recordedAt: LocalDateTime,
     val expiredAt: LocalDateTime? = null,
 ) : BaseEntity() {

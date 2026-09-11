@@ -10,7 +10,7 @@ class StampHistory(
     val type: StampHistoryType,
     val storeId: Long,
     val storeName: String,
-    val quantity: Long,
+    val quantity: Int,
     val recordedAt: LocalDateTime = LocalDateTime.now(),
     val expiredAt: LocalDateTime? = null,
 ) {
@@ -21,7 +21,7 @@ class StampHistory(
             principal: Principal,
             storeId: Long,
             storeName: String,
-            quantity: Long,
+            quantity: Int,
             recordedAt: LocalDateTime = LocalDateTime.now(),
             expiredAt: LocalDateTime? = null,
         ): StampHistory {
@@ -42,7 +42,7 @@ class StampHistory(
             principal: Principal,
             storeId: Long,
             storeName: String,
-            quantity: Long,
+            quantity: Int,
         ): StampHistory {
             return StampHistory(
                 id = 0,
@@ -60,7 +60,7 @@ class StampHistory(
             principal: Principal,
             storeId: Long,
             storeName: String,
-            quantity: Long,
+            quantity: Int,
         ): StampHistory {
             return StampHistory(
                 id = 0,

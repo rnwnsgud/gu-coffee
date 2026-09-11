@@ -21,15 +21,19 @@ public class AsyncTxTestListener {
     @Async
     @EventListener
     public void handleStandardAsync(TestPaymentCreatedEvent event) {
-        Optional<Payment> found = paymentRepository.findByOrderKey(event.orderKey());
-        event.future().complete(found.isPresent());
+        try {
+            Payment found = paymentRepository.findByOrderKey(event.orderKey());
+            event.future().complete(found != null);
+        } catch (Exception e) {
+            event.future().complete(false);
+        }
     }
 
     // 🟢 해결 방법: @TransactionalEventListener(phase = AFTER_COMMIT) + @Async (메인 트랜잭션 커밋 완료 후 실행)
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleTransactionalAsync(TestTxPaymentCreatedEvent event) {
-        Optional<Payment> found = paymentRepository.findByOrderKey(event.orderKey());
-        event.future().complete(found.isPresent());
+        Payment found = paymentRepository.findByOrderKey(event.orderKey());
+        event.future().complete(found != null);
     }
 }

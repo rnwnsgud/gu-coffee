@@ -79,7 +79,7 @@ class PaymentFastFailLockTest {
         BusinessInformation busiInfo = new BusinessInformation("홍길동", "구커피 부평점", "123-45-67890", "인천 부평구");
 
         Store store = storeRepository.save(new Store(0L, "부평점", "BP01", StoreStatus.OPEN, salesInfo, busiInfo));
-        Long storeId = store.getId();
+        long storeId = store.getId();
 
         OrderLine line = new OrderLine(null, orderKey, storeId, "아메리카노", null, null, 1L, amount, amount, false);
         Order order = new Order(orderKey, "아메리카노 1잔", user, storeId, amount, OrderState.CREATED, List.of(line));
@@ -87,7 +87,7 @@ class PaymentFastFailLockTest {
 
         paymentService.createPayment(order, PaymentDiscount.of(List.of(), null, amount));
 
-        Payment dbPayment = paymentRepository.findByOrderKey(orderKey).orElseThrow();
+        Payment dbPayment = paymentRepository.findByOrderKey(orderKey);
         BigDecimal exactAmount = dbPayment.getAmount();
 
         // PG Mock 설정
@@ -145,7 +145,7 @@ class PaymentFastFailLockTest {
 
         // 3. 최종 DB 결제 상태는 SUCCESS (PAID) 이어야 함 (1차 캐시 초기화 후 재조회)
         entityManager.clear();
-        Payment finalPayment = paymentRepository.findByOrderKey(orderKey).orElseThrow();
+        Payment finalPayment = paymentRepository.findByOrderKey(orderKey);
         assertThat(finalPayment.isPaid()).isTrue();
     }
 }

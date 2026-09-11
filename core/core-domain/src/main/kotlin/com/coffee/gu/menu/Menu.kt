@@ -5,9 +5,9 @@ import java.math.BigDecimal
 
 class Menu(
     val id: Long = 0,
-    val name: String? = null,
-    val type: MenuType? = null,
-    val price: Price? = null,
+    val name: String,
+    val type: MenuType,
+    val price: Price,
     val imageUrl: String? = null,
     val description: String? = null,
     val detail: MenuDetail? = null,
@@ -15,14 +15,10 @@ class Menu(
     val isStampEligible: Boolean
         get() = type == MenuType.DRINK
 
-    val salesPrice: BigDecimal?
-        get() = price?.salesPrice
+    val salesPrice: BigDecimal
+        get() = price.salesPrice
 
-    val costPrice: BigDecimal?
-        get() = price?.costPrice
+    val costPrice: BigDecimal
+        get() = price.costPrice
 
-    companion object {
-        @JvmStatic
-        fun createIdOnly(id: Long): Menu = Menu(id = id)
-    }
 }
