@@ -13,7 +13,7 @@ import java.math.BigDecimal
 
 @Table(name = "menu")
 @Entity
-class MenuEntity @JvmOverloads constructor(
+class MenuEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -64,7 +64,6 @@ class MenuEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(menu: Menu): MenuEntity = MenuEntity(
             id = menu.id,
             name = menu.name ?: "",

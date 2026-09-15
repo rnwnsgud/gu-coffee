@@ -8,6 +8,8 @@ import com.querydsl.jpa.impl.JPAQueryFactory
 import jakarta.persistence.LockModeType
 import org.hibernate.jpa.AvailableHints
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.annotation.Propagation
+import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.Optional
 
@@ -36,9 +38,10 @@ class PaymentRepositoryImpl(
         return paymentJpaRepository.findByOrderIdForUpdate(orderKey)?.toModel() ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
     }
 
-    override fun getPendingPayments(limit: Int): List<Payment> {
+    @Transactional(propagation = Propagation.MANDATORY)
+    override fun claimPendingPayments(limit: Int): List<Payment> {
         val createdBefore = LocalDateTime.now().minusMinutes(5)
-        return queryFactory.selectFrom(paymentEntity)
+        val entities = queryFactory.selectFrom(paymentEntity)
             .where(
                 paymentEntity.state.eq(PaymentState.PENDING_PG),
                 paymentEntity.updatedAt.before(createdBefore),
@@ -48,6 +51,15 @@ class PaymentRepositoryImpl(
             .setHint(AvailableHints.HINT_SPEC_LOCK_TIMEOUT, -2)
             .limit(limit.toLong())
             .fetch()
-            .map { it.toModel() }
+
+        if (entities.isEmpty()) return emptyList()
+
+        val ids = entities.map { it.id }
+        queryFactory.update(paymentEntity)
+            .set(paymentEntity.updatedAt, LocalDateTime.now())
+            .where(paymentEntity.id.`in`(ids))
+            .execute()
+
+        return entities.map { it.toModel() }
     }
 }

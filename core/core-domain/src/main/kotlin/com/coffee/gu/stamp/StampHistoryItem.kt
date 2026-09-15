@@ -11,7 +11,6 @@ class StampHistoryItem(
     val expiredAt: LocalDateTime?,
 ) {
     companion object {
-        @JvmStatic
         fun from(stampHistory: StampHistory): StampHistoryItem {
             return StampHistoryItem(
                 type = stampHistory.type,

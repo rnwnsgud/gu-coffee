@@ -2,7 +2,6 @@ package com.coffee.gu
 
 import java.math.BigDecimal
 
-@JvmRecord
 data class PGPayment(
     val paymentKey: String,
     val orderKey: String,

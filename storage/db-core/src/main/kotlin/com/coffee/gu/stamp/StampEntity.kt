@@ -24,7 +24,7 @@ import java.time.LocalDateTime
     ],
 )
 @Entity
-class StampEntity @JvmOverloads constructor(
+class StampEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -49,7 +49,6 @@ class StampEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(stamp: Stamp): StampEntity = StampEntity(
             id = stamp.id,
             orderKey = stamp.orderKey,

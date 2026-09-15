@@ -34,7 +34,7 @@ class TossPaymentsGateway(
                 .header("Content-Type", "application/json")
                 .body(request)
                 .retrieve()
-                .body(Payment::class.java)
+                .body<Payment>()
                 ?: throw CoreException(ErrorType.PAYMENT_FAIL, "토스페이먼츠 승인 응답이 비어 있습니다.")
 
             return PGConfirmResult.success(
@@ -77,7 +77,7 @@ class TossPaymentsGateway(
                 .header("Idempotency-Key", cancel.paymentKey)
                 .body(request)
                 .retrieve()
-                .body(Payment::class.java)
+                .body<Payment>()
                 ?: throw CoreException(ErrorType.PAYMENT_FAIL, "토스페이먼츠 승인 응답이 비어 있습니다.")
 
             return PGCancelResult()

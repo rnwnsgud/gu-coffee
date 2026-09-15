@@ -38,7 +38,6 @@ class Coupon(
         const val REWARD_COUPON_EXPIRY_DAYS = 30
         val REWARD_COUPON_DISCOUNT_AMOUNT: BigDecimal = BigDecimal("1800")
 
-        @JvmStatic
         fun rewardCoupon(): Coupon {
             return Coupon(
                 id = REWARD_COUPON_MASTER_ID,

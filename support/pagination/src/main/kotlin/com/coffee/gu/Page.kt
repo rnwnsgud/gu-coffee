@@ -2,7 +2,6 @@ package com.coffee.gu
 
 import java.time.LocalDateTime
 
-@JvmRecord
 data class Page<T>(
     val content: List<T>,
     val hasNext: Boolean,
@@ -16,8 +15,6 @@ data class Page<T>(
     }
 
     companion object {
-        @JvmStatic
-        @JvmOverloads
         fun <E> of(
             items: List<E>,
             pageSize: Int,

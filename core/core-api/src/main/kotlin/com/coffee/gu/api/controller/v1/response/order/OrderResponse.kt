@@ -12,7 +12,6 @@ class OrderResponse(
     val lines: List<OrderLineResponse>,
 ) {
     companion object {
-        @JvmStatic
         fun from(order: Order): OrderResponse {
             return OrderResponse(
                 key = order.key,

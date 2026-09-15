@@ -15,8 +15,6 @@ class StampHistory(
     val expiredAt: LocalDateTime? = null,
 ) {
     companion object {
-        @JvmStatic
-        @JvmOverloads
         fun createEarnHistory(
             principal: Principal,
             storeId: Long,
@@ -37,7 +35,6 @@ class StampHistory(
             )
         }
 
-        @JvmStatic
         fun createUseHistory(
             principal: Principal,
             storeId: Long,
@@ -55,7 +52,6 @@ class StampHistory(
             )
         }
 
-        @JvmStatic
         fun createCancelHistory(
             principal: Principal,
             storeId: Long,

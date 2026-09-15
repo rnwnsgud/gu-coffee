@@ -16,7 +16,7 @@ import java.time.OffsetDateTime
 
 @Entity
 @Table(name = "transaction_history")
-class TransactionHistoryEntity @JvmOverloads constructor(
+class TransactionHistoryEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -48,7 +48,6 @@ class TransactionHistoryEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(transactionHistory: TransactionHistory): TransactionHistoryEntity = TransactionHistoryEntity(
             id = transactionHistory.id,
             type = transactionHistory.type,

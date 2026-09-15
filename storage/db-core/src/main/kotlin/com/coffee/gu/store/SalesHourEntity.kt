@@ -12,7 +12,7 @@ import java.time.LocalTime
 
 @Table(name = "sales_hour")
 @Entity
-class SalesHourEntity @JvmOverloads constructor(
+class SalesHourEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,

@@ -9,7 +9,7 @@ import java.time.Duration
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 
-class Payment @JvmOverloads constructor(
+class Payment(
     val id: Long = 0,
     val principal: Principal,
     val orderKey: String,
@@ -56,8 +56,11 @@ class Payment @JvmOverloads constructor(
         this.state = PaymentState.PENDING_PG
     }
 
-    fun fail() {
+    fun fail(externalPaymentKey: String? = null) {
         this.state = PaymentState.FAILED
+        if (!externalPaymentKey.isNullOrBlank()) {
+            this.externalPaymentKey = externalPaymentKey
+        }
     }
 
     fun increaseRetryCount() {
@@ -74,7 +77,6 @@ class Payment @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun create(order: Order, paymentDiscount: PaymentDiscount): Payment {
             return Payment(
                 principal = order.principal,

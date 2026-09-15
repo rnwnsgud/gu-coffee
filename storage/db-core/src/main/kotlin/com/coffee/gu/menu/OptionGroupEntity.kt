@@ -9,7 +9,7 @@ import jakarta.persistence.Table
 
 @Table(name = "option_group")
 @Entity
-class OptionGroupEntity @JvmOverloads constructor(
+class OptionGroupEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,

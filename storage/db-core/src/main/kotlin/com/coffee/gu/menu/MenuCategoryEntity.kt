@@ -9,7 +9,7 @@ import jakarta.persistence.Table
 
 @Table(name = "menu_category")
 @Entity
-class MenuCategoryEntity @JvmOverloads constructor(
+class MenuCategoryEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,

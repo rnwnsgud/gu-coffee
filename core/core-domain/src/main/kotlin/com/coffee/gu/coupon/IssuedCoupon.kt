@@ -28,7 +28,6 @@ class IssuedCoupon(
     }
 
     companion object {
-        @JvmStatic
         fun download(principal: Principal, coupon: Coupon): IssuedCoupon {
             return IssuedCoupon(
                 id = 0,

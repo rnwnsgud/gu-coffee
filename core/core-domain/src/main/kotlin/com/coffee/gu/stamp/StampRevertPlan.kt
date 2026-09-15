@@ -24,7 +24,6 @@ class StampRevertPlan(
     }
 
     companion object {
-        @JvmStatic
         fun empty(): StampRevertPlan {
             return StampRevertPlan(
                 stampsToCancel = emptyList(),

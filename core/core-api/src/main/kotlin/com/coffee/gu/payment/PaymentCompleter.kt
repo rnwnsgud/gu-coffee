@@ -1,9 +1,11 @@
 package com.coffee.gu.payment
 
+import com.coffee.gu.CancelEvent
 import com.coffee.gu.PGConfirmResult
 import com.coffee.gu.TransactionHistoryManager
 import com.coffee.gu.coupon.IssuedCouponManager
 import com.coffee.gu.enums.TransactionType
+import com.coffee.gu.event.OutboxEventPublisher
 import com.coffee.gu.order.Order
 import com.coffee.gu.order.OrderManager
 import com.coffee.gu.stamp.StampHandler
@@ -19,6 +21,7 @@ class PaymentCompleter(
     private val issuedCouponManager: IssuedCouponManager,
     private val transactionHistoryManager: TransactionHistoryManager,
     private val stampHandler: StampHandler,
+    private val outboxEventPublisher: OutboxEventPublisher,
 ) {
     @Transactional
     fun complete(order: Order, paymentId: Long, confirmedPayment: PGConfirmResult): PaymentApprovalResult {
@@ -39,6 +42,28 @@ class PaymentCompleter(
         if (!payment.hasAppliedCoupon()) stampHandler.reward(order)
         transactionHistoryManager.record(TransactionType.PAYMENT, order, payment, "Payment processed", payment.paidAt)
         return PaymentApprovalResult.approved(order.key, payment.externalPaymentKey ?: "", payment.paidAt ?: OffsetDateTime.now())
+    }
+
+    @Transactional
+    fun compensateApprovalFailure(
+        order: Order,
+        paymentId: Long,
+        externalPaymentKey: String,
+        reason: String,
+    ): PaymentApprovalResult {
+        val payment = paymentReader.getByIdWithLock(paymentId)
+        payment.fail(externalPaymentKey)
+        paymentManager.save(payment)
+        transactionHistoryManager.record(
+            TransactionType.PAYMENT_FAIL,
+            order,
+            payment,
+            reason,
+            OffsetDateTime.now()
+        )
+        val event = CancelEvent(order.key)
+        outboxEventPublisher.publishOutboxEvent(event)
+        return PaymentApprovalResult.failed(order.key, externalPaymentKey, OffsetDateTime.now())
     }
 
     @Transactional

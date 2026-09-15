@@ -32,6 +32,7 @@ dependencies {
 
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation(project(":storage:db-core"))
 
     testImplementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")

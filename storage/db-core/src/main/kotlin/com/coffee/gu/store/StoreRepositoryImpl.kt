@@ -65,7 +65,6 @@ class StoreRepositoryImpl(
     }
 
     companion object {
-        @JvmStatic
         fun calculateDistance(userLat: Double, userLon: Double, storeLat: Double, storeLon: Double): Double {
             val earthRadius = 6371.01
             val deltaLat = Math.toRadians(storeLat - userLat)

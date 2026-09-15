@@ -42,7 +42,6 @@ class OrderEntity(
     }
 
     companion object {
-        @JvmStatic
         fun create(order: Order): OrderEntity = OrderEntity(
             orderKey = order.key,
             name = order.name,
@@ -54,7 +53,6 @@ class OrderEntity(
             isNewEntity = true,
         )
 
-        @JvmStatic
         fun from(order: Order): OrderEntity = OrderEntity(
             orderKey = order.key,
             name = order.name,

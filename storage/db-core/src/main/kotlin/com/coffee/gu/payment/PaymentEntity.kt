@@ -23,7 +23,7 @@ import java.time.OffsetDateTime
     ],
 )
 @Entity
-class PaymentEntity @JvmOverloads constructor(
+class PaymentEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -65,7 +65,6 @@ class PaymentEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(payment: Payment): PaymentEntity {
             return PaymentEntity(
                 id = payment.id,

@@ -9,7 +9,6 @@ class MenuResponse(
     val salesPrice: BigDecimal,
 ) {
     companion object {
-        @JvmStatic
         fun from(menus: List<Menu>): List<MenuResponse> {
             return menus.map { menu ->
                 MenuResponse(

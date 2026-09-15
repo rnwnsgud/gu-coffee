@@ -25,7 +25,6 @@ class Stamp(
         const val EXPIRY_ALARM_DAYS = 30L
         const val EXPIRY_DAYS = 180L
 
-        @JvmStatic
         fun create(
             principal: Principal,
             orderKey: String,
