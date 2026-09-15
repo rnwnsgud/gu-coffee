@@ -84,7 +84,7 @@ class PaymentFastFailLockTest {
 
         paymentService.createPayment(order, PaymentDiscount.of(emptyList(), null, amount))
 
-        val dbPayment = paymentRepository.findByOrderKey(orderKey)!!
+        val dbPayment = paymentRepository.findByOrderKey(orderKey)
         val exactAmount = dbPayment.amount
 
         // PG Mock 설정

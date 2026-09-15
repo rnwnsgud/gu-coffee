@@ -120,14 +120,24 @@ class PaymentRecoveryLatencyTest {
         val totalElapsedTimeMs = (System.nanoTime() - totalStartTime) / 1_000_000
 
         // then
-        val avgLatencyPerItem = totalElapsedTimeMs.toDouble() / targetCount
+        val actualProcessedCount = PaymentRecoverScheduler.LIMIT
+        val avgLatencyPerItem = totalElapsedTimeMs.toDouble() / actualProcessedCount
 
-        println("====== [결제 복구 Latency 실측 결과] ======")
-        println("총 처리 건수: $targetCount 건")
-        println("총 소요 시간: $totalElapsedTimeMs ms")
-        println("1건당 평균 처리 시간: ${String.format("%.2f", avgLatencyPerItem)} ms")
-        println("=========================================")
+        // 1분(60,000ms) 스케줄러 주기 내에서 단일 스레드가 소화 가능한 이론상 최대 건수 (안전 마진 80% 기준)
+        val maxSafeCapacityPerMinute = (60_000 * 0.8) / avgLatencyPerItem
 
-        assertThat(avgLatencyPerItem).isGreaterThanOrEqualTo(30.0)
+        println("====== [결제 복구 Latency & 스케줄러 용량 실측 결과] ======")
+        println("전체 백로그 건수: $targetCount 건")
+        println("1회 스케줄러 처리 건수: $actualProcessedCount 건 (LIMIT 기준)")
+        println("1회 스케줄러 총 소요 시간: $totalElapsedTimeMs ms")
+        println("1건당 평균 처리 시간(네트워크 RTT 200ms 포함): ${String.format("%.2f", avgLatencyPerItem)} ms")
+        println("1분 스케줄러 주기 내 안전 처리 한계(Capacity Limit): 최대 ${maxSafeCapacityPerMinute.toInt()} 건")
+        println("=====================================================")
+
+        // 1건당 평균 처리 시간은 네트워크 지연(200ms) 이상이어야 함 (왜곡 제거 검증)
+        assertThat(avgLatencyPerItem).isGreaterThanOrEqualTo(200.0)
+
+        // 현재 설정된 LIMIT(20건)은 1분 주기의 20% 이내(12초 미만)로 안전하게 수행됨을 검증
+        assertThat(totalElapsedTimeMs).isLessThan(12_000)
     }
 }
