@@ -40,6 +40,7 @@ subprojects {
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
         implementation("io.hypersistence:hypersistence-tsid:2.1.4")
         testImplementation("org.springframework.boot:spring-boot-starter-test")
+        testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
         testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     }
 

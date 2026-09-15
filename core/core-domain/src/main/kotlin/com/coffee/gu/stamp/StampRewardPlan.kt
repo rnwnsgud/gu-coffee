@@ -5,7 +5,7 @@ import com.coffee.gu.coupon.Coupon
 import com.coffee.gu.coupon.IssuedCoupon
 import java.time.LocalDateTime
 
-class StampRewardPlan @JvmOverloads constructor(
+class StampRewardPlan(
     val principal: Principal,
     val couponIssueCount: Int,
     val stampUseCount: Int,
@@ -43,7 +43,6 @@ class StampRewardPlan @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun empty(principal: Principal): StampRewardPlan {
             return StampRewardPlan(
                 principal = principal,

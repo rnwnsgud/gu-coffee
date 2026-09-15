@@ -10,7 +10,7 @@ import java.time.LocalDateTime
 
 @Table(name = "stamp_coupon_usage")
 @Entity
-class StampCouponUsageEntity @JvmOverloads constructor(
+class StampCouponUsageEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -29,7 +29,6 @@ class StampCouponUsageEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(stampCouponUsage: StampCouponUsage): StampCouponUsageEntity = StampCouponUsageEntity(
             id = stampCouponUsage.id ?: 0L,
             stampId = stampCouponUsage.stampId ?: 0L,

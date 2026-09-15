@@ -2,7 +2,6 @@ package com.coffee.gu.order
 
 import java.math.BigDecimal
 
-@JvmRecord
 data class NewOrderLine(
     val menuId: Long,
     val quantity: Long,

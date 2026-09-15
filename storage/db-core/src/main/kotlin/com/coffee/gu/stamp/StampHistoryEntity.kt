@@ -15,7 +15,7 @@ import java.time.LocalDateTime
 
 @Entity
 @Table(name = "stamp_history")
-class StampHistoryEntity @JvmOverloads constructor(
+class StampHistoryEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -45,7 +45,6 @@ class StampHistoryEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(stampHistory: StampHistory): StampHistoryEntity = StampHistoryEntity(
             id = stampHistory.id,
             principalKey = stampHistory.principal.key,

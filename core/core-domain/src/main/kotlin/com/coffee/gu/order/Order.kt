@@ -41,7 +41,6 @@ class Order(
     }
 
     companion object {
-        @JvmStatic
         fun create(name: String, principal: Principal, storeId: Long, totalPrice: BigDecimal): Order {
             return Order(
                 key = TSID.Factory.getTsid().toString(),

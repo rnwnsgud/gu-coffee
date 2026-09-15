@@ -15,7 +15,7 @@ import java.time.OffsetDateTime
 
 @Entity
 @Table(name = "cancel")
-class CancelEntity @JvmOverloads constructor(
+class CancelEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -50,7 +50,6 @@ class CancelEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(cancel: Cancel): CancelEntity = CancelEntity(
             id = cancel.id,
             principalKey = cancel.principal.key,

@@ -8,7 +8,6 @@ class StampHistoryResponse(
     val histories: List<StampHistoryItem>,
 ) {
     companion object {
-        @JvmStatic
         fun of(expiringSoonCount: Int, stampHistories: List<StampHistory>): StampHistoryResponse {
             val stampHistoryItems = stampHistories.map { StampHistoryItem.from(it) }
             return StampHistoryResponse(expiringSoonCount, stampHistoryItems)

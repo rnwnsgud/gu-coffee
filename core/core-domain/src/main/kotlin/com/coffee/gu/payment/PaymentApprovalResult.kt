@@ -13,7 +13,6 @@ class PaymentApprovalResult(
     val approvedAt: OffsetDateTime?,
 ) {
     companion object {
-        @JvmStatic
         fun approved(
             orderKey: String,
             paymentKey: String,
@@ -27,7 +26,6 @@ class PaymentApprovalResult(
             approvedAt = approvedAt,
         )
 
-        @JvmStatic
         fun alreadyApproved(
             orderKey: String,
             paymentKey: String,
@@ -41,7 +39,6 @@ class PaymentApprovalResult(
             approvedAt = approvedAt,
         )
 
-        @JvmStatic
         fun fromExisting(payment: Payment): PaymentApprovalResult {
             val orderState = if (payment.state == PaymentState.SUCCESS) OrderState.PAID else OrderState.CREATED
             return PaymentApprovalResult(
@@ -54,7 +51,6 @@ class PaymentApprovalResult(
             )
         }
 
-        @JvmStatic
         fun failed(
             orderKey: String,
             paymentKey: String,

@@ -18,10 +18,8 @@ data class Principal(
     )
 
     companion object {
-        @JvmStatic
         fun user(userId: String): Principal = Principal("U$userId", PrincipalType.USER)
 
-        @JvmStatic
         fun guest(guestKey: String): Principal = Principal("G$guestKey", PrincipalType.GUEST)
     }
 }

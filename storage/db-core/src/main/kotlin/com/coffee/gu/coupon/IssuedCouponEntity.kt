@@ -14,7 +14,7 @@ import jakarta.persistence.Table
 
 @Table(name = "issued_coupon")
 @Entity
-class IssuedCouponEntity @JvmOverloads constructor(
+class IssuedCouponEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -36,7 +36,6 @@ class IssuedCouponEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(issuedCoupon: IssuedCoupon): IssuedCouponEntity = IssuedCouponEntity(
             id = issuedCoupon.id,
             principalKey = issuedCoupon.principal.key,

@@ -10,7 +10,7 @@ import java.math.BigDecimal
 
 @Table(name = "option")
 @Entity
-class OptionEntity @JvmOverloads constructor(
+class OptionEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,

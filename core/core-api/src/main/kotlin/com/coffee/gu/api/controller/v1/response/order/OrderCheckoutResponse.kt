@@ -13,7 +13,6 @@ class OrderCheckoutResponse(
     val usableCoupons: List<IssuedCouponResponse>,
 ) {
     companion object {
-        @JvmStatic
         fun of(order: Order, issuedCoupons: List<IssuedCoupon>): OrderCheckoutResponse {
             return OrderCheckoutResponse(
                 key = order.key,

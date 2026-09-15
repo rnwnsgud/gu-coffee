@@ -47,7 +47,6 @@ class EventLogEntity(
     }
 
     companion object {
-        @JvmStatic
         fun create(
             eventId: String,
             eventType: EventType,

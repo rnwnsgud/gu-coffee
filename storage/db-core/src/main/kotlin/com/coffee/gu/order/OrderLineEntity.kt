@@ -10,7 +10,7 @@ import java.math.BigDecimal
 
 @Entity
 @Table(name = "order_line")
-class OrderLineEntity @JvmOverloads constructor(
+class OrderLineEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -41,7 +41,6 @@ class OrderLineEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(orderLine: OrderLine): OrderLineEntity = OrderLineEntity(
             id = orderLine.id ?: 0L,
             orderKey = orderLine.orderKey,

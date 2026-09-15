@@ -25,7 +25,6 @@ class MenuDetailResponse(
     val optionGroups: List<OptionGroupResponse>
 ) {
     companion object {
-        @JvmStatic
         fun from(menuDetail: MenuDetailResult): MenuDetailResponse {
             val menu = menuDetail.menu
             val detail = menu.detail
@@ -61,7 +60,6 @@ class MenuDetailResponse(
         val options: List<OptionResponse>,
     ) {
         companion object {
-            @JvmStatic
             fun of(optionGroups: List<OptionGroup>, options: List<Option>): List<OptionGroupResponse> {
                 val optionsByGroup = options.groupBy { it.optionGroupId }
                 return optionGroups.map { optionGroup ->
@@ -83,7 +81,6 @@ class MenuDetailResponse(
         val extraPrice: BigDecimal
     ) {
         companion object {
-            @JvmStatic
             fun from(options: List<Option>): List<OptionResponse> {
                 return options.map { option ->
                     OptionResponse(

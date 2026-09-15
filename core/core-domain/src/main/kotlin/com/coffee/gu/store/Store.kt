@@ -2,7 +2,7 @@ package com.coffee.gu.store
 
 import com.coffee.gu.enums.StoreStatus
 
-class Store @JvmOverloads constructor(
+class Store(
     val id: Long = 0,
     val name: String,
     val branchCode: String,

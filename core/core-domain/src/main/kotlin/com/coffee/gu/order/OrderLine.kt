@@ -2,7 +2,7 @@ package com.coffee.gu.order
 
 import java.math.BigDecimal
 
-class OrderLine @JvmOverloads constructor(
+class OrderLine(
     val id: Long? = null,
     val orderKey: String,
     val menuId: Long,
@@ -17,7 +17,6 @@ class OrderLine @JvmOverloads constructor(
     fun getIsStampEligible(): Boolean = isStampEligible
 
     companion object {
-        @JvmStatic
         fun create(
             orderKey: String,
             menuId: Long,

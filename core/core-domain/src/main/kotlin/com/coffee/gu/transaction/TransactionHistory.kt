@@ -19,7 +19,6 @@ class TransactionHistory(
     val occurredAt: OffsetDateTime? = null,
 ) {
     companion object {
-        @JvmStatic
         fun create(
             type: TransactionType,
             order: Order,

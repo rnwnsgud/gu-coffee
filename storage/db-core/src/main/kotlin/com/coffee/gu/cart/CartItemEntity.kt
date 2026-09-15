@@ -14,7 +14,7 @@ import jakarta.persistence.Table
 
 @Table(name = "cart_item")
 @Entity
-class CartItemEntity @JvmOverloads constructor(
+class CartItemEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -35,7 +35,6 @@ class CartItemEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun of(cartItem: CartItem, principal: Principal): CartItemEntity {
             return CartItemEntity(
                 id = cartItem.id,

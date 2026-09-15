@@ -3,7 +3,6 @@ package com.coffee.gu
 import com.coffee.gu.enums.PaymentMethod
 import java.time.OffsetDateTime
 
-@JvmRecord
 data class PGConfirmResult(
     val orderId: String,
     val paymentKey: String,
@@ -13,7 +12,6 @@ data class PGConfirmResult(
     val approvedAt: OffsetDateTime? = null,
 ) {
     companion object {
-        @JvmStatic
         fun success(
             orderId: String,
             paymentKey: String,
@@ -29,7 +27,6 @@ data class PGConfirmResult(
             approvedAt = approvedAt,
         )
 
-        @JvmStatic
         fun fail(
             orderId: String,
             paymentKey: String,

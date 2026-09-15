@@ -12,7 +12,7 @@ import jakarta.persistence.Table
 
 @Table(name = "coupon_target")
 @Entity
-class CouponTargetEntity @JvmOverloads constructor(
+class CouponTargetEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,

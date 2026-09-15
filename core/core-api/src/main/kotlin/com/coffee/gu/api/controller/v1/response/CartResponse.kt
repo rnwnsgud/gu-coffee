@@ -17,7 +17,6 @@ class CartResponse(
         val quantity: Long,
     ) {
         companion object {
-            @JvmStatic
             fun from(cartItem: CartItem): CartItemResponse {
                 val menu = cartItem.menu
                 return CartItemResponse(

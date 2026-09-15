@@ -15,7 +15,6 @@ class IssuedCouponResponse(
     val expiredAt: LocalDateTime,
 ) {
     companion object {
-        @JvmStatic
         fun from(issuedCoupon: IssuedCoupon): IssuedCouponResponse {
             return IssuedCouponResponse(
                 id = issuedCoupon.id,
@@ -27,7 +26,6 @@ class IssuedCouponResponse(
             )
         }
 
-        @JvmStatic
         fun from(issuedCoupons: List<IssuedCoupon>): List<IssuedCouponResponse> {
             return issuedCoupons.map { from(it) }
         }

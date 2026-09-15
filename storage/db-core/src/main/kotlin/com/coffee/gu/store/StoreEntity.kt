@@ -12,7 +12,7 @@ import jakarta.persistence.Table
 
 @Table(name = "store")
 @Entity
-class StoreEntity @JvmOverloads constructor(
+class StoreEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
@@ -51,7 +51,6 @@ class StoreEntity @JvmOverloads constructor(
     }
 
     companion object {
-        @JvmStatic
         fun from(store: Store): StoreEntity {
             val salesInfo = store.salesInformation ?: throw IllegalArgumentException("SalesInformation must not be null")
             val businessInfo = store.businessInformation ?: throw IllegalArgumentException("BusinessInformation must not be null")

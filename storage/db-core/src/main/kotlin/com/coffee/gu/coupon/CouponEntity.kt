@@ -14,7 +14,7 @@ import java.time.LocalDateTime
 
 @Table(name = "coupon")
 @Entity
-class CouponEntity @JvmOverloads constructor(
+class CouponEntity(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,

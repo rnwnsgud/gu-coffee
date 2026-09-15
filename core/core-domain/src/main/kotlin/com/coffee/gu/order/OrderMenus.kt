@@ -14,7 +14,6 @@ class OrderMenus(
     }
 
     companion object {
-        @JvmStatic
         fun from(menus: List<Menu>): OrderMenus {
             return OrderMenus(menus.associateBy { it.id })
         }

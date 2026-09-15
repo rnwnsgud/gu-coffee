@@ -2,7 +2,7 @@ package com.coffee.gu.cart
 
 import com.coffee.gu.menu.Menu
 
-class CartItem @JvmOverloads constructor(
+class CartItem(
     val id: Long = 0,
     val menu: Menu,
     var quantity: Long = 0,

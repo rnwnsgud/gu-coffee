@@ -11,7 +11,6 @@ class OrderListResponse(
     val state: OrderState,
 ) {
     companion object {
-        @JvmStatic
         fun from(order: OrderSummary): OrderListResponse {
             return OrderListResponse(
                 key = order.key,
@@ -21,7 +20,6 @@ class OrderListResponse(
             )
         }
 
-        @JvmStatic
         fun from(orders: List<OrderSummary>): List<OrderListResponse> {
             return orders.map { from(it) }
         }

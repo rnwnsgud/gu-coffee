@@ -1,6 +1,5 @@
 package com.coffee.gu.menu
 
-@JvmRecord
 data class Nutrition(
     val capacity: Double? = null,
     val caffeine: Double? = null,

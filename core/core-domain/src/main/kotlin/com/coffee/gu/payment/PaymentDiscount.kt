@@ -24,7 +24,6 @@ class PaymentDiscount(
         get() = useIssuedCouponId != null && useIssuedCouponId > 0
 
     companion object {
-        @JvmStatic
         fun of(
             issuedCoupons: List<IssuedCoupon>,
             useIssuedCouponId: Long?,
