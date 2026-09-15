@@ -26,7 +26,7 @@
 <a name="2-멀티-모듈-아키텍처"></a>
 ## 2. 멀티 모듈 아키텍처
 
-도메인 모듈을 중앙에 두고 **`API (core-api) ──► Domain (core-domain) ◄── DB (db-core)`** 방향으로 의존성이 수렴하는 **의존성 역전 원칙(DIP)**을 적용했습니다.
+도메인 모듈을 중앙에 두고 **`API (core-api) ──► Domain (core-domain) ◄── DB (db-core)`** 방향으로 의존성이 수렴하는 의존성 역전 원칙(DIP)을 적용했습니다.
 
 ```text
 gu-coffee
