@@ -50,10 +50,10 @@ class PaymentCompleterTest {
     private lateinit var transactionHistoryManager: TransactionHistoryManager
 
     @Mock
-    private lateinit var stampHandler: StampHandler
+    private lateinit var outboxEventPublisher: OutboxEventPublisher
 
     @Mock
-    private lateinit var outboxEventPublisher: OutboxEventPublisher
+    private lateinit var applicationEventPublisher: org.springframework.context.ApplicationEventPublisher
 
     @InjectMocks
     private lateinit var paymentCompleter: PaymentCompleter
@@ -159,5 +159,10 @@ class PaymentCompleterTest {
         verify(orderManager).pay(order)
         verify(issuedCouponManager).use(payment)
         verify(transactionHistoryManager).record(eq(TransactionType.PAYMENT), eq(order), eq(payment), anyOrNull(), anyOrNull())
+
+        val eventCaptor = argumentCaptor<com.coffee.gu.PaymentApprovedEvent>()
+        verify(applicationEventPublisher).publishEvent(eventCaptor.capture())
+        assertThat(eventCaptor.firstValue.orderKey).isEqualTo("ORDER-KEY-100")
+        assertThat(eventCaptor.firstValue.hasAppliedCoupon).isFalse()
     }
 }

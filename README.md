@@ -1,6 +1,6 @@
 # ☕ GU Coffee (`gu-coffee`)
 
-> ** Kotlin 2.1 & Spring Boot 4.0 기반의 커피 주문·결제 멀티 모듈 시스템**
+> Kotlin 2.1 & Spring Boot 4.0 기반의 커피 주문·결제 멀티 모듈 시스템
 
 ---
 
@@ -24,9 +24,10 @@
 ---
 
 <a name="2-멀티-모듈-아키텍처"></a>
-## 2. 멀티 모듈 아키텍처
+## 2. 멀티 모듈 아키텍처 (Modular Monolith)
 
-도메인 모듈을 중앙에 두고 **`API (core-api) ──► Domain (core-domain) ◄── DB (db-core)`** 방향으로 의존성이 수렴하는 의존성 역전 원칙(DIP)을 적용했습니다.
+단일 배포 단위(Single Deployment Unit)로 실행되지만 내부 도메인 간의 물리적/논리적 경계를 엄격히 분리한 **모듈러 모놀리스(Modular Monolith)** 아키텍처를 채택했습니다.
+도메인 모듈을 중앙에 두고 **`API (core-api) ──► Domain (core-domain) ◄── DB (db-core)`** 방향으로 의존성이 수렴하는 의존성 역전 원칙(DIP)을 적용하여, 향후 특정 도메인을 독립 마이크로서비스(MSA)로 분리해낼 수 있는 구조적 확장성을 확보했습니다.
 
 ```text
 gu-coffee
@@ -45,9 +46,9 @@ gu-coffee
     ├── support-auth          # Principal 기반 인증/인가 객체
     ├── support-error         # 비즈니스 예외 계층 및 공통 ErrorType
     ├── support-event         # 트랜잭셔널 아웃박스 이벤트 디스패처 및 이벤트 로그
-    ├── support-logging       # [미구현] AOP 기반 분산 추적 로깅 유틸리티
-    ├── support-monitoring    # [미구현] 시스템 프로메테우스/메트릭 모니터링
-    ├── support-pagination    # [미구현] 슬라이스/오프셋 페이징 유틸리티
+    ├── support-logging       # [미구현] AOP 기반 분산 추적 로깅 유틸리티 예정
+    ├── support-monitoring    # [미구현] 시스템 프로메테우스/메트릭 모니터링 예정
+    ├── support-pagination    # 슬라이스/오프셋 페이징 유틸리티
     ├── support-pg            # Toss Payments PG 연동 및 WebClient 클라이언트
     └── support-web           # 공통 ApiResponse 포맷 및 Spring Web MVC 설정
 ```
@@ -58,7 +59,7 @@ gu-coffee
 ## 3. 핵심 엔지니어링 & 시스템 신뢰성 설계
 
 ### 🛡️ 1. 결제 멱등성 보장 및 DB Connection Hold 방지
-- **문제 인식**: 외부 PG 승인 통신(평균 RTT 200ms) 구간을 DB 트랜잭션(`@Transactional`)으로 묶을 경우, 동시 요청 폭주 시 HikariCP 커넥션 풀(기본 10개)이 급속히 고갈되어 시스템 전체가 마비되는 `Connection Pool Exhaustion` 위험 발생.
+- **문제 인식**: 외부 PG 승인 통신(평균 RTT 200ms) 구간을 DB 트랜잭션(`@Transactional`)으로 묶을 경우, 동시 요청 폭주 시 HikariCP 커넥션 풀이 급속히 고갈되어 시스템 전체가 마비되는 `Connection Pool Exhaustion` 위험
 - **아키텍처 해결**:
   - `PaymentService.approvePayment` 메서드 전체를 **Non-Transactional**로 유지.
   - 비관적 락(`SELECT ... FOR UPDATE`)과 상태 전이(`READY -> PENDING_PG`)를 담당하는 `PaymentPreparer.prepare`로 트랜잭션 범위를 극소화.
@@ -80,13 +81,20 @@ gu-coffee
 - 메시지 발행과 도메인 변경의 원자성(Atomicity)을 보장하기 위해 별도 이벤트 저장소(`event_log`)를 도메인 로컬 트랜잭션 내에서 커밋.
 - 발행 실패 이벤트는 스케줄러가 주기적으로 재시도하며, 이벤트 ID 기반의 멱등 테이블을 통해 중복 소비 방지.
 
+### 🧩 5. 도메인 간 트랜잭션 디커플링 및 장애 격리 (Fault Isolation)
+- **문제 인식**: 결제 승인 완료 트랜잭션(`PaymentCompleter.complete`) 내부에 부가 기능인 스탬프 적립이 동기로 묶여 있을 경우, 스탬프 테이블 락/데드락 등 부가 기능의 일시적 장애로 인해 이미 카드사 승인이 끝난 결제 전체가 롤백되어 망취소/환불되는 치명적 결합 위험 감지.
+- **아키텍처 해결**:
+  - 결제 코어(Tier 1)와 마케팅 리워드(Tier 2)의 트랜잭션 라이프사이클을 완전 분리.
+  - `PaymentCompleter`에서 스탬프 동기 의존성을 제거하고, 결제 DB 커밋 완료 후 Spring 트랜잭션 이벤트(`@TransactionalEventListener(phase = AFTER_COMMIT)`) 및 비동기 워커 풀(`stampAsyncExecutor`)을 통해 스탬프를 적립하도록 파이프라인 구축.
+  - 스탬프 모듈에 장애가 발생하더라도 결제 성공을 100% 보장하는 **장애 격리(Fault Isolation)**를 달성하고, 모놀리스 내에서 도메인 간 최종적 일관성(Eventual Consistency)을 확보.
+
 ---
 
 <a name="4-기술-스택"></a>
 ## 4. 기술 스택
 
 ### Language & Framework
-- **Kotlin 2.1.0** (admin-api 제외 코틀린 기반)
+- **Kotlin 2.1.0** (admin-api 모듈 제외)
 - **Spring Boot 4.0.5**
 - **Spring Data JPA**, **QueryDSL 5.1.0 (KAPT)**
 - **Hypersistence TSID 2.1.4** (분산 분할 시간순 정렬 고유 식별자 PK)

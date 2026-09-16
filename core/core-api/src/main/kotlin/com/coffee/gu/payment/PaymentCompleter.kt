@@ -2,13 +2,14 @@ package com.coffee.gu.payment
 
 import com.coffee.gu.CancelEvent
 import com.coffee.gu.PGConfirmResult
+import com.coffee.gu.PaymentApprovedEvent
 import com.coffee.gu.TransactionHistoryManager
 import com.coffee.gu.coupon.IssuedCouponManager
 import com.coffee.gu.enums.TransactionType
 import com.coffee.gu.event.OutboxEventPublisher
 import com.coffee.gu.order.Order
 import com.coffee.gu.order.OrderManager
-import com.coffee.gu.stamp.StampHandler
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.OffsetDateTime
@@ -20,8 +21,8 @@ class PaymentCompleter(
     private val orderManager: OrderManager,
     private val issuedCouponManager: IssuedCouponManager,
     private val transactionHistoryManager: TransactionHistoryManager,
-    private val stampHandler: StampHandler,
     private val outboxEventPublisher: OutboxEventPublisher,
+    private val applicationEventPublisher: ApplicationEventPublisher,
 ) {
     @Transactional
     fun complete(order: Order, paymentId: Long, confirmedPayment: PGConfirmResult): PaymentApprovalResult {
@@ -39,9 +40,9 @@ class PaymentCompleter(
         paymentManager.pay(payment, confirmedPayment)
         orderManager.pay(order)
         issuedCouponManager.use(payment)
-        if (!payment.hasAppliedCoupon()) stampHandler.reward(order)
         transactionHistoryManager.record(TransactionType.PAYMENT, order, payment, "Payment processed", payment.paidAt)
-        return PaymentApprovalResult.approved(order.key, payment.externalPaymentKey ?: "", payment.paidAt ?: OffsetDateTime.now())
+        applicationEventPublisher.publishEvent(PaymentApprovedEvent(order.key, payment.hasAppliedCoupon()))
+        return PaymentApprovalResult.approved(order.key, extKey, paidAt)
     }
 
     @Transactional

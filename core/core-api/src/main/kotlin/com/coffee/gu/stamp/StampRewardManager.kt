@@ -7,7 +7,6 @@ import com.coffee.gu.coupon.Coupon
 import com.coffee.gu.coupon.IssuedCoupon
 import com.coffee.gu.coupon.IssuedCouponRepository
 import com.coffee.gu.event.OutboxEventPublisher
-import com.coffee.gu.store.Store
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
@@ -21,6 +20,7 @@ class StampRewardManager(
     private val stampRecorder: StampRecorder,
     private val outboxEventPublisher: OutboxEventPublisher,
 ) {
+    @Transactional
     fun reward(principal: Principal, orderKey: String, stampQuantity: Int, expiredAt: LocalDateTime, now: LocalDateTime, storeId: Long) {
         if (stampQuantity <= 0) return
         val stamps = List(stampQuantity) {
