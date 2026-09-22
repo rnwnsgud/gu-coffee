@@ -20,6 +20,7 @@ import java.time.OffsetDateTime
     name = "payment",
     indexes = [
         Index(name = "udx_order_key", columnList = "orderKey", unique = true),
+        Index(name = "idx_payment_recovery", columnList = "state, updatedAt, retryCount"),
     ],
 )
 @Entity

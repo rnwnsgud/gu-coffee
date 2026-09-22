@@ -9,10 +9,17 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
-@Table(name = "event_log")
+// todo
+@Table(
+    name = "event_log",
+    indexes = [
+        Index(name = "idx_event_recovery", columnList = "is_published, event_log_target, status, created_at")
+    ]
+)
 @Entity
 class EventLogEntity(
     @Id
