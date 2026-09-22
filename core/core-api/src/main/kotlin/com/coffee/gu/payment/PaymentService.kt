@@ -9,8 +9,6 @@ import com.coffee.gu.order.Order
 import org.springframework.stereotype.Service
 import java.time.OffsetDateTime
 
-
-// todo readme.md 모듈러 모놀리스로 수정
 @Service
 class PaymentService(
     private val paymentGatewayProcessor: PaymentGatewayProcessor,
