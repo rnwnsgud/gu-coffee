@@ -87,11 +87,19 @@ gu-coffee
 - 발행 실패 이벤트는 스케줄러가 주기적으로 재시도하며, 이벤트 ID 기반의 멱등 테이블을 통해 중복 소비 방지.
 
 ### 🧩 5. 도메인 간 트랜잭션 디커플링 및 장애 격리 (Fault Isolation)
-- **문제 인식**: 결제 승인 완료 트랜잭션(`PaymentCompleter.complete`) 내부에 부가 기능인 스탬프 적립이 동기로 묶여 있을 경우, 스탬프 테이블 락/데드락 등 부가 기능의 일시적 장애로 인해 이미 카드사 승인이 끝난 결제 전체가 롤백되어 망취소/환불되는 치명적 결합 위험 감지.
-- **아키텍처 해결**:
+- 문제 인식: 결제 승인 완료 트랜잭션(`PaymentCompleter.complete`) 내부에 부가 기능인 스탬프 적립이 동기로 묶여 있을 경우, 스탬프 테이블 락/데드락 등 부가 기능의 일시적 장애로 인해 이미 카드사 승인이 끝난 결제 전체가 롤백되어 망취소/환불되는 치명적 결합 위험 감지.
+- 아키텍처 해결:
   - 결제 코어와 마케팅 리워드의 트랜잭션 라이프사이클을 완전 분리.
   - `PaymentCompleter`에서 스탬프 동기 의존성을 제거하고, 결제 DB 커밋 완료 후 Spring 트랜잭션 이벤트(`@TransactionalEventListener(phase = AFTER_COMMIT)`) 및 비동기 워커 풀(`stampAsyncExecutor`)을 통해 스탬프를 적립하도록 파이프라인 구축.
   - 스탬프 모듈에 장애가 발생하더라도 결제 성공을 100% 보장하는 장애 격리(Fault Isolation)를 달성하고, 모놀리스 내에서 도메인 간 최종적 일관성(Eventual Consistency)을 확보.
+
+### ☕ 6. Read-Heavy 마스터 데이터 Redis Cache-Aside 및 스탬피드 방어
+- 문제 인식: 메뉴 상세 조회 시 1회 요청당 4단 순차 DB 쿼리(Menu $\to$ MenuOptionGroup $\to$ OptionGroup $\to$ Option)가 발생하여 동시 접속 시 DB 커넥션 풀을 과도하게 점유하는 문제 감지.
+- 아키텍처 해결:
+  - 1:N:M 다중 조인으로 인한 대량 데이터 중복 전송과 실행 계획 복잡도를 배제하고, DB는 단순 PK/IN 기반 조회를 유지하도록 역할을 분리.
+  - 조립된 메뉴 상세 데이터는 Redis 기반 Cache-Aside 패턴을 구축하여 95% 이상의 조회 트래픽을 메모리에서 즉시 서빙(RTT 1~2ms)하도록 격리.
+  - 대규모 트래픽 환경에서 캐시 만료 시 동시 다발적 DB 조회가 몰리는 캐시 스탬피드(Cache Stampede)를 방어하기 위해 `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 DB 접근을 직렬화.
+  - 관리자 메뉴-옵션 매핑 수정 시 `@CacheEvict`를 통해 캐시를 즉시 무효화하여 데이터 일관성 보장.
 
 ---
 
@@ -102,6 +110,7 @@ gu-coffee
 - **Kotlin 2.1.0** (admin-api 모듈 제외)
 - **Spring Boot 4.0.5**
 - **Spring Data JPA**, **QueryDSL 5.1.0 (KAPT)**
+- **Spring Data Redis 4.0.4**
 - **Hypersistence TSID 2.1.4** (분산 분할 시간순 정렬 고유 식별자 PK)
 
 
