@@ -1,6 +1,7 @@
 package com.coffee.admin.domain;
 
 import com.coffee.gu.*;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -49,6 +50,7 @@ public class AdminMenuService {
         return adminOptionRepository.save(new AdminOptionEntity(optionGroupId, name, BigDecimal.valueOf(extraPrice))).getId();
     }
 
+    @CacheEvict(cacheNames = "menuDetail", key = "#menuId")
     public Long createMenuOptionGroup(Long menuId, Long optionGroupId) {
         return adminMenuOptionGroupRepository.save(new AdminMenuOptionGroupEntity(menuId, optionGroupId)).getId();
     }

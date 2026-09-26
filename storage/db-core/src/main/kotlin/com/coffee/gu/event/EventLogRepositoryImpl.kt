@@ -76,7 +76,7 @@ class EventLogRepositoryImpl(
         return jpaQueryFactory
             .selectFrom(eventLogEntity)
             .where(eventLogEntity.isPublished.isFalse)
-            .where(eventLogEntity.status.ne(EventLogStatus.DEAD).or(eventLogEntity.status.isNull))
+            .where(eventLogEntity.status.eq(EventLogStatus.PENDING))
             .where(
                 eventLogEntity.eventLogTarget.eq(eventLogTarget),
                 eventLogEntity.createdAt.before(createdBefore),
