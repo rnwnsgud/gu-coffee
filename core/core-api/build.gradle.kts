@@ -26,6 +26,7 @@ dependencies {
     implementation(project(":support:pagination"))
     implementation(project(":support:pg"))
     implementation(project(":support:event"))
+    implementation(project(":support:lock"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")

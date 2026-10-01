@@ -3,6 +3,7 @@ package com.coffee.gu.menu
 import com.coffee.gu.OffsetLimit
 import com.coffee.gu.Page
 import com.coffee.gu.config.CacheConfig
+import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import java.time.LocalDateTime
@@ -26,5 +27,9 @@ class MenuService(
         val optionGroups = optionFinder.findByMenuId(menuId)
         val options = optionFinder.findByOptionGroups(optionGroups)
         return MenuDetailResult(menu, optionGroups, options)
+    }
+
+    @CacheEvict(cacheNames = [CacheConfig.MENU_DETAIL_CACHE], key = "#menuId")
+    fun evictMenuDetail(menuId: Long) {
     }
 }
