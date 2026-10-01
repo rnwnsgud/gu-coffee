@@ -1,16 +1,15 @@
 package com.coffee.gu.coupon
 
-import com.coffee.gu.CoreException
-import com.coffee.gu.ErrorType
 import com.coffee.gu.Principal
+import com.coffee.gu.lock.LockKeyGenerator
+import com.coffee.gu.lock.LockManager
 import com.coffee.gu.menu.Menu
 import org.springframework.stereotype.Service
-
 @Service
 class CouponService(
     private val couponFinder: CouponFinder,
-    private val issuedCouponFinder: IssuedCouponFinder,
-    private val couponManager: CouponManager
+    private val couponDownloadExecutor: CouponDownloadExecutor,
+    private val lockManager: LockManager,
 ) {
     fun getCouponsForMenus(principal: Principal, menus: List<Menu>): List<Coupon> {
         val applicableCoupons = couponFinder.findApplicableCoupons(menus)
@@ -20,9 +19,9 @@ class CouponService(
     }
 
     fun download(principal: Principal, couponId: Long) {
-        val coupon = couponFinder.getValidCoupon(couponId)
-        val exist = issuedCouponFinder.existsByPrincipalKeyAndCouponId(principal, couponId)
-        if (exist) throw CoreException(ErrorType.COUPON_ALREADY_DOWNLOADED, null)
-        couponManager.issue(principal, coupon)
+        val lockKey = LockKeyGenerator.generateCouponDownloadKey(couponId, principal.key)
+        lockManager.executeWithLock(lockKey) {
+            couponDownloadExecutor.download(principal, couponId)
+        }
     }
 }

@@ -12,7 +12,17 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 
-@Table(name = "issued_coupon")
+import jakarta.persistence.UniqueConstraint
+
+@Table(
+    name = "issued_coupon",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uk_issued_coupon_principal_coupon",
+            columnNames = ["principalKey", "couponId"]
+        )
+    ]
+)
 @Entity
 class IssuedCouponEntity(
     @Id

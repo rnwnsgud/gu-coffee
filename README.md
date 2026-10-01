@@ -46,6 +46,7 @@ gu-coffee
     ├── support-auth          # Principal 기반 인증/인가 객체
     ├── support-error         # 비즈니스 예외 계층 및 공통 ErrorType
     ├── support-event         # 트랜잭셔널 아웃박스 이벤트 디스패처 및 이벤트 로그
+    ├── support-lock          # Redisson 기반 분산 락 및 로컬 락 추상화(LockManager) 인프라
     ├── support-logging       # [미구현] AOP 기반 분산 추적 로깅 유틸리티 예정
     ├── support-monitoring    # [미구현] 시스템 프로메테우스/메트릭 모니터링 예정
     ├── support-pagination    # 슬라이스/오프셋 페이징 유틸리티
@@ -101,6 +102,16 @@ gu-coffee
   - 대규모 트래픽 환경에서 캐시 만료 시 동시 다발적 DB 조회가 몰리는 캐시 스탬피드(Cache Stampede)를 방어하기 위해 `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 DB 접근을 직렬화.
   - 관리자 메뉴-옵션 매핑 수정 시 `@CacheEvict`를 통해 캐시를 즉시 무효화하여 데이터 일관성 보장.
 
+### 🎟️ 7. Redisson 기반 분산 락을 통한 쿠폰 다운로드 동시성 제어
+- 문제 인식:
+  - 동일 사용자가 모바일 네트워크 지연 등으로 다운로드 버튼을 연타(따닥)하거나 동시 요청을 보낼 때, 애플리케이션 레벨의 중복 검사(`existsByPrincipalKeyAndCouponId`)가 동시에 통과되어 동일 쿠폰이 중복 발급되는 동시성 이슈 발생.
+- 아키텍처 해결:
+  - Redisson 의존성을 독립 인프라 모듈(`support:lock`)로 격리하여 비즈니스 코어와 서드파티 락 라이브러리 간의 결합도를 낮추고 `LockManager` 인터페이스로 추상화.
+  - Lettuce의 스핀 락(Spin Lock) 폴링 방식 대신 Redis Pub/Sub 기반의 `RedissonClient`를 채택하여 불필요한 네트워크 트래픽 및 Redis CPU 부하를 최소화.
+  - 트랜잭션 커밋 전에 락이 조기 해제되는 경합을 방지하기 위해, 트랜잭션 외부에서 락을 획득/해제하고 내부에서 DB 커밋까지 마치는 수명주기(`CouponService` $\to$ `CouponDownloadExecutor`)를 확립.
+  - `COUPON-DOWNLOAD-{couponId}-{principalKey}` 단위로 락을 세분화하여 타 유저의 발급 요청에는 영향을 주지 않도록 격리.
+  - 분산 락 실패 시나리오 및 인프라 순단에 대비하여 DB `issued_coupon` 테이블에 `(principal_key, coupon_id)` 복합 유니크 제약조건을 병행 적용해 데이터 정합성을 이중 보장.
+
 ---
 
 <a name="4-기술-스택"></a>
@@ -110,7 +121,7 @@ gu-coffee
 - **Kotlin 2.1.0** (admin-api 모듈 제외)
 - **Spring Boot 4.0.5**
 - **Spring Data JPA**, **QueryDSL 5.1.0 (KAPT)**
-- **Spring Data Redis 4.0.4**
+- **Spring Data Redis 4.0.4**, **Redisson 3.45.0**
 - **Hypersistence TSID 2.1.4** (분산 분할 시간순 정렬 고유 식별자 PK)
 
 
