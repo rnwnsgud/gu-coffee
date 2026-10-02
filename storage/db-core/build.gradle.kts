@@ -19,6 +19,9 @@ dependencies {
     implementation(project(":core:core-enum"))
     implementation(project(":support:pagination"))
     implementation(project(":support:event"))
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-mysql")
+    implementation("org.springframework.boot:spring-boot-autoconfigure")
 
     implementation("tools.jackson.core:jackson-databind")
     implementation("com.querydsl:querydsl-jpa:5.1.0:jakarta")
@@ -29,6 +32,9 @@ dependencies {
     kapt("jakarta.annotation:jakarta.annotation-api")
     kapt("jakarta.persistence:jakarta.persistence-api")
     testImplementation(kotlin("test"))
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.assertj:assertj-core")
+    testRuntimeOnly("com.h2database:h2")
 }
 repositories {
     mavenCentral()

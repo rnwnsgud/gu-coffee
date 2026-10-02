@@ -1,0 +1,1 @@
+ALTER TABLE `store` ADD COLUMN `test_memo` VARCHAR(255) NULL;

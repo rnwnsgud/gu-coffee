@@ -15,13 +15,15 @@ abstract class AdminBaseEntity {
     private Long id = 0L;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "VARCHAR")
+    @Column(name = "entity_status", columnDefinition = "VARCHAR")
     private AdminEntityStatus status = AdminEntityStatus.ACTIVE;
 
     @CreatedDate
+    @Column(name = "created_at")
     private LocalDateTime created = LocalDateTime.MIN;
 
     @LastModifiedDate
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.MIN;
 
     public Long getId() { return id; }
