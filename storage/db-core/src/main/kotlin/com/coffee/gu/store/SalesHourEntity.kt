@@ -3,6 +3,8 @@ package com.coffee.gu.store
 import com.coffee.gu.BaseEntity
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
@@ -17,6 +19,7 @@ class SalesHourEntity(
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long = 0,
     val storeId: Long,
+    @Enumerated(EnumType.STRING)
     @Column(name = "`day`")
     val day: DayOfWeek,
     val open: LocalTime,
