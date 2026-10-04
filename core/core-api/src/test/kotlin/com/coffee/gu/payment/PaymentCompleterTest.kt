@@ -157,7 +157,7 @@ class PaymentCompleterTest {
         assertThat(result.paymentState).isEqualTo(PaymentState.SUCCESS)
         verify(paymentManager).pay(payment, confirmed)
         verify(orderManager).pay(order)
-        verify(issuedCouponManager).use(payment)
+        verify(issuedCouponManager).use(payment.principal, payment.issuedCouponId)
         verify(transactionHistoryManager).record(eq(TransactionType.PAYMENT), eq(order), eq(payment), anyOrNull(), anyOrNull())
 
         val eventCaptor = argumentCaptor<com.coffee.gu.PaymentApprovedEvent>()

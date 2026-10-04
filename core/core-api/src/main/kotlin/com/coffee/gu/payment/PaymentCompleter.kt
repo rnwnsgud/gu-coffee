@@ -39,7 +39,7 @@ class PaymentCompleter(
         }
         paymentManager.pay(payment, confirmedPayment)
         orderManager.pay(order)
-        issuedCouponManager.use(payment)
+        issuedCouponManager.use(payment.principal, payment.issuedCouponId)
         transactionHistoryManager.record(TransactionType.PAYMENT, order, payment, "Payment processed", payment.paidAt)
         applicationEventPublisher.publishEvent(PaymentApprovedEvent(order.key, payment.hasAppliedCoupon()))
         return PaymentApprovalResult.approved(order.key, extKey, paidAt)

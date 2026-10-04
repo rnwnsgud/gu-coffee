@@ -21,4 +21,8 @@ dependencies {
     runtimeOnly(project(":admin-api"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
+
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.4.0")
+    testImplementation(project(":admin-api"))
+    testImplementation(project(":core:core-domain"))
 }
