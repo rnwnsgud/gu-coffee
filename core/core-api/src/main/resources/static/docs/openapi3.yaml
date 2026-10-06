@@ -181,6 +181,31 @@ paths:
               examples:
                 cart-add-item:
                   value: "{\"status\":\"SUCCESS\",\"data\":null,\"error\":null}"
+  /v1/limited-coupons/{limitedCouponId}:
+    get:
+      tags:
+      - v1
+      operationId: limited-coupon-get
+      parameters:
+      - name: limitedCouponId
+        in: path
+        description: 선착순 쿠폰 식별자
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-limited-coupons-limitedCouponId488809596"
+              examples:
+                limited-coupon-get:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"id\":1,\"name\":\"선착\
+                    순 3000원 할인 쿠폰\",\"type\":\"FIXED_AMOUNT\",\"discount\":3000,\"\
+                    expiredAt\":\"2026-12-31T23:59:59\",\"totalQuantity\":100,\"issuedQuantity\"\
+                    :30,\"remainingQuantity\":70},\"error\":null}"
   /v1/menus/{menuId}:
     get:
       tags:
@@ -361,6 +386,45 @@ paths:
               examples:
                 coupon-download:
                   value: "{\"status\":\"SUCCESS\",\"data\":null,\"error\":null}"
+  /v1/limited-coupons/{limitedCouponId}/issue:
+    post:
+      tags:
+      - v1
+      operationId: limited-coupon-issue
+      parameters:
+      - name: limitedCouponId
+        in: path
+        description: 선착순 쿠폰 식별자
+        required: true
+        schema:
+          type: string
+      - name: Gu-Coffee-com.coffee.gu.Principal-Id
+        in: header
+        description: 사용자 식별자
+        required: true
+        schema:
+          type: string
+        example: "1"
+      - name: Gu-Coffee-com.coffee.gu.Principal-Type
+        in: header
+        description: 사용자 타입 (USER/GUEST)
+        required: true
+        schema:
+          type: string
+        example: USER
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-limited-coupons-limitedCouponId-issue1165982840"
+              examples:
+                limited-coupon-issue:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"id\":10,\"state\":\"\
+                    DOWNLOADED\",\"name\":\"선착순 3000원 할인 쿠폰\",\"type\":\"FIXED_AMOUNT\"\
+                    ,\"discount\":3000,\"expiredAt\":\"2026-12-31T23:59:59\"},\"error\"\
+                    :null}"
   /v2/menus:
     get:
       tags:
@@ -502,6 +566,137 @@ components:
         status:
           type: string
           description: 응답 상태
+    v1-cart-items-cartItemId310325755:
+      required:
+      - quantity
+      type: object
+      properties:
+        quantity:
+          type: number
+          description: 변경할 수량
+    v1-payments-confirm1723508606:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - result
+          type: object
+          properties:
+            result:
+              type: string
+              description: 결제 상태
+        status:
+          type: string
+          description: 응답 상태
+    v1-limited-coupons-limitedCouponId-issue1165982840:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - discount
+          - expiredAt
+          - id
+          - name
+          - state
+          - type
+          type: object
+          properties:
+            expiredAt:
+              type: string
+              description: 쿠폰 만료 일시
+            name:
+              type: string
+              description: 쿠폰 명칭
+            discount:
+              type: number
+              description: 할인 금액 또는 할인율
+            state:
+              type: string
+              description: "발급된 쿠폰 상태 (DOWNLOADED, USED, CANCELED)"
+            id:
+              type: number
+              description: 발급된 쿠폰 식별자
+            type:
+              type: string
+              description: 쿠폰 할인 타입 (FIXED_AMOUNT / PERCENTAGE)
+        status:
+          type: string
+          description: 응답 상태
+    v1-payments-955441622:
+      required:
+      - orderKey
+      type: object
+      properties:
+        orderKey:
+          type: string
+          description: 주문 키
+    v1-cart-items-1531752005:
+      required:
+      - menuId
+      - quantity
+      type: object
+      properties:
+        quantity:
+          type: number
+          description: 수량
+        menuId:
+          type: number
+          description: 메뉴 식별자
+    v2-menus1003972509:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - content
+          - hasNext
+          type: object
+          properties:
+            nextCursor:
+              type: string
+              description: 다음 페이지 커서
+              nullable: true
+            hasNext:
+              type: boolean
+              description: 다음 페이지 여부
+            content:
+              type: array
+              description: 메뉴 목록
+              items:
+                required:
+                - id
+                - name
+                - salesPrice
+                type: object
+                properties:
+                  imageUrl:
+                    type: string
+                    description: 이미지 URL
+                    nullable: true
+                  salesPrice:
+                    type: number
+                    description: 판매가
+                  name:
+                    type: string
+                    description: 메뉴 이름
+                  id:
+                    type: number
+                    description: 메뉴 식별자
+            nextLastId:
+              type: number
+              description: 다음 페이지 마지막 ID
+              nullable: true
+        status:
+          type: string
+          description: 응답 상태
     v1-menus208544573:
       required:
       - error
@@ -568,51 +763,6 @@ components:
         status:
           type: string
           description: 응답 상태
-    v1-cart-items-cartItemId310325755:
-      required:
-      - quantity
-      type: object
-      properties:
-        quantity:
-          type: number
-          description: 변경할 수량
-    v1-payments-confirm1723508606:
-      required:
-      - error
-      - status
-      type: object
-      properties:
-        data:
-          required:
-          - result
-          type: object
-          properties:
-            result:
-              type: string
-              description: 결제 상태
-        status:
-          type: string
-          description: 응답 상태
-    v1-payments-955441622:
-      required:
-      - orderKey
-      type: object
-      properties:
-        orderKey:
-          type: string
-          description: 주문 키
-    v1-cart-items-1531752005:
-      required:
-      - menuId
-      - quantity
-      type: object
-      properties:
-        quantity:
-          type: number
-          description: 수량
-        menuId:
-          type: number
-          description: 메뉴 식별자
     v1-cart16818137:
       required:
       - error
@@ -636,55 +786,6 @@ components:
         status:
           type: string
           description: 응답 상태
-    v2-menus1003972509:
-      required:
-      - error
-      - status
-      type: object
-      properties:
-        data:
-          required:
-          - content
-          - hasNext
-          type: object
-          properties:
-            nextCursor:
-              type: string
-              description: 다음 페이지 커서
-              nullable: true
-            hasNext:
-              type: boolean
-              description: 다음 페이지 여부
-            content:
-              type: array
-              description: 메뉴 목록
-              items:
-                required:
-                - id
-                - name
-                - salesPrice
-                type: object
-                properties:
-                  imageUrl:
-                    type: string
-                    description: 이미지 URL
-                    nullable: true
-                  salesPrice:
-                    type: number
-                    description: 판매가
-                  name:
-                    type: string
-                    description: 메뉴 이름
-                  id:
-                    type: number
-                    description: 메뉴 식별자
-            nextLastId:
-              type: number
-              description: 다음 페이지 마지막 ID
-              nullable: true
-        status:
-          type: string
-          description: 응답 상태
     v1-issued-coupons1814974994:
       required:
       - data
@@ -701,6 +802,51 @@ components:
             - type: boolean
             - type: string
             - type: number
+        status:
+          type: string
+          description: 응답 상태
+    v1-limited-coupons-limitedCouponId488809596:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - discount
+          - expiredAt
+          - id
+          - issuedQuantity
+          - name
+          - remainingQuantity
+          - totalQuantity
+          - type
+          type: object
+          properties:
+            remainingQuantity:
+              type: number
+              description: 잔여 수량
+            expiredAt:
+              type: string
+              description: 쿠폰 만료 일시
+            totalQuantity:
+              type: number
+              description: 총 한정 수량
+            issuedQuantity:
+              type: number
+              description: 현재 발급된 수량
+            name:
+              type: string
+              description: 쿠폰 명칭
+            discount:
+              type: number
+              description: 할인 금액 또는 할인율
+            id:
+              type: number
+              description: 선착순 쿠폰 식별자
+            type:
+              type: string
+              description: 쿠폰 할인 타입 (FIXED_AMOUNT / PERCENTAGE)
         status:
           type: string
           description: 응답 상태
