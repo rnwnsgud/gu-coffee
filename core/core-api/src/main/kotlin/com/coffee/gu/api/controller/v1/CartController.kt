@@ -4,6 +4,7 @@ import com.coffee.gu.Principal
 import com.coffee.gu.api.controller.v1.request.AddCartItemRequest
 import com.coffee.gu.api.controller.v1.request.ModifyCartItemRequest
 import com.coffee.gu.api.controller.v1.response.CartResponse
+import com.coffee.gu.auth.Authenticated
 import com.coffee.gu.cart.CartService
 import com.coffee.gu.response.ApiResponse
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -19,23 +20,23 @@ class CartController(
     private val cartService: CartService,
 ) {
     @GetMapping("/v1/cart")
-    fun getCart(principal: Principal): ApiResponse<CartResponse> {
+    fun getCart(@Authenticated principal: Principal): ApiResponse<CartResponse> {
         val cart = cartService.getCart(principal)
         return ApiResponse.success(CartResponse(cart.items.map { CartResponse.CartItemResponse.from(it) }))
     }
 
     @PostMapping("/v1/cart/items")
     fun addCartItem(
-        principal: Principal,
+        @Authenticated principal: Principal,
         @RequestBody request: AddCartItemRequest,
-        ): ApiResponse<Unit> {
+    ): ApiResponse<Unit> {
         cartService.addCartItem(principal, request.toAddCartItem())
         return ApiResponse.success()
     }
 
     @PutMapping("/v1/cart/items/{cartItemId}")
     fun modifyCartItem(
-        principal: Principal,
+        @Authenticated principal: Principal,
         @PathVariable cartItemId: Long,
         @RequestBody request: ModifyCartItemRequest,
     ): ApiResponse<Unit> {
@@ -45,7 +46,7 @@ class CartController(
 
     @DeleteMapping("/v1/cart/items/{cartItemId}")
     fun deleteCartItem(
-        principal: Principal,
+        @Authenticated principal: Principal,
         @PathVariable cartItemId: Long,
     ): ApiResponse<Unit> {
         cartService.deleteCartItem(principal, cartItemId)

@@ -7,6 +7,7 @@ plugins {
 
 tasks.bootJar {
     enabled = true
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     val coreApiProject = project(":core:core-api")
     dependsOn(":core:core-api:asciidoctor")
     dependsOn(":core:core-api:openapi3")

@@ -80,17 +80,19 @@ tasks.matching { it.name == "openapi3" }.configureEach {
     dependsOn(tasks.test)
 }
 
-val copyDocs by tasks.registering(Copy::class) {
+val copyDocs = tasks.register("copyDocs") {
     dependsOn(tasks.asciidoctor)
     dependsOn(tasks.matching { it.name == "openapi3" })
-    from(tasks.asciidoctor.get().outputDir)
-    from("build/api-spec")
-    into("src/main/resources/static/docs")
     doLast {
         copy {
             from(tasks.asciidoctor.get().outputDir)
             from("build/api-spec")
-            into("build/resources/main/static/docs")
+            into("src/main/resources/static/docs")
+        }
+        copy {
+            from(tasks.asciidoctor.get().outputDir)
+            from("build/api-spec")
+            into(layout.buildDirectory.dir("resources/main/static/docs"))
         }
     }
 }

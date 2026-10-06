@@ -51,7 +51,7 @@ gu-coffee
     ├── support-monitoring    # [미구현] 시스템 프로메테우스/메트릭 모니터링 예정
     ├── support-pagination    # 슬라이스/오프셋 페이징 유틸리티
     ├── support-pg            # Toss Payments PG 연동 및 WebClient 클라이언트
-    └── support-web           # 공통 ApiResponse 포맷 및 Spring Web MVC 설정
+    └── support-web           # 공통 ApiResponse 포맷, PrincipalArgumentResolver 및 Spring Web MVC 설정
 ```
 
 ---
@@ -102,15 +102,36 @@ gu-coffee
   - 대규모 트래픽 환경에서 캐시 만료 시 동시 다발적 DB 조회가 몰리는 캐시 스탬피드(Cache Stampede)를 방어하기 위해 `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 DB 접근을 직렬화.
   - 관리자 메뉴-옵션 매핑 수정 시 `@CacheEvict`를 통해 캐시를 즉시 무효화하여 데이터 일관성 보장.
 
-### 🎟️ 7. Redisson 기반 분산 락을 통한 쿠폰 다운로드 동시성 제어
+### 🎟️ 7. 선착순 한정 수량 쿠폰(`LimitedCoupon`) 원자적 재고 차감 및 Redisson 분산 락 제어
+- **문제 인식 & 분산 락 도입 명분**:
+  - 단순 무제한 쿠폰 다운로드의 '연타(따닥) 방지'는 DB 복합 유니크 제약조건(`principal_key`, `coupon_id`)만으로도 애플리케이션 외부 인프라 비용 없이 원천 차단이 가능하므로, 여기에 분산 락을 사용하는 것은 불필요한 오버엔지니어링(Over-engineering)에 해당.
+  - 분산 락이 진정으로 필요한 임계 영역은 **"총 수량이 엄격히 한정된 선착순 프로모션 쿠폰의 실시간 잔여 재고 소진"** 상황임. 대규모 동시 트래픽 집중 시 애플리케이션 레벨의 잔여 재고 검사(`issuedQuantity < totalQuantity`)가 동시에 통과되면 한정 수량을 초과 발급하는 **오버이슈(Over-issue)** 정합성 결함이 발생하므로 강력한 동시성 직렬화가 필수적임.
+- **아키텍처 해결**:
+  - **도메인 분리 & 합성(Composition) 구조**:
+    - 기존 `Coupon` 도메인과의 무리한 JPA 상속(`JOINED`/`SINGLE_TABLE`)을 배제하고, 선착순 재고 라이프사이클을 독립적으로 전담하는 [`LimitedCoupon`](file:///Users/gujunhyeong/Desktop/dev/gu-coffee/core/core-domain/src/main/kotlin/com/coffee/gu/coupon/LimitedCoupon.kt) 모델 및 `limited_coupon` 테이블을 구축.
+    - 발급 성공 시 산출물은 기존 도메인 모델인 [`IssuedCoupon`](file:///Users/gujunhyeong/Desktop/dev/gu-coffee/core/core-domain/src/main/kotlin/com/coffee/gu/coupon/IssuedCoupon.kt)으로 영속화하여, 주문(`OrderController`), 결제(`PaymentController`), 스탬프 등 기존 파이프라인의 코드를 일절 수정하지 않고 100% 재사용.
+  - **Redisson 분산 락 기반 원자적 임계 영역 격리**:
+    - Lettuce의 CPU 낭비 및 네트워크 부하를 유발하는 스핀 락(Spin Lock) 폴링 대신, Redis Pub/Sub 기반의 `RedissonClient`를 채택하여 락 획득 대기 오버헤드를 최소화.
+    - Redisson 의존성을 독립 인프라 모듈(`support:lock`)로 격리하여 비즈니스 코어와 서드파티 락 라이브러리 간의 결합도를 낮추고 `LockManager` 인터페이스로 추상화.
+    - `LIMITED-COUPON-{limitedCouponId}` 단위로 락 범위를 한정하여 특정 선착순 이벤트가 타 쿠폰이나 일반 주문 트래픽에 영향을 주지 않도록 격리.
+    - **락과 트랜잭션의 명확한 수명주기 분리**: 트랜잭션 커밋 전에 락이 조기 해제되어 발생하는 레이스 컨디션을 방지하기 위해, 트랜잭션 외부에서 락을 획득/해제하고 내부에서 DB 커밋까지 마치는 수명주기(`LimitedCouponService` $\to$ `LimitedCouponIssueExecutor`)를 확립.
+    - 분산 락 보호 하에 **[1] 1인 1매 검증 $\to$ [2] 재고 소진 확인(`issuedQuantity < totalQuantity`) $\to$ [3] 재고 차감(`issuedQuantity++`) $\to$ [4] `IssuedCoupon` 생성**을 단일 원자적 트랜잭션으로 완결하여 오버이슈를 원천 차단.
+    - 인프라 순단 시 1인 1매 정책은 DB `issued_coupon`의 복합 유니크 제약조건으로 이중 방어.
+
+### 🧪 8. 멀티스레드 동시성 & 락 회귀(Regression) 테스트 자동화
 - 문제 인식:
-  - 동일 사용자가 모바일 네트워크 지연 등으로 다운로드 버튼을 연타(따닥)하거나 동시 요청을 보낼 때, 애플리케이션 레벨의 중복 검사(`existsByPrincipalKeyAndCouponId`)가 동시에 통과되어 동일 쿠폰이 중복 발급되는 동시성 이슈 발생.
+  - `@Transactional`의 위치 변경이나 락 해제 타이밍 리팩토링 시, 일반 단위 테스트로는 동시성 버그가 감지되지 않고 운영 환경에서만 장애로 터지는 위험 존재.
 - 아키텍처 해결:
-  - Redisson 의존성을 독립 인프라 모듈(`support:lock`)로 격리하여 비즈니스 코어와 서드파티 락 라이브러리 간의 결합도를 낮추고 `LockManager` 인터페이스로 추상화.
-  - Lettuce의 스핀 락(Spin Lock) 폴링 방식 대신 Redis Pub/Sub 기반의 `RedissonClient`를 채택하여 불필요한 네트워크 트래픽 및 Redis CPU 부하를 최소화.
-  - 트랜잭션 커밋 전에 락이 조기 해제되는 경합을 방지하기 위해, 트랜잭션 외부에서 락을 획득/해제하고 내부에서 DB 커밋까지 마치는 수명주기(`CouponService` $\to$ `CouponDownloadExecutor`)를 확립.
-  - `COUPON-DOWNLOAD-{couponId}-{principalKey}` 단위로 락을 세분화하여 타 유저의 발급 요청에는 영향을 주지 않도록 격리.
-  - 분산 락 실패 시나리오 및 인프라 순단에 대비하여 DB `issued_coupon` 테이블에 `(principal_key, coupon_id)` 복합 유니크 제약조건을 병행 적용해 데이터 정합성을 이중 보장.
+  - `CountDownLatch` 및 다중 워커 스레드 기반의 통합 동시성 회귀 테스트 스위트 구축:
+    - **100명 동시 선착순 발급 스트레스 테스트**: 30개 한정 수량 쿠폰에 100개 스레드가 동시 경합할 때 정확히 30건 성공, 70건 품절 차단(`LIMITED_COUPON_SOLD_OUT`), DB 최종 발급 수량 30건(오버이슈 0건)을 정밀 검증.
+    - **1인 1매 동시성 테스트**: 동일 유저의 10회 동시 연타 요청 시 1건만 성공하고 9건은 `COUPON_ALREADY_DOWNLOADED`로 정상 차단됨을 실측 검증.
+
+### 📑 9. RestDocs 기반 OpenAPI 3.0 (Swagger UI) 스펙 자동 추출 및 동기화
+- 문제 인식:
+  - Spring RestDocs는 테스트 기반으로 신뢰도가 높으나 정적 HTML 파일로만 산출되어 클라이언트 개발자가 브라우저에서 직접 API를 호출(Try it out)하거나 Postman 등으로 가져오기 불편함.
+- 아키텍처 해결:
+  - `com.epages.restdocs-api-spec`을 파이프라인에 연결하여 RestDocs 테스트 통과 시 `openapi3.yaml`이 자동 생성되도록 구성.
+  - Gradle `copyDocs` 태스크를 통해 빌드 산출물 및 정적 웹 리소스 디렉토리에 Swagger UI 스펙이 100% 자동 동기화되도록 연결.
 
 ---
 
@@ -126,9 +147,11 @@ gu-coffee
 
 
 ### Testing & Build
-- **Gradle 8.x** (Kotlin DSL Multi-Module)
+- **Gradle 9.x** (Kotlin DSL Multi-Module)
 - **JUnit 5**, **Mockito-Kotlin 5.4.0**, **AssertJ**
 - **Spring RestDocs** (Asciidoctor 4.0.2)
+- **restdocs-api-spec 0.20.1** (OpenAPI 3.0 / Swagger UI 자동 생성)
+- **ArchUnit 1.4.0** (멀티 모듈 DIP 및 패키지 아키텍처 규칙 검증)
 
 ---
 
@@ -158,7 +181,12 @@ gu-coffee
 - 음료 구매 시 결제 완료 이벤트 기반 스탬프 자동 적립
 - 10개 적립 시 무료 음료 쿠폰 자동 발급 및 결제 취소 시 스탬프 역순 회수
 
-### 🏬 7. 매장 (Store)
+### ⚡ 7. 선착순 한정 수량 쿠폰 (Limited Coupon)
+- 총 발행 한도가 정해진 선착순 프로모션 쿠폰 도메인
+- Redisson 분산 락 하에 1인 1매 검증 및 원자적 재고 차감(`issuedQuantity++`) 후 `IssuedCoupon` 발급
+- 잔여 수량 실시간 계산 및 소진 시 조기 차단
+
+### 🏬 8. 매장 (Store)
 - Haversine 공식 기반 사용자 위치 반경 매장 검색 및 지점 영업 정보 조회
 
 ---
@@ -166,18 +194,35 @@ gu-coffee
 <a name="6-api-엔드포인트-요약"></a>
 ## 6. API 엔드포인트 요약
 
-### 👤 사용자 API (`/api/v1`)
+### 👤 사용자 API (`/v1`)
 | 도메인 | HTTP Method | Endpoint | 설명 |
 | :--- | :--- | :--- | :--- |
 | **Health** | `GET` | `/health` | 서버 헬스 체크 |
-| **Menu** | `GET` | `/api/v1/menus` | 카테고리별 메뉴 목록 및 상세 조회 |
-| **Cart** | `POST` / `GET` / `DELETE` | `/api/v1/carts` | 장바구니 생성, 아이템 추가/수정/삭제 |
-| **Order** | `POST` / `GET` | `/api/v1/orders` | 주문서 생성 및 주문 내역 조회 |
-| **Payment** | `POST` | `/api/v1/payments` | 결제 승인 요청 (PG 결제 연동) |
-| **Cancel** | `POST` | `/api/v1/cancels` | 주문 및 결제 취소 요청 |
-| **Coupon** | `GET` / `POST` | `/api/v1/coupons` | 보유 쿠폰 목록 조회 및 다운로드 |
-| **Stamp** | `GET` | `/api/v1/stamps` | 사용자 스탬프 적립 현황 및 히스토리 조회 |
-| **Store** | `GET` | `/api/v1/stores` | 위치 반경 및 키워드 기반 매장 검색 |
+| **Menu** | `GET` | `/v1/menus` | 카테고리별 메뉴 목록 조회 |
+| | `GET` | `/v1/menus/{menuId}` | 메뉴 상세 및 옵션 목록 조회 |
+| **Cart** | `GET` | `/v1/cart` | 장바구니 조회 |
+| | `POST` | `/v1/cart/items` | 장바구니 아이템 담기 |
+| | `PUT` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 수량 변경 |
+| | `DELETE` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 삭제 |
+| **Order** | `POST` | `/v1/orders` | 주문서 생성 |
+| | `GET` | `/v1/orders` | 주문 목록 조회 |
+| | `GET` | `/v1/orders/{orderKey}` | 단건 주문 상세 조회 |
+| **Payment** | `POST` | `/v1/payment/prepare` | 결제 사전 준비 및 금액 검증 |
+| | `POST` | `/v1/payment/approve` | PG 결제 승인 요청 |
+| **Cancel** | `POST` | `/v1/cancel` | 주문 및 결제 취소 요청 |
+| **Coupon** | `GET` | `/v1/issued-coupons` | 보유 발급 쿠폰 목록 조회 |
+| | `POST` | `/v1/coupons/{couponId}/download` | 일반 쿠폰 다운로드 |
+| **Limited Coupon** | `GET` | `/v1/limited-coupons/{limitedCouponId}` | 선착순 쿠폰 정보 및 잔여 수량 조회 |
+| | `POST` | `/v1/limited-coupons/{limitedCouponId}/issue` | **선착순 쿠폰 발급/응모 (분산 락)** |
+| **Stamp** | `GET` | `/v1/stamps` | 사용자 스탬프 적립 현황 조회 |
+| | `GET` | `/v1/stamps/histories` | 스탬프 히스토리 내역 조회 |
+| **Store** | `GET` | `/v1/stores` | 위치 반경 기반 매장 검색 |
+
+### 📑 API 문서 & 명세
+| 문서 종류 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Swagger UI / Spec** | `GET` | `/docs/openapi3.yaml` | RestDocs 기반 자동 추출 OpenAPI 3.0 스펙 |
+| **RestDocs HTML** | `GET` | `/docs/index.html` | Spring RestDocs 정적 HTML 문서 |
 
 ### 🛠️ 관리자 API (`/admin/v1`)
 | 도메인 | HTTP Method | Endpoint | 설명 |
@@ -197,8 +242,20 @@ gu-coffee
 # 전체 단위 및 통합 테스트 실행
 ./gradlew test
 
-# 핵심 결제/동시성 테스트만 실행
+# 선착순 쿠폰 분산 락 및 100스레드 동시성 스트레스 테스트 실행
+./gradlew :core:core-api:test --tests "*LimitedCoupon*"
+
+# 결제 FOR UPDATE SKIP LOCKED 복구 파이프라인 테스트 실행
 ./gradlew :core:core-api:test --tests "com.coffee.gu.payment.*"
+
+# ArchUnit 아키텍처 규칙 검증 테스트 실행
+./gradlew :coffee-server:test
+```
+
+### OpenAPI / Swagger 스펙 생성
+```bash
+# RestDocs 테스트 기반 openapi3.yaml 자동 생성 및 정적 경로 동기화
+./gradlew :core:core-api:openapi3
 ```
 
 ### 애플리케이션 실행
