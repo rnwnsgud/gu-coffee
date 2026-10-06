@@ -13,7 +13,6 @@ import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.time.LocalDateTime
 
-// todo
 @Table(
     name = "event_log",
     indexes = [

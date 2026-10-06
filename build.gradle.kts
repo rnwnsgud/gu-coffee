@@ -9,6 +9,7 @@ plugins {
     id("org.springframework.boot") version "4.0.5" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     id("org.asciidoctor.jvm.convert") version "4.0.2" apply false
+    id("com.epages.restdocs-api-spec") version "0.20.1" apply false
 }
 
 subprojects {

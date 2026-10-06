@@ -15,33 +15,31 @@ abstract class AdminBaseEntity {
     private Long id = 0L;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "entity_status", columnDefinition = "VARCHAR")
-    private AdminEntityStatus status = AdminEntityStatus.ACTIVE;
+    @Column(columnDefinition = "VARCHAR")
+    private AdminEntityStatus entityStatus = AdminEntityStatus.ACTIVE;
 
     @CreatedDate
-    @Column(name = "created_at")
-    private LocalDateTime created = LocalDateTime.MIN;
+    private LocalDateTime createdAt = LocalDateTime.MIN;
 
     @LastModifiedDate
-    @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.MIN;
 
     public Long getId() { return id; }
 
     void active() {
-        this.status = AdminEntityStatus.ACTIVE;
+        this.entityStatus = AdminEntityStatus.ACTIVE;
     }
 
     boolean isActive() {
-        return this.status == AdminEntityStatus.ACTIVE;
+        return this.entityStatus == AdminEntityStatus.ACTIVE;
     }
 
     void delete() {
-        this.status = AdminEntityStatus.DELETED;
+        this.entityStatus = AdminEntityStatus.DELETED;
     }
 
     boolean isDeleted() {
-        return this.status == AdminEntityStatus.DELETED;
+        return this.entityStatus == AdminEntityStatus.DELETED;
     }
 
 }
