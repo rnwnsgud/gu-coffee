@@ -28,6 +28,7 @@ enum class ErrorType(
     COUPON_NOT_FOUND_OR_EXPIRED(400, ErrorCode.E4000, "쿠폰을 찾을 수 없거나 만료되었습니다.", ErrorLogLevel.INFO),
     COUPON_ALREADY_DOWNLOADED(400, ErrorCode.E4001, "이미 다운로드한 쿠폰입니다.", ErrorLogLevel.INFO),
     COUPON_LOCK_ACQUISITION_FAILED(429, ErrorCode.E4002, "쿠폰 발급 요청이 몰려 처리에 실패했습니다. 잠시 후 다시 시도해주세요.", ErrorLogLevel.WARN),
+    LIMITED_COUPON_SOLD_OUT(409, ErrorCode.E4003, "선착순 쿠폰이 모두 소진되었습니다.", ErrorLogLevel.INFO),
 
     // 발행 쿠폰
     ISSUED_COUPON_INVALID(400, ErrorCode.E5000, "사용할 수 없는 쿠폰입니다.", ErrorLogLevel.INFO);

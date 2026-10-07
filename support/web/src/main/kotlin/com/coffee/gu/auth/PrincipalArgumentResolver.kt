@@ -34,26 +34,28 @@ class PrincipalArgumentResolver : HandlerMethodArgumentResolver {
             ?: throw CoreException(ErrorType.INVALID_REQUEST, null)
 
         val annotation = parameter.getParameterAnnotation(Authenticated::class.java)
+        val isRequired = annotation?.required ?: true
 
         val id = request.getHeader(PRINCIPAL_ID_HEADER)
         val type = request.getHeader(PRINCIPAL_TYPE_HEADER)
 
-        validatePrincipal(annotation, id, type)
-
-        return Principal(id!!, type!!)
-    }
-
-    private fun validatePrincipal(annotation: Authenticated?, id: String?, type: String?) {
-        val isRequired = annotation != null && annotation.required
-
-        if (isRequired) {
-            if (id == null) throw CoreException(ErrorType.UNAUTHORIZED, null)
-            if (PrincipalType.USER.name != type) {
-                throw CoreException(ErrorType.UNAUTHORIZED, "회원 전용 서비스입니다.")
+        if (id.isNullOrBlank() || type.isNullOrBlank()) {
+            if (isRequired) {
+                throw CoreException(ErrorType.UNAUTHORIZED, "인증 헤더가 누락되었습니다.")
             }
+            throw CoreException(ErrorType.INVALID_REQUEST, "인증 헤더가 누락되었습니다.")
         }
-        if (type == null) {
-            throw CoreException(ErrorType.INVALID_REQUEST, null)
+
+        val principalType = try {
+            PrincipalType.valueOf(type)
+        } catch (e: IllegalArgumentException) {
+            throw CoreException(ErrorType.INVALID_REQUEST, "유효하지 않은 사용자 타입입니다.")
         }
+
+        if (isRequired && principalType != PrincipalType.USER) {
+            throw CoreException(ErrorType.UNAUTHORIZED, "회원 전용 서비스입니다.")
+        }
+
+        return Principal(id, principalType)
     }
 }

@@ -6,6 +6,7 @@ plugins {
     id("org.springframework.boot")
     id("io.spring.dependency-management")
     id("org.asciidoctor.jvm.convert")
+    id("com.epages.restdocs-api-spec")
 }
 
 tasks.bootJar {
@@ -34,6 +35,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-cache")
 
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
+    testImplementation("com.epages:restdocs-api-spec-mockmvc:0.20.1")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation(project(":storage:db-core"))
@@ -46,6 +48,12 @@ val snippetsDir = file("build/generated-snippets")
 
 tasks.test {
     outputs.dir(snippetsDir)
+    testLogging {
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 tasks.asciidoctor {
@@ -58,9 +66,44 @@ tasks.asciidoctor {
     dependsOn(tasks.test)
 }
 
-tasks.bootJar {
+openapi3 {
+    setServer("http://localhost:8080")
+    title = "Gu Coffee API Specification"
+    description = "Gu Coffee REST API Specification (Generated from Spring RestDocs)"
+    version = "0.0.1"
+    format = "yaml"
+    outputDirectory = "build/api-spec"
+    outputFileNamePrefix = "openapi3"
+}
+
+tasks.matching { it.name == "openapi3" }.configureEach {
+    dependsOn(tasks.test)
+}
+
+val copyDocs = tasks.register("copyDocs") {
     dependsOn(tasks.asciidoctor)
-    from(tasks.asciidoctor.get().outputDir) {
-        into("static/docs")
+    dependsOn(tasks.matching { it.name == "openapi3" })
+    doLast {
+        copy {
+            from(tasks.asciidoctor.get().outputDir)
+            from("build/api-spec")
+            into("src/main/resources/static/docs")
+        }
+        copy {
+            from(tasks.asciidoctor.get().outputDir)
+            from("build/api-spec")
+            into(layout.buildDirectory.dir("resources/main/static/docs"))
+        }
     }
 }
+
+tasks.asciidoctor {
+    finalizedBy(copyDocs)
+}
+
+tasks.matching { it.name == "openapi3" }.configureEach {
+    finalizedBy(copyDocs)
+}
+
+
+

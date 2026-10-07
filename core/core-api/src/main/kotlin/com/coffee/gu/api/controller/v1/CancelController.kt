@@ -2,6 +2,7 @@ package com.coffee.gu.api.controller.v1
 
 import com.coffee.gu.Principal
 import com.coffee.gu.api.controller.v1.request.CancelRequest
+import com.coffee.gu.auth.Authenticated
 import com.coffee.gu.cancel.CancelService
 import com.coffee.gu.enums.OrderState
 import com.coffee.gu.order.OrderService
@@ -17,7 +18,7 @@ class CancelController(
 ) {
     @PostMapping("/v1/cancel")
     fun cancelOrder(
-        principal: Principal,
+        @Authenticated principal: Principal,
         @RequestBody request: CancelRequest,
     ): ApiResponse<Unit> {
         val order = orderService.getOrder(request.orderKey, OrderState.PAID)

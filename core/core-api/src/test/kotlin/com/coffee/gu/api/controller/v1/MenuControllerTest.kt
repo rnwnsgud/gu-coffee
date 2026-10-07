@@ -18,7 +18,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.quality.Strictness
-import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders.get
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields

@@ -22,6 +22,7 @@ enum class ErrorCode {
     E4000,
     E4001,
     E4002,
+    E4003,
 
     // 발행쿠폰
     E5000
