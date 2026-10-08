@@ -28,8 +28,4 @@ class MenuService(
         val options = optionFinder.findByOptionGroups(optionGroups)
         return MenuDetailResult(menu, optionGroups, options)
     }
-
-    @CacheEvict(cacheNames = [CacheConfig.MENU_DETAIL_CACHE], key = "#menuId")
-    fun evictMenuDetail(menuId: Long) {
-    }
 }

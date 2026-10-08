@@ -17,4 +17,12 @@ public class AdminMenuOptionGroupEntity extends AdminBaseEntity{
         this.optionGroupId = optionGroupId;
     }
 
+    public Long getMenuId() {
+        return menuId;
+    }
+
+    public Long getOptionGroupId() {
+        return optionGroupId;
+    }
+
 }
