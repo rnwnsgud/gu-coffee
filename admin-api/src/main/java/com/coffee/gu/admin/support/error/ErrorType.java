@@ -1,4 +1,4 @@
-package com.coffee.admin.support.error;
+package com.coffee.gu.admin.support.error;
 
 
 import org.springframework.boot.logging.LogLevel;

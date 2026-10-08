@@ -1,6 +1,6 @@
 package com.coffee.gu;
 
-import com.coffee.admin.domain.AdminEntityStatus;
+import com.coffee.gu.admin.domain.AdminEntityStatus;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -8,7 +8,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import java.time.LocalDateTime;
 
 @MappedSuperclass
-abstract class AdminBaseEntity {
+public abstract class AdminBaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,20 +26,24 @@ abstract class AdminBaseEntity {
 
     public Long getId() { return id; }
 
-    void active() {
+    public void active() {
         this.entityStatus = AdminEntityStatus.ACTIVE;
     }
 
-    boolean isActive() {
+    public boolean isActive() {
         return this.entityStatus == AdminEntityStatus.ACTIVE;
     }
 
-    void delete() {
+    public void delete() {
         this.entityStatus = AdminEntityStatus.DELETED;
     }
 
-    boolean isDeleted() {
+    public boolean isDeleted() {
         return this.entityStatus == AdminEntityStatus.DELETED;
+    }
+
+    public AdminEntityStatus getEntityStatus() {
+        return this.entityStatus;
     }
 
 }

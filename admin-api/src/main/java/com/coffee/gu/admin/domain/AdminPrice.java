@@ -1,4 +1,4 @@
-package com.coffee.admin.domain;
+package com.coffee.gu.admin.domain;
 
 import java.math.BigDecimal;
 

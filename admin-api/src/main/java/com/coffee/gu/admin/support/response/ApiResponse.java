@@ -1,7 +1,7 @@
-package com.coffee.admin.support.response;
+package com.coffee.gu.admin.support.response;
 
-import com.coffee.admin.support.error.ErrorMessage;
-import com.coffee.admin.support.error.ErrorType;
+import com.coffee.gu.admin.support.error.ErrorMessage;
+import com.coffee.gu.admin.support.error.ErrorType;
 
 public record ApiResponse<T>(
         StatusType status,

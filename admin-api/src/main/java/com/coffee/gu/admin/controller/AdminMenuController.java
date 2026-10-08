@@ -1,12 +1,15 @@
-package com.coffee.admin.controller;
+package com.coffee.gu.admin.controller;
 
-import com.coffee.admin.controller.request.CreateAdminMenuOptionGroup;
-import com.coffee.admin.controller.request.CreateAdminOptionGroupRequest;
-import com.coffee.admin.controller.request.CreateAdminOptionRequest;
-import com.coffee.admin.domain.AdminMenuService;
-import com.coffee.admin.controller.request.CreateAdminMenuRequest;
-import com.coffee.admin.support.response.ApiResponse;
+import com.coffee.gu.admin.controller.request.CreateAdminMenuOptionGroup;
+import com.coffee.gu.admin.controller.request.CreateAdminOptionGroupRequest;
+import com.coffee.gu.admin.controller.request.CreateAdminOptionRequest;
+import com.coffee.gu.admin.domain.AdminMenuService;
+import com.coffee.gu.admin.controller.request.CreateAdminMenuRequest;
+import com.coffee.gu.admin.support.response.ApiResponse;
+import com.coffee.gu.admin.controller.request.UpdateAdminMenuOptionGroupRequest;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,6 +45,21 @@ public class AdminMenuController {
     @PostMapping("/menu-option-group")
     public ApiResponse<?> createMenuOptionGroup(@RequestBody CreateAdminMenuOptionGroup request) {
         adminMenuService.createMenuOptionGroup(request.menuId(), request.optionGroupId());
+        return ApiResponse.success();
+    }
+
+    @PutMapping("/{menuId}/option-groups")
+    public ApiResponse<?> updateMenuOptionGroups(
+            @PathVariable("menuId") Long menuId,
+            @RequestBody UpdateAdminMenuOptionGroupRequest request
+    ) {
+        adminMenuService.updateMenuOptionGroups(menuId, request.optionGroupIds());
+        return ApiResponse.success();
+    }
+
+    @PutMapping("/menu-option-group")
+    public ApiResponse<?> updateMenuOptionGroup(@RequestBody UpdateAdminMenuOptionGroupRequest request) {
+        adminMenuService.updateMenuOptionGroups(request.menuId(), request.optionGroupIds());
         return ApiResponse.success();
     }
 

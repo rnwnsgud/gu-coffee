@@ -1,4 +1,4 @@
-package com.coffee.admin.domain;
+package com.coffee.gu.admin.domain;
 
 /**
  * 어드민기능(여기서 어드민이랑 내부적으로 사용할, 다른팀에게 제공할)

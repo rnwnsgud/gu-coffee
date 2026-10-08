@@ -1,9 +1,9 @@
-package com.coffee.admin.controller.request;
+package com.coffee.gu.admin.controller.request;
 
-import com.coffee.admin.domain.CreateAdminMenu;
-import com.coffee.admin.domain.AdminMenuDetail;
-import com.coffee.admin.domain.AdminNutrition;
-import com.coffee.admin.domain.AdminPrice;
+import com.coffee.gu.admin.domain.CreateAdminMenu;
+import com.coffee.gu.admin.domain.AdminMenuDetail;
+import com.coffee.gu.admin.domain.AdminNutrition;
+import com.coffee.gu.admin.domain.AdminPrice;
 
 import java.math.BigDecimal;
 

@@ -1,12 +1,15 @@
-package com.coffee.admin.domain;
+package com.coffee.gu.admin.domain;
 
 import com.coffee.gu.*;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
+@Transactional
 public class AdminMenuService {
 
     private final AdminMenuRepository adminMenuRepository;
@@ -53,5 +56,23 @@ public class AdminMenuService {
     @CacheEvict(cacheNames = "menuDetail", key = "#menuId")
     public Long createMenuOptionGroup(Long menuId, Long optionGroupId) {
         return adminMenuOptionGroupRepository.save(new AdminMenuOptionGroupEntity(menuId, optionGroupId)).getId();
+    }
+
+    @CacheEvict(cacheNames = "menuDetail", key = "#menuId")
+    public void updateMenuOptionGroups(Long menuId, List<Long> optionGroupIds) {
+        List<AdminMenuOptionGroupEntity> existingMappings =
+                adminMenuOptionGroupRepository.findByMenuIdAndEntityStatus(menuId, AdminEntityStatus.ACTIVE);
+
+        for (AdminMenuOptionGroupEntity mapping : existingMappings) {
+            mapping.delete();
+        }
+
+        if (optionGroupIds != null && !optionGroupIds.isEmpty()) {
+            List<AdminMenuOptionGroupEntity> newMappings = optionGroupIds.stream()
+                    .distinct()
+                    .map(optionGroupId -> new AdminMenuOptionGroupEntity(menuId, optionGroupId))
+                    .toList();
+            adminMenuOptionGroupRepository.saveAll(newMappings);
+        }
     }
 }

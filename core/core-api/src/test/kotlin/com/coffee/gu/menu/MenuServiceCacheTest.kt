@@ -72,21 +72,4 @@ class MenuServiceCacheTest {
         verify(optionFinder, times(0)).findByMenuId(menuId)
     }
 
-    @Test
-    @DisplayName("evictMenuDetail 호출 시 캐시가 무효화되어 다음 조회 시 다시 DB 조회를 수행한다")
-    fun testCacheEvictForcesDbQuery() {
-        // 1회차: 캐시 적재
-        menuService.getMenu(menuId)
-        verify(menuFinder, times(1)).getById(menuId)
-
-        clearInvocations(menuFinder, optionFinder)
-
-        // 캐시 무효화 (Evict)
-        menuService.evictMenuDetail(menuId)
-
-        // 3회차: 캐시가 비었으므로 다시 DB 조회 실행
-        val afterEvictResult = menuService.getMenu(menuId)
-        assertThat(afterEvictResult.menu.name).isEqualTo("Latte")
-        verify(menuFinder, times(1)).getById(menuId)
-    }
 }

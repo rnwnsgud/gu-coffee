@@ -1,4 +1,4 @@
-package com.coffee.admin.support.error;
+package com.coffee.gu.admin.support.error;
 
 public enum ErrorCode {
     E500,

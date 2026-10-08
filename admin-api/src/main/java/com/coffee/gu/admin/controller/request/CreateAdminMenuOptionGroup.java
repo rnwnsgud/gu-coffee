@@ -1,4 +1,4 @@
-package com.coffee.admin.controller.request;
+package com.coffee.gu.admin.controller.request;
 
 public record CreateAdminMenuOptionGroup(
         Long menuId,
