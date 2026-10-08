@@ -60,17 +60,17 @@ gu-coffee
 ## 3. 핵심 엔지니어링 & 시스템 신뢰성 설계
 
 ### 🛡️ 1. 결제 멱등성 보장 및 DB Connection Hold 방지
-- **문제 인식**: 외부 PG 승인 통신(평균 RTT 200ms) 구간을 DB 트랜잭션으로 묶을 경우, 동시 요청 폭주 시 HikariCP 커넥션 풀이 급속히 고갈되어 시스템 전체가 마비되는 `Connection Pool Exhaustion` 위험
+- **문제 인식**: 외부 PG 승인 통신(평균 RTT 200ms) 구간을 DB 트랜잭션으로 묶을 경우, 동시 요청 폭주 시 커넥션 풀이 급속히 고갈되어 시스템 전체가 마비 위험
 - **아키텍처 해결**:
   - `PaymentService.approvePayment` 메서드 전체를 **Non-Transactional**로 유지.
   - 비관적 락(`SELECT ... FOR UPDATE`)과 상태 전이(`READY -> PENDING_PG`)를 담당하는 `PaymentPreparer.prepare`로 트랜잭션 범위를 극소화.
   - 외부 PG 네트워크 I/O 호출 이전에 DB 트랜잭션을 커밋하고 커넥션을 즉시 풀에 반환함으로써 **커넥션 점유 시간을 200ms $\to$ 수 ms 단위로 단축**.
 
 ### ⚡ 2. 네트워크 타임아웃 대응 3중 안전망
-외부 PG 승인 요청 중 Read Timeout 발생 시 결제건이 고아 상태로 남는 것을 방지하기 위해 3단계 즉각 복구 파이프라인 구축:
-1. **1차 즉각 동기 조회**: 예외 포착 즉시 `paymentGatewayProcessor.getPGPayment`를 호출하여 PG사의 실제 승인 완료 여부를 실시간 확인 $\to$ 승인 완료 시 정상 완료(`complete`) 처리.
-2. **2차 자동 망취소**: 미승인 상태이거나 응답 불능 시 즉시 자동 망취소(`cancelPayment`)를 호출하여 결제 승인 취소.
-3. **3차 원자적 Outbox 적재**: 망취소마저 실패하거나 프로세스 비정상 종료 시, 트랜잭셔널 아웃박스 테이블에 `CancelEvent`를 원자적으로 영속화하여 스케줄러 기반 비동기 보상 트랜잭션 수행.
+외부 PG 승인 요청 중 Read Timeout 발생 시 결제건이 고아 상태로 남는 것을 방지하기 위해 3단계 즉각 복구 파이프라인 구축
+1. **즉각 동기 조회**: 예외 포착 즉시 `paymentGatewayProcessor.getPGPayment`를 호출하여 PG사의 실제 승인 완료 여부를 실시간 확인 $\to$ 승인 완료 시 정상 완료(`complete`) 처리.
+2. **자동 망취소**: 미승인 상태이거나 응답 불능 시 즉시 자동 망취소(`cancelPayment`)를 호출하여 결제 승인 취소.
+3. **원자적 Outbox 적재**: 망취소마저 실패하거나 프로세스 비정상 종료 시, 트랜잭셔널 아웃박스 테이블에 `CancelEvent`를 원자적으로 영속화하여 스케줄러 기반 비동기 보상 트랜잭션 수행.
 
 ### 🚀 3. `FOR UPDATE SKIP LOCKED` 기반 분산 스케일아웃 복구 파이프라인
 - 실측 레이턴시 기반 단일 스레드 용량:
@@ -83,23 +83,23 @@ gu-coffee
   - 기존 방식의 한계 (ShedLock): 단일 인스턴스만 독점 실행되는 ShedLock 방식은 서버가 많아도 1대만 20건씩 순차 처리하므로 72건 해소에 총 4분(4주기)이 소요되어 점심 피크 고객 대기 시간 증가.
   - 아키텍처 해결 (`SKIP LOCKED`): 행 단위 비차단 락인 `FOR UPDATE SKIP LOCKED`를 적용하여, 서버 4대 증설 시 락 경합 없이 각 서버가 20건씩 총 80건을 단 4.2초 만에 병렬로 즉시 해소하여 72건 백로그를 1회 주기 내에 전량 복구하도록 설계.
 
-### 📦 4. 트랜잭셔널 아웃박스 패턴 (Transactional Outbox Pattern)
+### 📦 4. 트랜잭셔널 아웃박스 패턴
 - 메시지 발행과 도메인 변경의 원자성을 보장하기 위해 별도 이벤트 저장소(`event_log`)를 도메인 로컬 트랜잭션 내에서 커밋.
 - 발행 실패 이벤트는 스케줄러가 주기적으로 재시도하며, 이벤트 ID 기반의 멱등 테이블을 통해 중복 소비 방지.
 
-### 🧩 5. 도메인 간 트랜잭션 디커플링 및 장애 격리 (Fault Isolation)
+### 🧩 5. 도메인 간 트랜잭션 디커플링 및 장애 격리
 - 문제 인식: 결제 승인 완료 트랜잭션(`PaymentCompleter.complete`) 내부에 부가 기능인 스탬프 적립이 동기로 묶여 있을 경우, 스탬프 테이블 락/데드락 등 부가 기능의 일시적 장애로 인해 이미 카드사 승인이 끝난 결제 전체가 롤백되어 망취소/환불되는 치명적 결합 위험 감지.
 - 아키텍처 해결:
   - 결제 코어와 마케팅 리워드의 트랜잭션 라이프사이클을 완전 분리.
   - `PaymentCompleter`에서 스탬프 동기 의존성을 제거하고, 결제 DB 커밋 완료 후 Spring 트랜잭션 이벤트(`@TransactionalEventListener(phase = AFTER_COMMIT)`) 및 비동기 워커 풀(`stampAsyncExecutor`)을 통해 스탬프를 적립하도록 파이프라인 구축.
-  - 스탬프 모듈에 장애가 발생하더라도 결제 성공을 100% 보장하는 장애 격리(Fault Isolation)를 달성하고, 모놀리스 내에서 도메인 간 최종적 일관성(Eventual Consistency)을 확보.
+  - 스탬프 모듈에 장애가 발생하더라도 결제 성공을 100% 보장하는 장애 격리를 달성하고, 모놀리스 내에서 도메인 간 최종적 일관성을 확보.
 
 ### ☕ 6. Read-Heavy 마스터 데이터 Redis Cache-Aside 및 스탬피드 방어
 - 문제 인식: 메뉴 상세 조회 시 1회 요청당 4단 순차 DB 쿼리(Menu $\to$ MenuOptionGroup $\to$ OptionGroup $\to$ Option)가 발생하여 동시 접속 시 DB 커넥션 풀을 과도하게 점유하는 문제 감지.
 - 아키텍처 해결:
   - 1:N:M 다중 조인으로 인한 대량 데이터 중복 전송과 실행 계획 복잡도를 배제하고, DB는 단순 PK/IN 기반 조회를 유지하도록 역할을 분리.
-  - 조립된 메뉴 상세 데이터는 Redis 기반 Cache-Aside 패턴을 구축하여 95% 이상의 조회 트래픽을 메모리에서 즉시 서빙(RTT 1~2ms)하도록 격리.
-  - 대규모 트래픽 환경에서 캐시 만료 시 동시 다발적 DB 조회가 몰리는 캐시 스탬피드(Cache Stampede)를 방어하기 위해 `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 DB 접근을 직렬화.
+  - 조립된 메뉴 상세 데이터는 Redis 기반 Cache-Aside 패턴을 구축하여 95% 이상의 조회 트래픽을 메모리에서 즉시 서빙하도록 격리.
+  - 대규모 트래픽 환경에서 캐시 만료 시 동시 다발적 DB 조회가 몰리는 캐시 스탬피드를 방어하기 위해 `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 DB 접근을 직렬화.
   - 관리자 메뉴-옵션 매핑 수정 시 `@CacheEvict`를 통해 캐시를 즉시 무효화하여 데이터 일관성 보장.
 
 ### 🎟️ 7. 선착순 한정 수량 쿠폰(`LimitedCoupon`) 원자적 재고 차감 및 Redisson 분산 락 제어
@@ -118,7 +118,7 @@ gu-coffee
     - 분산 락 보호 하에 **[1] 1인 1매 검증 $\to$ [2] 재고 소진 확인(`issuedQuantity < totalQuantity`) $\to$ [3] 재고 차감(`issuedQuantity++`) $\to$ [4] `IssuedCoupon` 생성**을 단일 원자적 트랜잭션으로 완결하여 오버이슈를 원천 차단.
     - 인프라 순단 시 1인 1매 정책은 DB `issued_coupon`의 복합 유니크 제약조건으로 이중 방어.
 
-### 🧪 8. 멀티스레드 동시성 & 락 회귀(Regression) 테스트 자동화
+### 🧪 8. 멀티스레드 동시성 & 락 회귀테스트 자동화
 - 문제 인식:
   - `@Transactional`의 위치 변경이나 락 해제 타이밍 리팩토링 시, 일반 단위 테스트로는 동시성 버그가 감지되지 않고 운영 환경에서만 장애로 터지는 위험 존재.
 - 아키텍처 해결:
@@ -252,14 +252,43 @@ gu-coffee
 ./gradlew :coffee-server:test
 ```
 
+### 로컬 개발 환경 1방 부트스트랩 (Local Infrastructure As Code)
+MySQL 8.0과 Redis 7.x 컨테이너를 기동하고, 헬스체크 확인 후 Flyway 마이그레이션 및 서버를 단 1개의 명령어로 원클릭 구동할 수 있습니다.
+
+```bash
+# 1. 인프라 기동 + 헬스체크 대기 + 로컬 서버 원클릭 실행 (profile: local-dev)
+./local-run.sh
+# 또는
+make run
+
+# 2. 인프라 컨테이너(MySQL, Redis)만 백그라운드로 띄울 때
+./local-run.sh --infra-only
+# 또는
+make up
+# 또는
+./gradlew composeUp
+
+# 3. 로컬 인프라 컨테이너 종료
+./local-stop.sh
+# 또는
+make down
+# 또는
+./gradlew composeDown
+
+# 4. 인프라 및 DB/Redis 데이터 볼륨 완전 초기화
+./local-stop.sh --clean
+# 또는
+make clean
+```
+
 ### OpenAPI / Swagger 스펙 생성
 ```bash
 # RestDocs 테스트 기반 openapi3.yaml 자동 생성 및 정적 경로 동기화
 ./gradlew :core:core-api:openapi3
 ```
 
-### 애플리케이션 실행
+### 애플리케이션 수동 실행 (H2 인메모리 프로파일)
 ```bash
-# 메인 서버 실행
+# H2 인메모리 기반 단순 로컬 서버 실행 (profile: local)
 ./gradlew :coffee-server:bootRun
 ```

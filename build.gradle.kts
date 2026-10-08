@@ -52,3 +52,15 @@ subprojects {
         withType<Jar> { enabled = false }
     }
 }
+
+tasks.register<Exec>("composeUp") {
+    group = "infrastructure"
+    description = "Spin up local infrastructure (MySQL 8.0, Redis 7) via Docker Compose."
+    commandLine("docker", "compose", "up", "-d")
+}
+
+tasks.register<Exec>("composeDown") {
+    group = "infrastructure"
+    description = "Stop local infrastructure containers via Docker Compose."
+    commandLine("docker", "compose", "down")
+}
