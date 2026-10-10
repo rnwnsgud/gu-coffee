@@ -36,6 +36,9 @@ out/
 ### VS Code ###
 .vscode/
 
-*.yml
-!docker-compose.yml
-!.github/workflows/*.yml
+### Secrets & Local Overrides ###
+*secret*.yml
+*secret*.yaml
+*local-override*.yml
+*local-override*.yaml
+.env
