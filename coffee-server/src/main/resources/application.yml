@@ -1,0 +1,55 @@
+spring.application.name: coffee-api
+spring.profiles.active: local-dev
+
+spring:
+  config:
+    import:
+      - optional:classpath:db-core.yml
+      - optional:classpath:monitoring.yml
+      - optional:classpath:logging.yml
+  web.resources.add-mappings: true
+
+server:
+  tomcat:
+    max-connections: 20000
+    threads:
+      max: 600
+      min-spare: 100
+
+---
+spring.config.activate.on-profile: local
+app:
+  init-seed-data:
+    enabled: true
+payment:
+  toss:
+    secret-key: test_sk_24xLea5zVAJG0k9PKDayrQAMYNwW
+    base-url: https://api.tosspayments.com/v1
+
+---
+spring.config.activate.on-profile: local-dev
+app:
+  init-seed-data:
+    enabled: true
+spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+payment:
+  toss:
+    secret-key: test_sk_24xLea5zVAJG0k9PKDayrQAMYNwW
+    base-url: https://api.tosspayments.com/v1
+
+
+---
+spring.config.activate.on-profile: dev
+
+
+---
+spring.config.activate.on-profile: staging
+
+
+---
+spring.config.activate.on-profile: live
+

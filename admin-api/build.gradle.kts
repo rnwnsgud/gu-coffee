@@ -14,4 +14,6 @@ dependencies {
     compileOnly("org.springframework.boot:spring-boot-starter-web")
     compileOnly("org.springframework.boot:spring-boot-starter-data-jpa")
     compileOnly("org.springframework.boot:spring-boot-starter-cache")
+
+    testImplementation("org.springframework.boot:spring-boot-starter-data-jpa")
 }
