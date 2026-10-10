@@ -288,7 +288,7 @@ MySQL 8.0과 Redis 7.x 컨테이너를 기동하고 `local-dev` 프로파일로 
 ```
 
 ### GitHub Actions CI 파이프라인
-`main`, `dev` 브랜치 푸시 및 풀 리퀘스트 생성 시 자동으로 다음 파이프라인이 실행됩니다:
+`main` 브랜치 푸시 및 `main` 대상 풀 리퀘스트 생성 시 자동으로 다음 파이프라인이 실행됩니다:
 1. **JDK 21 & Gradle 캐싱 환경 구성**
 2. **전체 단위·통합·ArchUnit 테스트 검증** (`./gradlew test --continue`)
 3. **RestDocs HTML & OpenAPI 3.0 스펙 생성 검증** (`./gradlew :core:core-api:asciidoctor :core:core-api:openapi3`)
