@@ -173,6 +173,7 @@ gu-coffee
 
 ### Testing & Build
 - **Gradle 9.x** (Kotlin DSL Multi-Module)
+- **GitHub Actions** (CI 자동화: 테스트 검증, RestDocs/OpenAPI 스펙 생성, 빌드 패키징)
 - **JUnit 5**, **Mockito-Kotlin 5.4.0**, **AssertJ**
 - **Spring RestDocs** (Asciidoctor 4.0.2)
 - **restdocs-api-spec 0.20.1** (OpenAPI 3.0 / Swagger UI)
@@ -285,3 +286,12 @@ MySQL 8.0과 Redis 7.x 컨테이너를 기동하고 `local-dev` 프로파일로 
 # ArchUnit 아키텍처 규칙 검증
 ./gradlew :coffee-server:test
 ```
+
+### GitHub Actions CI 파이프라인
+`main`, `dev` 브랜치 푸시 및 풀 리퀘스트 생성 시 자동으로 다음 파이프라인이 실행됩니다:
+1. **JDK 21 & Gradle 캐싱 환경 구성**
+2. **전체 단위·통합·ArchUnit 테스트 검증** (`./gradlew test --continue`)
+3. **RestDocs HTML & OpenAPI 3.0 스펙 생성 검증** (`./gradlew :core:core-api:asciidoctor :core:core-api:openapi3`)
+4. **BootJar 최종 패키징 검증** (`./gradlew :coffee-server:bootJar`)
+5. **실패 시 테스트 리포트, 성공 시 API 문서 아티팩트 자동 보관**
+

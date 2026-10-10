@@ -38,3 +38,4 @@ out/
 
 *.yml
 !docker-compose.yml
+!.github/workflows/*.yml
