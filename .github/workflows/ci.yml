@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & Test & Documentation Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Tests & Verification (Unit, Integration, ArchUnit)
+        run: ./gradlew test --continue
+
+      - name: Generate RestDocs & OpenAPI 3.0 Spec
+        run: ./gradlew :core:core-api:asciidoctor :core:core-api:openapi3
+
+      - name: Build BootJar Package
+        run: ./gradlew :coffee-server:bootJar
+
+      - name: Upload Test Report Artifact on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          retention-days: 7
+
+      - name: Upload API Documentation Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-documentation
+          path: |
+            core/core-api/build/docs/asciidoc/
+            core/core-api/build/api-spec/
+          retention-days: 7
