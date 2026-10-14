@@ -25,6 +25,10 @@ payment:
   toss:
     secret-key: test_sk_24xLea5zVAJG0k9PKDayrQAMYNwW
     base-url: https://api.tosspayments.com/v1
+spring:
+  kafka:
+    listener:
+      auto-startup: false
 
 ---
 spring.config.activate.on-profile: local-dev
@@ -36,6 +40,20 @@ spring:
     redis:
       host: localhost
       port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      group-id: coffee-stamp-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.coffee.gu.*"
 payment:
   toss:
     secret-key: test_sk_24xLea5zVAJG0k9PKDayrQAMYNwW

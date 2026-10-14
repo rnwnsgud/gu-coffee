@@ -33,12 +33,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
     implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("org.springframework.kafka:spring-kafka")
 
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("com.epages:restdocs-api-spec-mockmvc:0.20.1")
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation(project(":storage:db-core"))
+    testImplementation("org.springframework.kafka:spring-kafka-test")
 
     testImplementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
     testImplementation("net.javacrumbs.shedlock:shedlock-provider-jdbc-template:5.16.0")
