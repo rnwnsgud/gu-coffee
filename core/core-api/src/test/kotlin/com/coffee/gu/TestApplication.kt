@@ -3,12 +3,15 @@ package com.coffee.gu
 import com.coffee.gu.config.CoreDataSourceConfig
 import com.coffee.gu.config.CoreJpaConfig
 import com.coffee.gu.config.QuerydslConfig
+import org.mockito.ArgumentMatchers
+import org.mockito.Mockito
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.persistence.autoconfigure.EntityScan
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.scheduling.annotation.EnableAsync
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor
@@ -35,5 +38,14 @@ class TestApplication {
         executor.setThreadNamePrefix("StampAsync-")
         executor.initialize()
         return executor
+    }
+
+    @Bean
+    @Suppress("UNCHECKED_CAST")
+    fun kafkaTemplate(): KafkaTemplate<String, Any> {
+        val template = Mockito.mock(KafkaTemplate::class.java) as KafkaTemplate<String, Any>
+        Mockito.`when`(template.send(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+            .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null))
+        return template
     }
 }

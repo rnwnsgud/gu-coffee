@@ -18,7 +18,7 @@ class PaymentApprovedEventListener(
     private val log = LoggerFactory.getLogger(PaymentApprovedEventListener::class.java)
 
     @Async("stampAsyncExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun handlePaymentApproved(event: PaymentApprovedEvent) {
         if (event.hasAppliedCoupon) return
         try {

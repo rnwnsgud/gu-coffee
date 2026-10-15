@@ -38,6 +38,7 @@ subprojects {
 
     dependencies {
         implementation("org.jetbrains.kotlin:kotlin-stdlib")
+        implementation("org.jetbrains:annotations:26.0.2")
         implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
         implementation("tools.jackson.module:jackson-module-kotlin")
         implementation("io.hypersistence:hypersistence-tsid:2.1.4")
