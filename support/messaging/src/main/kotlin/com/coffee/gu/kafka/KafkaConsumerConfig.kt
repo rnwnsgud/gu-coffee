@@ -16,6 +16,8 @@ import org.springframework.kafka.support.serializer.JacksonJsonDeserializer
 class KafkaConsumerConfig(
     @param:Value("\${spring.kafka.bootstrap-servers:localhost:9092}")
     private val bootstrapServers: String,
+    @param:Value("\${spring.kafka.listener.concurrency:3}")
+    private val concurrency: Int,
 ) {
 
     @Bean
@@ -39,6 +41,7 @@ class KafkaConsumerConfig(
     ): ConcurrentKafkaListenerContainerFactory<String, Any> {
         val factory = ConcurrentKafkaListenerContainerFactory<String, Any>()
         factory.setConsumerFactory(consumerFactory)
+        factory.setConcurrency(concurrency)
         factory.containerProperties.ackMode = ContainerProperties.AckMode.RECORD
         return factory
     }
