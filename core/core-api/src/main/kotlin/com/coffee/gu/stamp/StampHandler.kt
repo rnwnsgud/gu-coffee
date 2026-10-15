@@ -1,10 +1,7 @@
 package com.coffee.gu.stamp
 
-import com.coffee.gu.Principal
 import com.coffee.gu.StampEarnEvent
-import com.coffee.gu.event.OutboxEventPublisher
 import com.coffee.gu.order.Order
-import com.coffee.gu.store.Store
 import org.springframework.stereotype.Component
 import java.time.LocalDateTime
 
