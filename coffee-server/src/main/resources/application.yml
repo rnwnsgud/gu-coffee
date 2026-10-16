@@ -53,7 +53,7 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
       properties:
-        spring.json.trusted.packages: "com.coffee.gu.*"
+        spring.json.trusted.packages: "com.coffee.gu,com.coffee.gu.*"
     listener:
       concurrency: 3
 payment:

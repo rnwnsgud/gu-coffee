@@ -6,6 +6,7 @@ import com.coffee.gu.config.QuerydslConfig
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.persistence.autoconfigure.EntityScan
 import org.springframework.context.annotation.Bean
@@ -41,6 +42,7 @@ class TestApplication {
     }
 
     @Bean
+    @ConditionalOnMissingBean
     @Suppress("UNCHECKED_CAST")
     fun kafkaTemplate(): KafkaTemplate<String, Any> {
         val template = Mockito.mock(KafkaTemplate::class.java) as KafkaTemplate<String, Any>
