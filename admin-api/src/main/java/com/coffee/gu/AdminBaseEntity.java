@@ -4,10 +4,12 @@ import com.coffee.gu.admin.domain.AdminEntityStatus;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
 @MappedSuperclass
+@EntityListeners(AuditingEntityListener.class)
 public abstract class AdminBaseEntity {
 
     @Id
@@ -19,10 +21,11 @@ public abstract class AdminBaseEntity {
     private AdminEntityStatus entityStatus = AdminEntityStatus.ACTIVE;
 
     @CreatedDate
-    private LocalDateTime createdAt = LocalDateTime.MIN;
+    @Column(updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     @LastModifiedDate
-    private LocalDateTime updatedAt = LocalDateTime.MIN;
+    private LocalDateTime updatedAt = LocalDateTime.now();
 
     public Long getId() { return id; }
 

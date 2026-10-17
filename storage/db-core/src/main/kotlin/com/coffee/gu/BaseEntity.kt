@@ -2,14 +2,17 @@ package com.coffee.gu
 
 import com.coffee.gu.enums.EntityStatus
 import jakarta.persistence.Column
+import jakarta.persistence.EntityListeners
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.MappedSuperclass
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 
 @MappedSuperclass
+@EntityListeners(AuditingEntityListener::class)
 abstract class BaseEntity {
 
     @Enumerated(EnumType.STRING)
@@ -17,10 +20,13 @@ abstract class BaseEntity {
     var entityStatus: EntityStatus = EntityStatus.ACTIVE
 
     @CreatedDate
-    val createdAt: LocalDateTime = LocalDateTime.MIN
+    @Column(updatable = false)
+    var createdAt: LocalDateTime = LocalDateTime.now()
+        protected set
 
     @LastModifiedDate
-    val updatedAt: LocalDateTime = LocalDateTime.MIN
+    var updatedAt: LocalDateTime = LocalDateTime.now()
+        protected set
 
     val isActive: Boolean
         get() = this.entityStatus == EntityStatus.ACTIVE

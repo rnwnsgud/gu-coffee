@@ -58,6 +58,10 @@ class PaymentRepositorySkipLockTest {
 
         paymentRepository.save(p1)
         paymentRepository.save(p2)
+        jdbcTemplate.update(
+            "UPDATE payment SET updated_at = ?",
+            java.sql.Timestamp.valueOf(LocalDateTime.now().minusMinutes(10)),
+        )
 
         val executor = Executors.newFixedThreadPool(2)
         val tx1LockedLatch = CountDownLatch(1)
