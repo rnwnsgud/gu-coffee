@@ -2,11 +2,47 @@
 <html lang="ko">
 <head>
     <meta charset="utf-8" />
-    <title>결제 성공</title>
+    <title>토스 인증 완료 & 결제 승인</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 680px; margin: 40px auto; padding: 0 20px; line-height: 1.5; color: #222; }
+        .card { border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #fafafa; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+        input { width: 100%; padding: 8px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+        button { padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 8px; margin-top: 6px; }
+        .btn-primary { background: #3182f6; color: white; }
+        .btn-success { background: #00a86b; color: white; }
+        .btn-outline { background: white; border: 1px solid #aaa; color: #333; }
+        pre { background: #1e1e1e; color: #d4d4d4; padding: 12px; border-radius: 6px; font-size: 12px; overflow-x: auto; }
+        .info-row { font-size: 14px; margin-bottom: 6px; }
+        .info-row code { background: #eee; padding: 2px 6px; border-radius: 4px; }
+    </style>
 </head>
 <body>
-    <h1>결제 승인 중...</h1>
-    <p id="result"></p>
+    <h1>토스 프론트엔드 결제 인증 완료</h1>
+
+    <div class="card">
+        <h3>1. 토스 리다이렉트 파라미터</h3>
+        <div class="info-row"><strong>orderId (orderKey):</strong> <code id="orderId-text">-</code></div>
+        <div class="info-row"><strong>paymentKey:</strong> <code id="paymentKey-text">-</code></div>
+        <div class="info-row"><strong>amount:</strong> <code id="amount-text">-</code></div>
+        <div class="form-group" style="margin-top: 14px;">
+            <label for="principalId">사용자 ID (Header: Gu-Coffee-com.coffee.gu.Principal-Id)</label>
+            <input id="principalId" type="text" value="user-100" />
+        </div>
+        <button id="confirm-btn" class="btn-primary">① 결제 최종 승인 요청 (POST /v1/payments/confirm)</button>
+        <p style="font-size: 12px; color: #666; margin-top: 8px;">
+            ※ 이 버튼을 누르거나, 위 <code>orderId</code>를 복사하여 <strong>Swagger UI (<code>/swagger-ui.html</code>)</strong>의 <code>POST /v1/payments/confirm</code>에 넣어서 호출해도 동일하게 동작합니다.
+        </p>
+    </div>
+
+    <div class="card">
+        <h3>2. Kafka 비동기 처리 결과 확인 (Stamp & Coupon)</h3>
+        <button id="verify-btn" class="btn-success">② 스탬프 잔여 개수 & 발급된 쿠폰 조회</button>
+        <a href="/payment-test"><button type="button" class="btn-outline">처음으로 돌아가기</button></a>
+    </div>
+
+    <pre id="result">대기 중... [① 결제 최종 승인 요청] 버튼을 누르거나 Swagger에서 호출해 주세요.</pre>
 
     <script>
         const urlParams = new URLSearchParams(window.location.search);
@@ -14,26 +50,68 @@
         const orderId = urlParams.get('orderId');
         const amount = urlParams.get('amount');
 
-        if (paymentKey && orderId && amount) {
-            // 백엔드 승인 API 호출
-            fetch(`/v1/payments/comfirm?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}`, {
-                method: 'POST'
-            })
-            .then(async (response) => {
-                const data = await response.json();
-                if (response.ok) {
-                    document.getElementById('result').innerText = '결제가 성공적으로 완료되었습니다.';
-                } else {
-                    document.getElementById('result').innerText = '결제 승인 실패: ' + (data.message || '알 수 없는 오류');
-                }
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-                document.getElementById('result').innerText = '결제 승인 중 오류가 발생했습니다.';
-            });
-        } else {
-            document.getElementById('result').innerText = '필수 결제 정보가 누락되었습니다.';
+        const savedPrincipal = localStorage.getItem('gu_coffee_principal_id') || 'user-100';
+        document.getElementById('principalId').value = savedPrincipal;
+
+        document.getElementById('orderId-text').innerText = orderId || '없음';
+        document.getElementById('paymentKey-text').innerText = paymentKey || '없음';
+        document.getElementById('amount-text').innerText = amount || '없음';
+
+        const resultBox = document.getElementById('result');
+
+        function getHeaders() {
+            const principalId = document.getElementById('principalId').value.trim();
+            return {
+                'Content-Type': 'application/json',
+                'Gu-Coffee-com.coffee.gu.Principal-Id': principalId,
+                'Gu-Coffee-com.coffee.gu.Principal-Type': 'USER',
+            };
         }
+
+        // ① 결제 최종 승인 호출 -> Outbox 저장 -> Kafka Producer -> Kafka Consumer 트리거
+        document.getElementById('confirm-btn').addEventListener('click', async function () {
+            if (!orderId) {
+                resultBox.innerText = 'orderId 파라미터가 없습니다.';
+                return;
+            }
+            resultBox.innerText = 'POST /v1/payments/confirm 호출 중...';
+            try {
+                const response = await fetch(`/v1/payments/confirm?orderId=${encodeURIComponent(orderId)}`, {
+                    method: 'POST',
+                    headers: getHeaders(),
+                });
+                const data = await response.json();
+                resultBox.innerText = `[결제 승인 응답 (HTTP ${response.status})]\n` + JSON.stringify(data, null, 2) +
+                    '\n\n👉 이제 [② 스탬프 잔여 개수 & 발급된 쿠폰 조회] 버튼을 눌러 Kafka Consumer 동작 결과를 확인하세요.';
+            } catch (error) {
+                resultBox.innerText = '결제 승인 요청 중 오류 발생: ' + error.message;
+            }
+        });
+
+        // ② 스탬프 및 리워드 쿠폰 조회
+        document.getElementById('verify-btn').addEventListener('click', async function () {
+            resultBox.innerText = '스탬프 및 발급 쿠폰 조회 중...';
+            try {
+                const [stampsRes, historyRes, couponsRes] = await Promise.all([
+                    fetch('/v1/stamps', { headers: getHeaders() }),
+                    fetch('/v1/stamps/history', { headers: getHeaders() }),
+                    fetch('/v1/issued-coupons', { headers: getHeaders() }),
+                ]);
+
+                const stamps = await stampsRes.json();
+                const history = await historyRes.json();
+                const coupons = await couponsRes.json();
+
+                resultBox.innerText = JSON.stringify({
+                    currentStampCount: stamps.data,
+                    stampHistory: history.data,
+                    issuedCoupons: coupons.data,
+                }, null, 2);
+            } catch (error) {
+                resultBox.innerText = '조회 중 오류 발생: ' + error.message;
+            }
+        });
     </script>
 </body>
 </html>
+
