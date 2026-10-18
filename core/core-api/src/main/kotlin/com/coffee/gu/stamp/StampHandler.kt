@@ -1,5 +1,6 @@
 package com.coffee.gu.stamp
 
+import com.coffee.gu.PaymentApprovedEvent
 import com.coffee.gu.StampEarnEvent
 import com.coffee.gu.order.Order
 import org.springframework.stereotype.Component
@@ -24,6 +25,10 @@ class StampHandler(
             val storeId = order.storeId
             stampRewardManager.reward(principal, orderKey, stampEligibleQuantity, expiredAt, now, storeId)
         }
+    }
+
+    fun completePaymentApprovedEvent(event: PaymentApprovedEvent) {
+        stampRewardManager.completePaymentApprovedEvent(event)
     }
 
     fun stampToCouponWithIdempotency(event: StampEarnEvent) {

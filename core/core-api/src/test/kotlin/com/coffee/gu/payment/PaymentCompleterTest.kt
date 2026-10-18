@@ -161,7 +161,7 @@ class PaymentCompleterTest {
         verify(transactionHistoryManager).record(eq(TransactionType.PAYMENT), eq(order), eq(payment), anyOrNull(), anyOrNull())
 
         val eventCaptor = argumentCaptor<com.coffee.gu.PaymentApprovedEvent>()
-        verify(applicationEventPublisher).publishEvent(eventCaptor.capture())
+        verify(outboxEventPublisher).publishOutboxEvent(eventCaptor.capture())
         assertThat(eventCaptor.firstValue.orderKey).isEqualTo("ORDER-KEY-100")
         assertThat(eventCaptor.firstValue.hasAppliedCoupon).isFalse()
     }

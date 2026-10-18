@@ -100,33 +100,38 @@ gu-coffee
 </details>
 
 <details>
-<summary><b>4. Kafka 기반 비동기 이벤트 스트리밍 파이프라인 (Transactional Outbox + Kafka + 멱등 컨슈머)</b></summary>
+<summary><b>4. Transactional Outbox 및 Kafka 기반 비동기 이벤트 파이프라인</b></summary>
 
 - **문제 정의**:
-  - 인메모리 비동기 이벤트(`@Async`)는 프로세스 종료 또는 재시작 시 메모리에 머물던 이벤트가 유실될 위험이 존재.
-  - 결제 완료 후 스탬프 적립 등 후속 도메인 처리를 단일 서버 스레드 풀에서만 수행하면, 대용량 트래픽 인입 시 컨슈머만 독립적으로 스케일 아웃하여 처리량을 확장하기 어려움.
-- **해결 방안**:
-  - **Transactional Outbox 연동**: 결제 승인 DB 트랜잭션 커밋 완료 후(`@TransactionalEventListener(phase = AFTER_COMMIT, fallbackExecution = true)`), 카프카 토픽(`coffee.stamp.earn.v1`)으로 이벤트를 비동기 발행.
-  - **유저별 단일 파티션 라우팅**: 유저 식별자(`principal.key`)를 파티션 키로 지정하여, 동일 유저의 이벤트가 항상 동일 파티션에 순서대로 적재되도록 보장.
-  - **멀티 파티션 병렬 소비**: 토픽 파티션 3개와 리스너 동시성(`concurrency = 3`)을 구성하여 3개의 독립 컨슈머 워커 스레드가 파티션을 1:1 전담 처리.
-  - **브로커 장애 대응 복구 스케줄러**: 일시적 카프카 장애로 발행되지 못한 아웃박스 미발행 건은 복구 스케줄러가 주기적으로 재시도.
-  - **EmbeddedKafka E2E 검증**: 임베디드 카프카 브로커 환경에서 브로커 기동, 파티션 할당 대기(`ContainerTestUtils`), 프로듀서 발행 및 컨슈머 수신/위임 E2E 통합 테스트 검증 완료.
+  - 순수 인메모리 비동기 이벤트(`@Async`)만 사용할 경우, DB 트랜잭션 커밋 직후 비동기 스레드가 작업을 완료하기 전에 프로세스가 종료·재시작되면 메모리에 머물던 이벤트가 증발하여 후속 도메인 처리가 유실됨.
+  - 또한 단일 서버 스레드 풀이나 단순 폴링 스케줄러만으로는 다중 스레드 경합 시 동일 유저의 이벤트 처리 순서가 역전될 수 있으며, 트래픽 급증 시 소비 처리량만 독립적으로 수평 확장하기 어려움.
+- **해결 방안 (역할 분리)**:
+  - **Transactional Outbox (`event_log`)를 통한 유실 방지**:
+    - 결제 완료(`PaymentCompleter` $\to$ `PaymentApprovedEvent`)와 스탬프 적립(`StampRewardManager` $\to$ `StampEarnEvent`) 두 구간 모두 도메인 상태 변경과 동일한 DB 트랜잭션 내에서 `event_log` 테이블에 `PENDING`(`is_published = false`) 레코드를 원자적으로 함께 커밋.
+    - 평상시에는 `@TransactionalEventListener(phase = AFTER_COMMIT)`와 `@Async`를 통해 지연 없이 즉시 후속 처리를 트리거하고, 만약 메모리에 머무는 동안 프로세스가 종료되거나 예외가 발생하더라도 `InternalEventRecoveryScheduler`가 DB의 미발행(`PENDING`) 레코드를 조회하여 재발행함으로써 최소 1회 이상 전달 보장.
+  - **Kafka를 통한 순서 보장 및 소비 확장성 확보**:
+    - **유저별 단일 파티션 라우팅**: 유저 식별자(`principal.key`)를 파티션 키로 지정하여, 동일 유저의 스탬프 적립 이벤트가 항상 동일 파티션에 순서대로 적재되도록 보장.
+    - **멀티 파티션 병렬 소비**: 토픽 파티션 3개와 리스너 동시성(`concurrency = 3`)을 구성하여 3개의 독립 컨슈머 워커 스레드가 파티션을 1:1 전담 처리하고, 주문 키(`orderKey`) 및 이벤트 ID(`eventId`) 기반 멱등성 검증으로 중복 적립·발급을 방지.
+    - **EmbeddedKafka E2E 검증**: 임베디드 카프카 브로커 환경에서 브로커 기동, 파티션 할당 대기(`ContainerTestUtils`), 프로듀서 발행 및 컨슈머 수신/위임 E2E 통합 테스트 검증 완료.
 
 ```mermaid
 sequenceDiagram
-    participant Payment as 결제 트랜잭션
+    participant Payment as PaymentCompleter
     participant Outbox as DB (event_log)
-    participant Listener as StampEventListener
+    participant ApprovedListener as PaymentApprovedEventListener
+    participant Reward as StampRewardManager
+    participant StampListener as StampEventListener
     participant Kafka as Kafka Broker (Topic)
     participant Consumer as StampMessagingConsumer
-    participant Handler as StampHandler (멱등 적립)
 
-    Payment->>Outbox: 결제 및 아웃박스 이벤트 저장 (PENDING)
-    Payment-->>Listener: 트랜잭션 커밋 완료 (AFTER_COMMIT)
-    Listener->>Kafka: StampEarnEvent 발행 (Key: principal.key)
-    Kafka->>Consumer: 파티션별 전담 스레드 수신 (concurrency = 3)
-    Consumer->>Handler: stampToCouponWithIdempotency()
-    Handler->>Outbox: 아웃박스 상태 갱신 (SUCCESS)
+    Payment->>Outbox: 1. 결제 완료 및 PaymentApprovedEvent 저장 (PENDING)
+    Payment-->>ApprovedListener: 2. AFTER_COMMIT 비동기 호출 (메모리 유실 시 스케줄러가 Outbox 재발행)
+    ApprovedListener->>Reward: 3. 스탬프 적립 (orderKey 멱등 검증)
+    Reward->>Outbox: 4. PaymentApprovedEvent 완료(SUCCESS) 및 StampEarnEvent 저장 (PENDING)
+    Reward-->>StampListener: 5. AFTER_COMMIT 비동기 호출 (메모리 유실 시 스케줄러가 Outbox 재발행)
+    StampListener->>Kafka: 6. StampEarnEvent 발행 (Key: principal.key)
+    Kafka->>Consumer: 7. 파티션별 전담 스레드 수신 (concurrency = 3)
+    Consumer->>Outbox: 8. 리워드 쿠폰 발급 및 StampEarnEvent 완료(SUCCESS)
 ```
 
 </details>
@@ -134,12 +139,12 @@ sequenceDiagram
 <details>
 <summary><b>5. 도메인 간 트랜잭션 분리 및 장애 격리</b></summary>
 
-- **문제 정의**: 결제 완료 트랜잭션 내부에 부가 기능(스탬프 적립)이 동기로 묶여 있을 경우, 스탬프 테이블 락이나 일시적 장애로 인해 정상 승인된 결제 전체가 롤백되는 결합 문제 발생.
+- **문제 정의**: 결제 완료 트랜잭션 내부에 부가 기능(스탬프 적립 및 리워드 쿠폰 발급)이 동기로 묶여 있을 경우, 스탬프 테이블 락이나 일시적 장애로 인해 정상 승인된 결제 전체가 롤백되는 결합 문제 발생.
 - **해결 방안**:
   - 결제 코어와 마케팅 리워드의 트랜잭션 수명주기를 분리.
-  - `PaymentCompleter`에서 스탬프 동기 호출을 제거하고, 결제 DB 커밋 완료 후 Spring 트랜잭션 이벤트(`@TransactionalEventListener(phase = AFTER_COMMIT, fallbackExecution = true)`) 및 카프카 비동기 브릿지(`StampMessagingProducer`)를 통해 스탬프를 적립.
-  - 스탬프 적립 지연/실패가 결제 성공 트랜잭션에 영향을 주지 않도록 장애 격리.
-  - ArchUnit 아키텍처 테스트를 통해 모든 `TransactionalEventListener`에 `fallbackExecution = true`가 선언되어 비-트랜잭션 환경에서도 유실 없이 동작함을 지속 검증.
+  - `PaymentCompleter`는 결제 승인 확정과 `PaymentApprovedEvent` 아웃박스 기록까지만 단일 트랜잭션으로 커밋하고, 실제 스탬프 적립과 카프카 발행은 커밋 이후 별도 비동기 트랜잭션으로 격리.
+  - 스탬프 적립 도중 DB 장애가 발생하더라도 결제 성공 상태는 롤백되지 않으며, 실패한 스탬프 적립은 아웃박스 복구 스케줄러를 통해 재시도되도록 구성.
+  - ArchUnit 아키텍처 테스트를 통해 모든 `TransactionalEventListener`에 `fallbackExecution = true`가 선언되어 스케줄러 재발행(비-트랜잭션) 환경에서도 누락 없이 동작함을 지속 검증.
 
 </details>
 
