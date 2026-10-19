@@ -18,12 +18,14 @@ class PaymentApprovedEventListener(
     private val log = LoggerFactory.getLogger(PaymentApprovedEventListener::class.java)
 
     @Async("stampAsyncExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     fun handlePaymentApproved(event: PaymentApprovedEvent) {
-        if (event.hasAppliedCoupon) return
         try {
-            val order = orderReader.getByOrderKey(event.orderKey)
-            stampHandler.reward(order)
+            if (!event.hasAppliedCoupon) {
+                val order = orderReader.getByOrderKey(event.orderKey)
+                stampHandler.reward(order)
+            }
+            stampHandler.completePaymentApprovedEvent(event)
             log.info("스탬프 적립 비동기 처리 완료: orderKey={}", event.orderKey)
         } catch (e: Exception) {
             log.error("스탬프 적립 비동기 처리 중 오류 발생 : orderKey={}, error={}", event.orderKey, e.message, e)

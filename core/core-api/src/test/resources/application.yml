@@ -7,6 +7,9 @@ spring:
     type: simple
   lock:
     type: local
+  kafka:
+    listener:
+      auto-startup: false
   jpa:
     open-in-view: false
     hibernate:

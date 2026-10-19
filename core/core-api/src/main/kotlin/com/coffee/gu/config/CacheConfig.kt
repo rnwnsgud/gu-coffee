@@ -34,17 +34,19 @@ class CacheConfig {
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build()
 
-        val menuDetailSerializer = JacksonJsonRedisSerializer(jsonMapper, MenuDetailResult::class.java)
-
-        val defaultConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+        val baseConfiguration = RedisCacheConfiguration.defaultCacheConfig()
             .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(StringRedisSerializer()))
-            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(menuDetailSerializer))
-            .entryTtl(Duration.ofHours(1))
+            .entryTtl(Duration.ofMinutes(30))
             .disableCachingNullValues()
 
+        val menuDetailSerializer = JacksonJsonRedisSerializer(jsonMapper, MenuDetailResult::class.java)
+        val menuDetailConfig = baseConfiguration
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(menuDetailSerializer))
+            .entryTtl(Duration.ofHours(1))
+
         return RedisCacheManager.builder(redisConnectionFactory)
-            .cacheDefaults(defaultConfiguration)
-            .withCacheConfiguration(MENU_DETAIL_CACHE, defaultConfiguration)
+            .cacheDefaults(baseConfiguration)
+            .withCacheConfiguration(MENU_DETAIL_CACHE, menuDetailConfig)
             .build()
     }
 }

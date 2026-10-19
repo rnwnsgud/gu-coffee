@@ -9,7 +9,6 @@ import com.coffee.gu.enums.TransactionType
 import com.coffee.gu.event.OutboxEventPublisher
 import com.coffee.gu.order.Order
 import com.coffee.gu.order.OrderManager
-import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.time.OffsetDateTime
@@ -22,7 +21,6 @@ class PaymentCompleter(
     private val issuedCouponManager: IssuedCouponManager,
     private val transactionHistoryManager: TransactionHistoryManager,
     private val outboxEventPublisher: OutboxEventPublisher,
-    private val applicationEventPublisher: ApplicationEventPublisher,
 ) {
     @Transactional
     fun complete(order: Order, paymentId: Long, confirmedPayment: PGConfirmResult): PaymentApprovalResult {
@@ -41,7 +39,7 @@ class PaymentCompleter(
         orderManager.pay(order)
         issuedCouponManager.use(payment.principal, payment.issuedCouponId)
         transactionHistoryManager.record(TransactionType.PAYMENT, order, payment, "Payment processed", payment.paidAt)
-        applicationEventPublisher.publishEvent(PaymentApprovedEvent(order.key, payment.hasAppliedCoupon()))
+        outboxEventPublisher.publishOutboxEvent(PaymentApprovedEvent(order.key, payment.hasAppliedCoupon()))
         return PaymentApprovalResult.approved(order.key, extKey, paidAt)
     }
 

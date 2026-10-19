@@ -28,6 +28,6 @@ class PaymentValidator {
     }
 
     private fun validateAmount(payment: Payment, amount: BigDecimal) {
-        if (payment.amount != amount) throw CoreException(ErrorType.PAYMENT_AMOUNT_MISMATCH)
+        if (payment.amount.compareTo(amount) != 0) throw CoreException(ErrorType.PAYMENT_AMOUNT_MISMATCH)
     }
 }

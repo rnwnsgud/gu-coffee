@@ -26,6 +26,10 @@ tasks.jar {
     enabled = false
 }
 
+tasks.named("classes") {
+    dependsOn(rootProject.subprojects.filter { it != project }.map { "${it.path}:classes" })
+}
+
 dependencies {
     runtimeOnly(project(":core:core-api"))
     runtimeOnly(project(":storage:db-core"))

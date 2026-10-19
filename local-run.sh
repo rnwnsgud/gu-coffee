@@ -77,8 +77,9 @@ wait_for_health() {
 
 wait_for_health "mysql"
 wait_for_health "redis"
+wait_for_health "kafka"
 
-echo -e "${GREEN}✓ 로컬 인프라 (MySQL: 3306, Redis: 6379) 준비 완료!${NC}"
+echo -e "${GREEN}✓ 로컬 인프라 (MySQL: 3306, Redis: 6379, Kafka: 9092) 준비 완료!${NC}"
 
 # --infra-only 플래그가 전달되었는지 확인
 if [[ "$1" == "--infra-only" ]]; then
@@ -86,6 +87,7 @@ if [[ "$1" == "--infra-only" ]]; then
     echo -e "${GREEN} 인프라 컨테이너가 성공적으로 기동되었습니다. (--infra-only)${NC}"
     echo -e " MySQL : localhost:3306 (DB: gu_coffee, User: coffee, Pwd: coffee)"
     echo -e " Redis : localhost:6379"
+    echo -e " Kafka : localhost:9092"
     echo -e "${CYAN}======================================================${NC}"
     exit 0
 fi

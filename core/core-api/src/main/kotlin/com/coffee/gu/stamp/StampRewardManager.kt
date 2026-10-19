@@ -1,6 +1,7 @@
 package com.coffee.gu.stamp
 
 import com.coffee.gu.EventLogRepository
+import com.coffee.gu.PaymentApprovedEvent
 import com.coffee.gu.Principal
 import com.coffee.gu.StampEarnEvent
 import com.coffee.gu.coupon.Coupon
@@ -23,19 +24,28 @@ class StampRewardManager(
     @Transactional
     fun reward(principal: Principal, orderKey: String, stampQuantity: Int, expiredAt: LocalDateTime, now: LocalDateTime, storeId: Long) {
         if (stampQuantity <= 0) return
+        if (stampRepository.findByOrderKey(orderKey).isNotEmpty()) return
         val stamps = List(stampQuantity) {
             Stamp.create(principal, orderKey, expiredAt)
         }
         stampRepository.saveAll(stamps)
-        val store =  stampRecorder.recordEarn(principal, storeId, stampQuantity, now, expiredAt)
+        val store = stampRecorder.recordEarn(principal, storeId, stampQuantity, now, expiredAt)
         val event = StampEarnEvent(principal, storeId, store.name)
         outboxEventPublisher.publishOutboxEvent(event)
     }
 
     @Transactional
+    fun completePaymentApprovedEvent(event: PaymentApprovedEvent) {
+        eventLogRepository.publish(event)
+    }
+
+    @Transactional
     fun stampToCouponWithIdempotency(event: StampEarnEvent) {
         val plan = stampRewardPlanner.plan(event)
-        if (plan.isEmpty) return
+        if (plan.isEmpty) {
+            eventLogRepository.publish(event)
+            return
+        }
         useStamps(plan)
         issueCoupons(plan)
         stampRecorder.recordStampCouponUsages(plan)
