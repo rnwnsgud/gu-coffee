@@ -284,7 +284,7 @@ CREATE TABLE IF NOT EXISTS stamp_coupon_usage (
     entity_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     created_at DATETIME(6) NOT NULL,
     updated_at DATETIME(6) NOT NULL,
-    INDEX idx_stamp_coupon_usage_stamp (stamp_id)
+    CONSTRAINT uk_stamp_coupon_usage_stamp UNIQUE (stamp_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 20. 스탬프 이력 (Stamp History)
