@@ -41,6 +41,9 @@ class StampRewardManager(
 
     @Transactional
     fun stampToCouponWithIdempotency(event: StampEarnEvent) {
+        if (eventLogRepository.isPublished(event.eventId)) {
+            return
+        }
         val plan = stampRewardPlanner.plan(event)
         if (plan.isEmpty) {
             eventLogRepository.publish(event)

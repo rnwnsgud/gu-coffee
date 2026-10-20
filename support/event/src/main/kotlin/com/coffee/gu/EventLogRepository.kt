@@ -4,6 +4,7 @@ import com.coffee.gu.enums.EventLogTarget
 
 interface EventLogRepository {
     fun saveIfNotExists(event: Event): Boolean
+    fun isPublished(eventId: String): Boolean
 
     /**
      * 반드시 기존 비즈니스 트랜잭션 내부에서 호출되어야 합니다. @Transactional(propagation = Propagation.MANDATORY)
