@@ -6,9 +6,18 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
+import jakarta.persistence.UniqueConstraint
 import java.time.LocalDateTime
 
-@Table(name = "stamp_coupon_usage")
+@Table(
+    name = "stamp_coupon_usage",
+    uniqueConstraints = [
+        UniqueConstraint(
+            name = "uk_stamp_coupon_usage_stamp",
+            columnNames = ["stampId"],
+        ),
+    ],
+)
 @Entity
 class StampCouponUsageEntity(
     @Id

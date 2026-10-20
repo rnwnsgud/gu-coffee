@@ -3,6 +3,7 @@ package com.coffee.gu.stamp
 import com.coffee.gu.enums.StampState
 import com.coffee.gu.stamp.QStampEntity.stampEntity
 import com.querydsl.jpa.impl.JPAQueryFactory
+import jakarta.persistence.LockModeType
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 
@@ -49,6 +50,7 @@ class StampRepositoryImpl(
             .offset(pageNumber.toLong() * pageSize)
             .limit(pageSize.toLong())
             .orderBy(stampEntity.createdAt.asc())
+            .setLockMode(LockModeType.PESSIMISTIC_WRITE)
             .fetch()
             .map { it.toModel() }
     }
