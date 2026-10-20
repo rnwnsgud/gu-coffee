@@ -30,13 +30,11 @@ class InternalEventRecoveryScheduler(
             }
 
             try {
+                eventLogRepository.increaseRetryCount(eventLog.eventId)
                 eventDispatchers.filter { it.supports(eventLog.eventType) }
                     .forEach { it.dispatch(eventLog.payload) }
-
-                eventLogRepository.republish(listOf(eventLog.eventId))
             } catch (e: Exception) {
-                log.error("Outbox 이벤트 재발행 실패 (retryCount 증가): eventId={}", eventLog.eventId, e)
-                eventLogRepository.increaseRetryCount(eventLog.eventId)
+                log.error("Outbox 이벤트 재발행 실패: eventId={}", eventLog.eventId, e)
             }
         }
     }
