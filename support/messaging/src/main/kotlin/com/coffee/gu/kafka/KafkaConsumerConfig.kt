@@ -10,8 +10,11 @@ import org.springframework.kafka.annotation.EnableKafka
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory
 import org.springframework.kafka.core.ConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
+import org.springframework.kafka.listener.CommonErrorHandler
 import org.springframework.kafka.listener.ContainerProperties
+import org.springframework.kafka.listener.DefaultErrorHandler
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+import org.springframework.util.backoff.FixedBackOff
 
 @Configuration
 @EnableKafka
@@ -21,6 +24,10 @@ class KafkaConsumerConfig(
     @param:Value("\${spring.kafka.listener.concurrency:3}")
     private val concurrency: Int,
 ) {
+    companion object {
+        const val RETRY_INTERVAL_MS = 1000L
+        const val MAX_RETRY_ATTEMPTS = 3L
+    }
 
     @Bean
     @ConditionalOnMissingBean
@@ -30,6 +37,7 @@ class KafkaConsumerConfig(
             ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
             ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to JacksonJsonDeserializer::class.java,
             ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest",
+            ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG to false,
             JacksonJsonDeserializer.TRUSTED_PACKAGES to "com.coffee.gu,com.coffee.gu.*",
         )
         return DefaultKafkaConsumerFactory(configProps)
@@ -37,13 +45,21 @@ class KafkaConsumerConfig(
 
     @Bean
     @ConditionalOnMissingBean
+    fun kafkaCommonErrorHandler(): CommonErrorHandler {
+        return DefaultErrorHandler(FixedBackOff(RETRY_INTERVAL_MS, MAX_RETRY_ATTEMPTS))
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
     @Suppress("UsePropertyAccessSyntax")
     fun kafkaListenerContainerFactory(
         consumerFactory: ConsumerFactory<String, Any>,
+        kafkaCommonErrorHandler: CommonErrorHandler,
     ): ConcurrentKafkaListenerContainerFactory<String, Any> {
         val factory = ConcurrentKafkaListenerContainerFactory<String, Any>()
         factory.setConsumerFactory(consumerFactory)
         factory.setConcurrency(concurrency)
+        factory.setCommonErrorHandler(kafkaCommonErrorHandler)
         factory.containerProperties.ackMode = ContainerProperties.AckMode.RECORD
         return factory
     }
