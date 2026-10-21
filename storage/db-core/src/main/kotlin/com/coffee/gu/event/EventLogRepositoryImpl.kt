@@ -31,6 +31,17 @@ class EventLogRepositoryImpl(
         }
     }
 
+    override fun isPublished(eventId: String): Boolean {
+        return jpaQueryFactory
+            .selectOne()
+            .from(eventLogEntity)
+            .where(
+                eventLogEntity.eventId.eq(eventId),
+                eventLogEntity.isPublished.isTrue,
+            )
+            .fetchFirst() != null
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     override fun publish(event: Event) {
         jpaQueryFactory
