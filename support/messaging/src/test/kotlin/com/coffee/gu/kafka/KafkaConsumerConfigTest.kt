@@ -6,18 +6,21 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.springframework.kafka.core.ConsumerFactory
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.listener.ContainerProperties
 import org.springframework.kafka.listener.DefaultErrorHandler
 
 class KafkaConsumerConfigTest {
 
     @Test
-    @DisplayName("KafkaConsumerConfig는 auto.commit을 비활성화하고 RECORD AckMode 및 에러 핸들러가 포함된 리스너 컨테이너 팩토리를 생성한다")
+    @DisplayName("KafkaConsumerConfig는 auto.commit을 비활성화하고 RECORD AckMode 및 DLT 에러 핸들러가 포함된 리스너 컨테이너 팩토리를 생성한다")
     fun kafkaListenerContainerFactory_concurrency() {
         // given
         val config = KafkaConsumerConfig("localhost:9092", 3)
         val consumerFactory: ConsumerFactory<String, Any> = mock()
-        val errorHandler = config.kafkaCommonErrorHandler()
+        val kafkaTemplate: KafkaTemplate<String, Any> = mock()
+        val recoverer = config.deadLetterPublishingRecoverer(kafkaTemplate)
+        val errorHandler = config.kafkaCommonErrorHandler(recoverer)
 
         // when
         val realConsumerFactory = config.consumerFactory()

@@ -1,6 +1,7 @@
 package com.coffee.gu.kafka
 
 import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.serialization.StringDeserializer
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -10,8 +11,10 @@ import org.springframework.kafka.annotation.EnableKafka
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory
 import org.springframework.kafka.core.ConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.listener.CommonErrorHandler
 import org.springframework.kafka.listener.ContainerProperties
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer
 import org.springframework.kafka.listener.DefaultErrorHandler
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer
 import org.springframework.util.backoff.FixedBackOff
@@ -45,8 +48,23 @@ class KafkaConsumerConfig(
 
     @Bean
     @ConditionalOnMissingBean
-    fun kafkaCommonErrorHandler(): CommonErrorHandler {
-        return DefaultErrorHandler(FixedBackOff(RETRY_INTERVAL_MS, MAX_RETRY_ATTEMPTS))
+    fun deadLetterPublishingRecoverer(
+        kafkaTemplate: KafkaTemplate<String, Any>,
+    ): DeadLetterPublishingRecoverer {
+        return DeadLetterPublishingRecoverer(kafkaTemplate) { record, _ ->
+            TopicPartition(record.topic() + KafkaTopic.DLT_SUFFIX, record.partition())
+        }
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun kafkaCommonErrorHandler(
+        deadLetterPublishingRecoverer: DeadLetterPublishingRecoverer,
+    ): CommonErrorHandler {
+        return DefaultErrorHandler(
+            deadLetterPublishingRecoverer,
+            FixedBackOff(RETRY_INTERVAL_MS, MAX_RETRY_ATTEMPTS),
+        )
     }
 
     @Bean
