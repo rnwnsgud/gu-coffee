@@ -6,9 +6,7 @@ import com.coffee.gu.TestApplication
 import com.coffee.gu.kafka.KafkaTopic
 import com.coffee.gu.stamp.StampHandler
 import org.apache.kafka.clients.consumer.ConsumerConfig
-import org.apache.kafka.clients.producer.ProducerConfig
 import org.apache.kafka.common.serialization.StringDeserializer
-import org.apache.kafka.common.serialization.StringSerializer
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -18,16 +16,9 @@ import org.mockito.Mockito.timeout
 import org.mockito.Mockito.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
-import org.springframework.context.annotation.Primary
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory
-import org.springframework.kafka.core.DefaultKafkaProducerFactory
-import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-import org.springframework.kafka.support.serializer.JacksonJsonSerializer
 import org.springframework.kafka.test.EmbeddedKafkaBroker
 import org.springframework.kafka.test.context.EmbeddedKafka
 import org.springframework.kafka.test.utils.ContainerTestUtils
@@ -37,14 +28,16 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.time.Duration
 
-@SpringBootTest(classes = [TestApplication::class])
+@SpringBootTest(
+    classes = [TestApplication::class],
+    properties = ["spring.kafka.listener.auto-startup=true"],
+)
 @EmbeddedKafka(
     partitions = 3,
     topics = [KafkaTopic.STAMP_EARN_V1, KafkaTopic.STAMP_EARN_V1_DLT],
     bootstrapServersProperty = "spring.kafka.bootstrap-servers",
 )
 @ActiveProfiles("local")
-@Import(StampMessagingIntegrationTest.RealKafkaTestConfig::class)
 @DirtiesContext
 @Suppress("SpringJavaInjectionPointsAutowiringInspection")
 class StampMessagingIntegrationTest {
@@ -65,22 +58,6 @@ class StampMessagingIntegrationTest {
     ) {
         registry.listenerContainers.forEach { container ->
             ContainerTestUtils.waitForAssignment(container, embeddedKafka.partitionsPerTopic)
-        }
-    }
-
-    @TestConfiguration
-    class RealKafkaTestConfig {
-
-        @Bean
-        @Primary
-        fun kafkaTemplate(embeddedKafka: EmbeddedKafkaBroker): KafkaTemplate<String, Any> {
-            val props = mutableMapOf<String, Any>(
-                ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to embeddedKafka.brokersAsString,
-                ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to StringSerializer::class.java,
-                ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG to JacksonJsonSerializer::class.java,
-                ProducerConfig.ACKS_CONFIG to "all",
-            )
-            return KafkaTemplate(DefaultKafkaProducerFactory(props))
         }
     }
 

@@ -108,11 +108,13 @@ gu-coffee
 - **해결 방안 (역할 분리)**:
   - **Transactional Outbox (`event_log`)를 통한 유실 방지**:
     - 결제 완료(`PaymentCompleter` $\to$ `PaymentApprovedEvent`)와 스탬프 적립(`StampRewardManager` $\to$ `StampEarnEvent`) 두 구간 모두 도메인 상태 변경과 동일한 DB 트랜잭션 내에서 `event_log` 테이블에 `PENDING`(`is_published = false`) 레코드를 원자적으로 함께 커밋.
-    - 평상시에는 `@TransactionalEventListener(phase = AFTER_COMMIT)`와 `@Async`를 통해 지연 없이 즉시 후속 처리를 트리거하고, 만약 메모리에 머무는 동안 프로세스가 종료되거나 예외가 발생하더라도 `InternalEventRecoveryScheduler`가 DB의 미발행(`PENDING`) 레코드를 조회하여 재발행함으로써 최소 1회 이상 전달 보장.
-  - **Kafka를 통한 순서 보장 및 소비 확장성 확보**:
+    - 평상시에는 `@TransactionalEventListener(phase = AFTER_COMMIT)`와 `@Async`를 통해 지연 없이 즉시 후속 처리를 트리거하고, 메모리에 머무는 동안 프로세스가 종료되거나 예외가 발생하더라도 `InternalEventRecoveryScheduler`가 DB의 미발행 레코드를 조회하여 재발행함으로써 최소 1회 이상 전달 보장. (스케줄러는 단순 재발행만 수행하며, 실제 소비 로직 완료 시점에만 `SUCCESS` 상태로 전이)
+  - **Kafka를 통한 순서 보장, 멱등성 방어 및 장애 격리(DLT)**:
     - **유저별 단일 파티션 라우팅**: 유저 식별자(`principal.key`)를 파티션 키로 지정하여, 동일 유저의 스탬프 적립 이벤트가 항상 동일 파티션에 순서대로 적재되도록 보장.
-    - **멀티 파티션 병렬 소비**: 토픽 파티션 3개와 리스너 동시성(`concurrency = 3`)을 구성하여 3개의 독립 컨슈머 워커 스레드가 파티션을 1:1 전담 처리하고, 주문 키(`orderKey`) 및 이벤트 ID(`eventId`) 기반 멱등성 검증으로 중복 적립·발급을 방지.
-    - **EmbeddedKafka E2E 검증**: 임베디드 카프카 브로커 환경에서 브로커 기동, 파티션 할당 대기(`ContainerTestUtils`), 프로듀서 발행 및 컨슈머 수신/위임 E2E 통합 테스트 검증 완료.
+    - **수동 오프셋 제어 및 멀티 파티션 병렬 소비**: `enable.auto.commit = false`와 `AckMode.RECORD`를 설정하여 레코드 단위 비즈니스 로직이 정상 처리된 후에만 오프셋을 커밋하며, 토픽 파티션 3개와 리스너 동시성(`concurrency = 3`)으로 파티션을 1:1 전담 처리.
+    - **다중 계층 멱등성 방어**: DB 트랜잭션 커밋 직후 ~ Kafka 오프셋 커밋 직전 장애로 인한 재수신이나 동시성 경합 시 중복 보상이 지급되지 않도록, Outbox 이벤트 ID(`eventId`) 완료 상태 가드, 사용자별 스탬프 비관적 락(`FOR UPDATE`), DB Unique 제약조건으로 중복 처리를 차단.
+    - **재시도 및 Dead Letter Topic(DLT) 격리**: 컨슈머 처리 중 일시적 예외 발생 시 `DefaultErrorHandler`(`FixedBackOff` 1초 간격 최대 3회 재시도)를 수행하고, 최종 실패한 메시지는 `DeadLetterPublishingRecoverer`를 통해 `.dlt` 토픽(`coffee.stamp.earn.v1.dlt`)으로 격리 발행하여 파티션 소비 지연을 방지.
+    - **EmbeddedKafka E2E 검증**: 임베디드 카프카 브로커 환경에서 정상 소비, 중복 발행 시 멱등성 처리, 예외 발생 시 3회 재시도 후 DLT 격리 발행까지 E2E 통합 테스트 검증 완료.
 
 ```mermaid
 sequenceDiagram

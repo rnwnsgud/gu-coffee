@@ -4,11 +4,11 @@ import com.coffee.gu.Principal
 import com.coffee.gu.enums.PaymentMethod
 import com.coffee.gu.enums.PaymentState
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.annotation.DirtiesContext
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import java.math.BigDecimal
@@ -19,7 +19,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class PaymentSkipLockPerformanceTest {
 
     @Autowired
@@ -30,6 +29,11 @@ class PaymentSkipLockPerformanceTest {
 
     @Autowired
     private lateinit var jdbcTemplate: org.springframework.jdbc.core.JdbcTemplate
+
+    @BeforeEach
+    fun setUp() {
+        jdbcTemplate.update("DELETE FROM payment")
+    }
 
     @Test
     @DisplayName("SKIP LOCKED 도입 시 락 선점 중인 batchSize개 대용량 건에 대해 타 워커 스레드는 대기 시간 0ms에 가깝게 즉시 스킵(Non-blocking)한다")

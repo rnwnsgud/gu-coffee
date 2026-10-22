@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.test.annotation.DirtiesContext
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.DefaultTransactionDefinition
 import java.math.BigDecimal
@@ -28,7 +27,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 @SpringBootTest
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class ShedLockVsSkipLockBenchmarkTest {
 
     @Autowired
@@ -47,6 +45,7 @@ class ShedLockVsSkipLockBenchmarkTest {
 
     @BeforeEach
     fun setUp() {
+        jdbcTemplate.update("DELETE FROM payment")
         lockProvider = JdbcTemplateLockProvider(jdbcTemplate)
     }
 
