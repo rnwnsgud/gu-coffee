@@ -26,6 +26,8 @@ class KafkaConsumerConfig(
     private val bootstrapServers: String,
     @param:Value("\${spring.kafka.listener.concurrency:3}")
     private val concurrency: Int,
+    @param:Value("\${spring.kafka.listener.auto-startup:true}")
+    private val autoStartup: Boolean,
 ) {
     companion object {
         const val RETRY_INTERVAL_MS = 1000L
@@ -77,6 +79,7 @@ class KafkaConsumerConfig(
         val factory = ConcurrentKafkaListenerContainerFactory<String, Any>()
         factory.setConsumerFactory(consumerFactory)
         factory.setConcurrency(concurrency)
+        factory.setAutoStartup(autoStartup)
         factory.setCommonErrorHandler(kafkaCommonErrorHandler)
         factory.containerProperties.ackMode = ContainerProperties.AckMode.RECORD
         return factory

@@ -16,7 +16,7 @@ class KafkaConsumerConfigTest {
     @DisplayName("KafkaConsumerConfig는 auto.commit을 비활성화하고 RECORD AckMode 및 DLT 에러 핸들러가 포함된 리스너 컨테이너 팩토리를 생성한다")
     fun kafkaListenerContainerFactory_concurrency() {
         // given
-        val config = KafkaConsumerConfig("localhost:9092", 3)
+        val config = KafkaConsumerConfig("localhost:9092", 3, true)
         val consumerFactory: ConsumerFactory<String, Any> = mock()
         val kafkaTemplate: KafkaTemplate<String, Any> = mock()
         val recoverer = config.deadLetterPublishingRecoverer(kafkaTemplate)
