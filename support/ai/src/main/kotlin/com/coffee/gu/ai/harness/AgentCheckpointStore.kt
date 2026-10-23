@@ -2,6 +2,10 @@ package com.coffee.gu.ai.harness
 
 import com.coffee.gu.ai.client.LlmMessage
 import com.coffee.gu.ai.client.ToolCall
+import org.springframework.data.redis.core.StringRedisTemplate
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.module.kotlin.readValue
+import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -38,5 +42,41 @@ class InMemoryAgentCheckpointStore : AgentCheckpointStore {
 
     override fun deleteById(sessionId: String) {
         store.remove(sessionId)
+    }
+}
+
+/**
+ * [Phase 4 분산 하네스: Redis 기반 분산 체크포인트 저장소]
+ *
+ * 서버가 여러 대로 로드밸런싱되거나 재배포되더라도,
+ * 세션 정보(messages, pendingToolCall)를 Redis에 안전하게 보관하여 다른 서버에서도 루프를 재개할 수 있습니다.
+ * TTL(기본 30분)을 두어 승인되지 않고 방치된 세션의 메모리 누수를 자동 방지합니다.
+ */
+class RedisAgentCheckpointStore(
+    private val redisTemplate: StringRedisTemplate,
+    private val objectMapper: ObjectMapper,
+    private val ttl: Duration = Duration.ofMinutes(30),
+    private val keyPrefix: String = "ai:checkpoint:"
+) : AgentCheckpointStore {
+
+    override fun save(checkpoint: AgentCheckpoint) {
+        val key = keyPrefix + checkpoint.sessionId
+        val json = objectMapper.writeValueAsString(checkpoint)
+        redisTemplate.opsForValue().set(key, json, ttl)
+    }
+
+    override fun findById(sessionId: String): AgentCheckpoint? {
+        val key = keyPrefix + sessionId
+        val json = redisTemplate.opsForValue().get(key) ?: return null
+        return try {
+            objectMapper.readValue<AgentCheckpoint>(json)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    override fun deleteById(sessionId: String) {
+        val key = keyPrefix + sessionId
+        redisTemplate.delete(key)
     }
 }
