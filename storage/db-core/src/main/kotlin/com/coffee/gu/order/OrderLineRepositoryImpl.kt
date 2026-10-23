@@ -12,8 +12,8 @@ class OrderLineRepositoryImpl(
 ) : OrderLineRepository {
 
     override fun saveAll(orderLines: List<OrderLine>): List<OrderLine> {
-        val entities = orderLines.map { OrderLineEntity.from(it) }
-        return orderLineJpaRepository.saveAll(entities).map { it.toModel() }
+        val savedOrderLines = orderLineJpaRepository.saveAll(orderLines.map { OrderLineEntity.from(it) })
+        return savedOrderLines.map { it.toModel() }
     }
 
     override fun findByOrderKey(orderKeys: Collection<String>): List<OrderLine> {

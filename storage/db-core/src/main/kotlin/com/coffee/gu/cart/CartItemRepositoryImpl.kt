@@ -33,7 +33,7 @@ class CartItemRepositoryImpl(
     }
 
     override fun save(cartItem: CartItem, principal: Principal): CartItem {
-        val entity = CartItemEntity.of(cartItem, principal)
-        return cartItemJpaRepository.save(entity).toModel(menuRepository.findById(entity.menuId))
+        val savedCartItem = cartItemJpaRepository.save(CartItemEntity.of(cartItem, principal))
+        return savedCartItem.toModel(menuRepository.findById(savedCartItem.menuId))
     }
 }

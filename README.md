@@ -151,25 +151,39 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>6. Redis Cache-Aside 및 캐시 스탬피드 방어</b></summary>
+<summary><b>6. Redis Cache-Aside, 캐시 스탬피드 및 장애 우회(Fail-Open) 설계</b></summary>
 
-- **문제 정의**: 메뉴 상세 조회 시 4단계 연관 데이터 조회(Menu $\to$ MenuOptionGroup $\to$ OptionGroup $\to$ Option)로 인해 반복 호출 시 DB 부담 증가.
+- **문제 정의**:
+  - 메뉴 상세 조회 시 4단계 연관 데이터 조회(Menu $\to$ MenuOptionGroup $\to$ OptionGroup $\to$ Option)로 인해 반복 호출 시 DB 부담 증가.
+  - 캐시 만료 시 다수 요청이 일시에 DB로 집중되는 캐시 스탬피드 위험.
+  - Redis 인스턴스 장애나 타임아웃 발생 시 Spring 기본 에러 핸들러가 런타임 예외를 전파하여, DB가 정상이어도 메뉴 상세 API 전체가 실패하는 가용성 저하 발생.
 - **해결 방안**:
-  - 단순 PK/IN 기반 조회를 유지하면서, 조립된 메뉴 상세 데이터는 Redis 기반 Cache-Aside 패턴을 구축하여 메모리에서 서빙.
-  - 캐시 만료 시 동시 다발적 DB 조회가 몰리는 현상을 방어하기 위해 `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 DB 접근을 직렬화.
-  - 관리자 메뉴-옵션 매핑 수정 시 `@CacheEvict`를 통해 캐시를 즉시 무효화하여 데이터 일관성 보장.
+  - **Cache-Aside 패턴**: 단순 PK/IN 기반 조회를 유지하면서, 조립된 메뉴 상세 데이터는 Redis 기반 Cache-Aside 패턴을 구축하여 메모리에서 서빙.
+  - **캐시 스탬피드 방어**: `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 동시 DB 접근을 단 1회로 직렬화.
+  - **장애 시 자동 DB 우회 (Fail-Open)**:
+    - `CachingConfigurer.errorHandler()`를 구현하여 일반 캐시 작업 실패 시 예외를 전파하지 않고 로깅 처리.
+    - `@Cacheable(sync = true)` 환경에서 Spring AOP가 기본 에러 핸들러를 거치지 않고 `Cache.get(key, valueLoader)`를 직접 호출하는 특성에 대응하기 위해, `FailOpenCacheManager` 및 `FailOpenCache` 데코레이터를 적용.
+    - Redis 연결 장애 시 예외를 흡수하고 `valueLoader.call()`을 호출하여 DB 원본 조회로 자동 우회하도록 구성. 비즈니스 예외(`ValueRetrievalException`)는 정상 전파.
+  - **캐시 정합성 관리**: 관리자 메뉴-옵션 매핑 수정 시 `@CacheEvict`를 통해 캐시를 즉시 무효화하여 데이터 일관성 유지.
 
 </details>
 
 <details>
-<summary><b>7. 선착순 한정 수량 쿠폰과 Redisson 분산 락 제어</b></summary>
+<summary><b>7. 선착순 한정 수량 쿠폰의 분산 락 및 DB 비관적 락 2차 방어선</b></summary>
 
-- **문제 정의**: 한정 수량 프로모션 쿠폰의 동시 발급 요청 시, 재고 검사(`issuedQuantity < totalQuantity`)와 차감 간 레이스 컨디션으로 인한 초과 발급 방지 필요.
+- **문제 정의**:
+  - 한정 수량 프로모션 쿠폰의 동시 발급 요청 시, 재고 검사(`issuedQuantity < totalQuantity`)와 차감 간 레이스 컨디션으로 인한 초과 발급 방지 필요.
+  - 분산 락의 대여 시간(`leaseTime = 5초`) 만료(GC 지연, DB 지연 등) 또는 Redis 장애 조치 시 락이 조기 해제되어 복수 스레드가 동시 진입할 경우 초과 발급 및 갱신 손실 위험.
 - **해결 방안**:
-  - **도메인 분리와 합성 구조**: 기존 쿠폰 도메인과의 무리한 상속을 배제하고, 선착순 재고 라이프사이클을 독립 전담하는 `LimitedCoupon` 모델 및 테이블을 구축. 발급 산출물은 기존 `IssuedCoupon`으로 영속화하여 기존 주문/결제 파이프라인 재사용.
-  - **Redisson 분산 락**: Redis Pub/Sub 기반 `RedissonClient`를 채택하여 락 획득 대기 오버헤드를 낮추고, `LockManager` 인터페이스로 인프라를 추상화.
+  - **도메인 분리와 합성 구조**: 기존 쿠폰 도메인과의 무리한 상속을 배제하고, 선착순 재고 수명주기를 독립 전담하는 `LimitedCoupon` 모델 및 테이블을 구축. 발급 산출물은 기존 `IssuedCoupon`으로 영속화하여 기존 주문/결제 파이프라인 재사용.
+  - **1차 방어선 (Redisson 분산 락 & Fail-Closed)**:
+    - Redis Pub/Sub 기반 `RedissonClient`를 채택하여 락 획득 대기 오버헤드를 낮추고, `LockManager` 인터페이스로 인프라를 추상화.
+    - 재고 정합성 보호를 위해 Redis 연결 실패 시 요청을 차단(`COUPON_LOCK_ACQUISITION_FAILED`)하는 Fail-Closed 정책 적용.
+    - 비즈니스 로직 정상 완료 후 `finally` 블록의 락 해제 예외가 성공 응답을 훼손하지 않도록 안전 해제 처리.
+  - **2차 방어선 (DB 비관적 락)**:
+    - 분산 락 내부 트랜잭션(`LimitedCouponIssueExecutor.execute`)에서 `findByIdForUpdate`(`SELECT ... FOR UPDATE` 비관적 락)를 적용하여, 락 만료나 지연으로 복수 요청이 진입하더라도 DB 레벨에서 행 잠금을 통해 정합성을 보장.
   - **수명주기 분리**: 트랜잭션 커밋 전에 락이 조기 해제되는 현상을 방지하기 위해, 트랜잭션 외부에서 락을 획득/해제하고 내부에서 DB 커밋까지 마치는 수명주기(`LimitedCouponService` $\to$ `LimitedCouponIssueExecutor`) 적용.
-  - 1인 1매 정책은 분산 락 내부 검증 및 DB `issued_coupon`의 복합 유니크 제약조건으로 이중 방어.
+  - **1인 1매 정책**: 분산 락 내부 검증 및 DB `issued_coupon`의 `(principal_key, coupon_id)` 복합 유니크 제약조건으로 이중 방어.
 
 </details>
 
@@ -311,11 +325,14 @@ MySQL 8.0, Redis 7.x, Kafka 3.8(KRaft) 컨테이너를 기동하고 `local-dev` 
 # 전체 테스트 실행
 ./gradlew test
 
-# Kafka 메시징 파이프라인 E2E 통합 테스트
+# Kafka 메시징 파이프라인 및 DLT E2E 통합 테스트
 ./gradlew :core:core-api:test --tests "com.coffee.gu.stamp.messaging.*"
 
-# 선착순 쿠폰 분산 락 및 동시성 테스트
+# 선착순 쿠폰 분산 락, DB 비관적 락 2차 방어선 및 동시성 테스트
 ./gradlew :core:core-api:test --tests "*LimitedCoupon*"
+
+# 메뉴 캐시 및 Fail-Open(DB 우회) 테스트
+./gradlew :core:core-api:test --tests "com.coffee.gu.menu.*"
 
 # 결제 FOR UPDATE SKIP LOCKED 복구 파이프라인 테스트
 ./gradlew :core:core-api:test --tests "com.coffee.gu.payment.*"

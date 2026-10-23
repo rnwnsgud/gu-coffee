@@ -40,8 +40,10 @@ class CouponFinder(
     }
 
     fun getValidCoupon(couponId: Long): Coupon {
-        return couponRepository.findById(couponId)
-            .filter { coupon -> coupon.expiredAt.isAfter(LocalDateTime.now()) }
-            .orElseThrow { CoreException(ErrorType.COUPON_NOT_FOUND_OR_EXPIRED, null) }
+        val coupon = couponRepository.findById(couponId)
+        if (coupon == null || !coupon.expiredAt.isAfter(LocalDateTime.now())) {
+            throw CoreException(ErrorType.COUPON_NOT_FOUND_OR_EXPIRED, null)
+        }
+        return coupon
     }
 }

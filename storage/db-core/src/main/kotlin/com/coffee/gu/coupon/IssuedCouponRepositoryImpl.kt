@@ -6,9 +6,8 @@ import com.coffee.gu.coupon.QCouponEntity.couponEntity
 import com.coffee.gu.coupon.QIssuedCouponEntity.issuedCouponEntity
 import com.coffee.gu.enums.EntityStatus
 import com.querydsl.jpa.impl.JPAQueryFactory
-import jakarta.persistence.EntityNotFoundException
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Repository
-import java.util.Optional
 
 @Repository
 class IssuedCouponRepositoryImpl(
@@ -23,11 +22,10 @@ class IssuedCouponRepositoryImpl(
 
     override fun saveAll(issuedCoupons: List<IssuedCoupon>): List<IssuedCoupon> {
         val couponMap = issuedCoupons.map { it.coupon }.distinctBy { it.id }.associateBy { it.id }
-        val entities = issuedCoupons.map { IssuedCouponEntity.from(it) }
-        val savedEntities = issuedCouponJpaRepository.saveAll(entities)
-        return savedEntities.mapNotNull { entity ->
-            couponMap[entity.couponId]?.let { coupon ->
-                entity.toModel(coupon)
+        val savedIssuedCoupons = issuedCouponJpaRepository.saveAll(issuedCoupons.map { IssuedCouponEntity.from(it) })
+        return savedIssuedCoupons.mapNotNull { issuedCoupon ->
+            couponMap[issuedCoupon.couponId]?.let { coupon ->
+                issuedCoupon.toModel(coupon)
             }
         }
     }
@@ -54,7 +52,8 @@ class IssuedCouponRepositoryImpl(
     }
 
     override fun findById(issuedCouponId: Long): IssuedCoupon {
-        val issuedCoupon = issuedCouponJpaRepository.findById(issuedCouponId).orElseThrow { CoreException(ErrorType.NOT_FOUND_DATA) }
+        val issuedCoupon = issuedCouponJpaRepository.findByIdOrNull(issuedCouponId)
+            ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
         val coupon = jpaQueryFactory
             .selectFrom(couponEntity)
             .where(couponEntity.id.eq(issuedCoupon.couponId))
@@ -82,9 +81,9 @@ class IssuedCouponRepositoryImpl(
             .where(couponEntity.id.`in`(couponIds))
             .fetch()
         val couponMap = coupons.associateBy { it.id }
-        return issuedCoupons.mapNotNull { entity ->
-            val couponEntity = couponMap[entity.couponId] ?: return@mapNotNull null
-            entity.toModel(couponEntity.toModel())
+        return issuedCoupons.mapNotNull { issuedCoupon ->
+            val coupon = couponMap[issuedCoupon.couponId] ?: return@mapNotNull null
+            issuedCoupon.toModel(coupon.toModel())
         }
     }
 }
