@@ -18,7 +18,7 @@ class GeminiRestClient(
     private val restClient: RestClient,
     @param:Value("\${gemini.api.base-url:https://generativelanguage.googleapis.com/v1beta}")
     private val baseUrl: String,
-    @param:Value("\${gemini.api.model:gemini-2.5-flash}")
+    @param:Value("\${gemini.api.model:gemini-3.5-flash}")
     private val model: String,
     @param:Value("\${gemini.api.key:dummy-key}")
     private val apiKey: String
@@ -68,18 +68,19 @@ class GeminiRestClient(
             ?: throw IllegalStateException("Gemini API 응답이 비어 있습니다.")
 
         val parts = response.candidates.firstOrNull()?.content?.parts.orEmpty()
-        val functionCalls = parts.mapNotNull { it.functionCall }
+        val toolCalls = parts.mapNotNull { part ->
+            part.functionCall?.let { fc ->
+                ToolCall(
+                    id = "call_${UUID.randomUUID().toString().take(8)}",
+                    name = fc.name,
+                    arguments = fc.args,
+                    thoughtSignature = part.thoughtSignature
+                )
+            }
+        }
 
-        if (functionCalls.isNotEmpty()) {
-            return LlmMessage.assistantToolCalls(
-                functionCalls.map { fc ->
-                    ToolCall(
-                        id = "call_${UUID.randomUUID().toString().take(8)}",
-                        name = fc.name,
-                        arguments = fc.args
-                    )
-                }
-            )
+        if (toolCalls.isNotEmpty()) {
+            return LlmMessage.assistantToolCalls(toolCalls)
         }
 
         val textResponse = parts.mapNotNull { it.text }.joinToString("\n")
@@ -97,7 +98,10 @@ class GeminiRestClient(
                     GeminiContent(
                         role = "model",
                         parts = msg.toolCalls.map { tc ->
-                            GeminiPart(functionCall = GeminiFunctionCall(name = tc.name, args = tc.arguments))
+                            GeminiPart(
+                                functionCall = GeminiFunctionCall(name = tc.name, args = tc.arguments),
+                                thoughtSignature = tc.thoughtSignature
+                            )
                         }
                     )
                 } else {
@@ -139,7 +143,8 @@ data class GeminiContent(
 data class GeminiPart(
     val text: String? = null,
     val functionCall: GeminiFunctionCall? = null,
-    val functionResponse: GeminiFunctionResponse? = null
+    val functionResponse: GeminiFunctionResponse? = null,
+    val thoughtSignature: String? = null
 )
 
 data class GeminiFunctionCall(

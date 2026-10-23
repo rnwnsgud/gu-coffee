@@ -31,7 +31,7 @@ class AgentFromScratchLabTest {
         val geminiClient = GeminiRestClient(
             restClient = builder.build(),
             baseUrl = "https://generativelanguage.googleapis.com/v1beta",
-            model = "gemini-2.5-flash",
+            model = "gemini-3.5-flash",
             apiKey = "test-api-key"
         )
 
@@ -57,7 +57,7 @@ class AgentFromScratchLabTest {
             }
         """.trimIndent()
 
-        mockServer.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=test-api-key"))
+        mockServer.expect(requestTo("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=test-api-key"))
             .andExpect(method(HttpMethod.POST))
             .andRespond(withSuccess(fakeGeminiJsonResponse, MediaType.APPLICATION_JSON))
 
@@ -327,11 +327,11 @@ class AgentFromScratchLabTest {
     @EnabledIfEnvironmentVariable(named = "GEMINI_API_KEY", matches = ".+")
     @DisplayName("[Live 연동] 실제 Google Gemini API를 호출하여 Phase 1~4 전체 과정을 라이브로 실행한다")
     fun live_realGeminiApi_endToEnd() {
-        val apiKey = System.getenv("GEMINI_API_KEY")
+        val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
         val realGeminiClient = GeminiRestClient(
             restClient = RestClient.create(),
             baseUrl = "https://generativelanguage.googleapis.com/v1beta",
-            model = "gemini-2.5-flash",
+            model = "gemini-3.5-flash",
             apiKey = apiKey
         )
 
