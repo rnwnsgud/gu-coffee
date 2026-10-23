@@ -33,7 +33,7 @@ class LimitedCouponEntity(
         fun from(limitedCoupon: LimitedCoupon): LimitedCouponEntity {
             return LimitedCouponEntity(
                 id = limitedCoupon.id,
-                couponId = limitedCoupon.coupon.id ?: 0L,
+                couponId = limitedCoupon.coupon.id,
                 totalQuantity = limitedCoupon.totalQuantity,
                 issuedQuantity = limitedCoupon.issuedQuantity,
             )
