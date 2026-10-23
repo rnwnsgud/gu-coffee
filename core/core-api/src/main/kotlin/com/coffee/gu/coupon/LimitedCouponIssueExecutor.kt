@@ -14,7 +14,7 @@ class LimitedCouponIssueExecutor(
 ) {
     @Transactional
     fun execute(principal: Principal, limitedCouponId: Long): IssuedCoupon {
-        val limitedCoupon = limitedCouponFinder.getById(limitedCouponId)
+        val limitedCoupon = limitedCouponFinder.getByIdWithLock(limitedCouponId)
         val alreadyIssued = issuedCouponFinder.existsByPrincipalKeyAndCouponId(principal, limitedCoupon.coupon.id)
         if (alreadyIssued) {
             throw CoreException(ErrorType.COUPON_ALREADY_DOWNLOADED)
