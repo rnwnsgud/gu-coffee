@@ -10,6 +10,11 @@ class LimitedCouponFinder(
 ) {
     fun getById(id: Long): LimitedCoupon {
         return limitedCouponRepository.findById(id)
-            .orElseThrow { CoreException(ErrorType.NOT_FOUND_DATA) }
+            ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
+    }
+
+    fun getByIdWithLock(id: Long): LimitedCoupon {
+        return limitedCouponRepository.findByIdWithLock(id)
+            ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
     }
 }

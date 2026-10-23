@@ -11,6 +11,7 @@ import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.given
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.cache.CacheManager
@@ -72,4 +73,31 @@ class MenuServiceCacheTest {
         verify(optionFinder, times(0)).findByMenuId(menuId)
     }
 
+    @Test
+    @DisplayName("[Fail-Open] Redis 장애로 캐시 get 시 예외가 발생하더라도 500 에러를 내지 않고 DB 직접 조회로 자동 우회하여 정상 반환한다")
+    fun testFailOpenOnRedisFailure() {
+        // given: 원본 캐시를 모킹하여 Redis 장애 상황(RuntimeException) 시뮬레이션
+        val mockCache = org.mockito.kotlin.mock<org.springframework.cache.Cache>()
+        whenever(mockCache.name).thenReturn(CacheConfig.MENU_DETAIL_CACHE)
+        whenever(mockCache.get(org.mockito.kotlin.any(), org.mockito.kotlin.any<java.util.concurrent.Callable<Any>>()))
+            .thenThrow(org.springframework.data.redis.RedisConnectionFailureException("Redis connection refused"))
+
+        // FailOpenCache 데코레이터 객체 생성
+        val failOpenCacheClass = Class.forName("com.coffee.gu.config.CacheConfig\$FailOpenCache")
+        val constructor = failOpenCacheClass.getDeclaredConstructor(org.springframework.cache.Cache::class.java)
+        constructor.isAccessible = true
+        val failOpenCache = constructor.newInstance(mockCache) as org.springframework.cache.Cache
+
+        val dbCallable = java.util.concurrent.Callable {
+            menuFinder.getById(menuId)
+        }
+
+        // when: Redis 장애 상태에서 캐시 조회 시도
+        val result = failOpenCache.get(menuId, dbCallable)
+
+        // then: 에러가 전파되지 않고 DB 조회를 호출해 정상 반환됨을 검증 (Fail-Open)
+        assertThat(result).isNotNull
+        assertThat(result?.name).isEqualTo("Latte")
+        verify(menuFinder, times(1)).getById(menuId)
+    }
 }

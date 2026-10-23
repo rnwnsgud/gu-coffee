@@ -4,7 +4,6 @@ import com.coffee.gu.coupon.QCouponEntity.couponEntity
 import com.coffee.gu.enums.EntityStatus
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.stereotype.Repository
-import java.util.Optional
 
 @Repository
 class CouponRepositoryImpl(
@@ -21,14 +20,13 @@ class CouponRepositoryImpl(
             .map { it.toModel() }
     }
 
-    override fun findById(couponId: Long): Optional<Coupon> {
-        return Optional.ofNullable(
-            queryFactory.selectFrom(couponEntity)
-                .where(
-                    couponEntity.id.eq(couponId),
-                    couponEntity.entityStatus.eq(EntityStatus.ACTIVE),
-                )
-                .fetchFirst(),
-        ).map { it.toModel() }
+    override fun findById(couponId: Long): Coupon? {
+        return queryFactory.selectFrom(couponEntity)
+            .where(
+                couponEntity.id.eq(couponId),
+                couponEntity.entityStatus.eq(EntityStatus.ACTIVE),
+            )
+            .fetchFirst()
+            ?.toModel()
     }
 }
