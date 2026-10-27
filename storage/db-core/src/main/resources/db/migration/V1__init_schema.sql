@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS menu (
     may_contain_allergens VARCHAR(255) NULL,
     entity_status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
     created_at DATETIME(6) NOT NULL,
-    updated_at DATETIME(6) NOT NULL
+    updated_at DATETIME(6) NOT NULL,
+    INDEX idx_menu_status_created_id (entity_status, created_at, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3. 메뉴-카테고리 매핑 (Menu Category Mapping)

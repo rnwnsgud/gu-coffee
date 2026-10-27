@@ -1,5 +1,6 @@
 package com.coffee.gu.api.controller.v1
 
+import com.coffee.gu.OffsetLimit
 import com.coffee.gu.Page
 import com.coffee.gu.api.controller.RestDocsTest
 import com.coffee.gu.enums.MenuType
@@ -15,6 +16,7 @@ import org.mockito.BDDMockito.given
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.junit.jupiter.MockitoSettings
 import org.mockito.quality.Strictness
@@ -48,7 +50,7 @@ class MenuControllerTest : RestDocsTest() {
         // given
         val menu = Menu(1L, "Americano", MenuType.DRINK, Price(BigDecimal.valueOf(1000), BigDecimal.valueOf(2000)), null, null, null)
         val page = Page(listOf(menu), false, null, null)
-        given(menuService.findMenus(eq(1L), any())).willReturn(page)
+        given(menuService.findMenus(eq(1L), any<OffsetLimit>())).willReturn(page)
 
         // when & then
         mockMvc.perform(
@@ -89,7 +91,7 @@ class MenuControllerTest : RestDocsTest() {
         // given
         val menu = Menu(1L, "Americano", MenuType.DRINK, Price(BigDecimal.valueOf(1000), BigDecimal.valueOf(2000)), null, null, null)
         val page = Page(listOf(menu), false, null, null)
-        given(menuService.findMenus(eq(1L), any(), any(), any())).willReturn(page)
+        given(menuService.findMenus(eq(1L), any<Int>(), anyOrNull<LocalDateTime>(), anyOrNull<Long>())).willReturn(page)
 
         // when & then
         mockMvc.perform(

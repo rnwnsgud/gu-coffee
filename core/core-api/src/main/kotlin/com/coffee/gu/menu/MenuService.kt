@@ -17,7 +17,7 @@ class MenuService(
         return menuFinder.findByCategory(categoryId, offsetLimit)
     }
 
-    fun findMenus(categoryId: Long, pageSize: Int, cursor: LocalDateTime, lastId: Long): Page<Menu> {
+    fun findMenus(categoryId: Long, pageSize: Int, cursor: LocalDateTime? = null, lastId: Long? = null): Page<Menu> {
         return menuFinder.findByCategory(categoryId, pageSize, cursor, lastId)
     }
 
