@@ -16,6 +16,12 @@ server:
       max: 600
       min-spare: 100
 
+gemini:
+  api:
+    base-url: https://generativelanguage.googleapis.com/v1beta
+    model: gemini-3.5-flash-lite
+    key: ${GEMINI_API_KEY:dummy-key}
+
 ---
 spring.config.activate.on-profile: local
 app:
