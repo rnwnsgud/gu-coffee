@@ -97,3 +97,24 @@ include::{snippets}/coupon-download/path-parameters.adoc[]
 ==== Response
 include::{snippets}/coupon-download/http-response.adoc[]
 include::{snippets}/coupon-download/response-fields.adoc[]
+
+== AI Agent API
+
+=== AI 고객 상담 및 주문 처리 요청
+==== Request
+include::{snippets}/ai-chat/http-request.adoc[]
+include::{snippets}/ai-chat/request-fields.adoc[]
+
+==== Response
+include::{snippets}/ai-chat/http-response.adoc[]
+include::{snippets}/ai-chat/response-fields.adoc[]
+
+=== AI 위험 작업(주문 취소 등) 실행 승인/거절
+==== Request
+include::{snippets}/ai-approve/http-request.adoc[]
+include::{snippets}/ai-approve/request-fields.adoc[]
+
+==== Response
+include::{snippets}/ai-approve/http-response.adoc[]
+include::{snippets}/ai-approve/response-fields.adoc[]
+

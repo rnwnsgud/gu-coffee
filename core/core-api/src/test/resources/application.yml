@@ -35,3 +35,10 @@ storage:
 
 gu-coffee.storage.core.security.key: 11111111111111111111111111111111
 gu-coffee.storage.core.security.iv: 1111111111111111
+
+gemini:
+  api:
+    base-url: https://generativelanguage.googleapis.com/v1beta
+    model: gemini-3.5-flash-lite
+    key: ${GEMINI_API_KEY:dummy-key}
+

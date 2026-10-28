@@ -2,6 +2,7 @@ package com.coffee.gu.ai.tool
 
 import com.coffee.gu.ai.client.ToolSpecification
 import com.coffee.gu.cancel.CancelService
+import com.coffee.gu.enums.OrderState
 import com.coffee.gu.order.OrderReader
 import org.springframework.stereotype.Component
 import tools.jackson.module.kotlin.jacksonObjectMapper
@@ -61,7 +62,7 @@ class CancelOrderAgentTool(
     override fun specification(): ToolSpecification {
         return ToolSpecification(
             name = "cancelOrder",
-            description = "주문을 취소하고 결제를 환불합니다. 반드시 주문 상태가 PAID일 때만 취소 가능합니다.",
+            description = "주문 번호(orderKey)로 주문을 취소하고 결제를 환불합니다. 사전 상태 조회(getOrderStatus) 없이 바로 호출할 수 있습니다.",
             parametersSchema = mapOf(
                 "type" to "object",
                 "properties" to mapOf(
@@ -80,6 +81,9 @@ class CancelOrderAgentTool(
             ?: throw IllegalArgumentException("주문 번호(orderKey) 파라미터가 누락되었습니다.")
 
         val order = orderReader.getByOrderKey(orderKey)
+        if (order.state != OrderState.PAID) {
+            throw IllegalStateException("현재 주문 상태(${order.state})에서는 취소할 수 없습니다. PAID 상태만 취소 가능합니다.")
+        }
         cancelService.cancel(order)
 
         val result = mapOf(

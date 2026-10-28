@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
 @RestController
-@RequestMapping("/api/v1/ai")
+@RequestMapping("/v1/ai")
 class AiChatController(
     private val agentLoopRunner: AgentLoopRunner
 ) {
@@ -35,7 +35,7 @@ class AiChatController(
         val response = AiChatResponse(
             sessionId = result.sessionId,
             status = result.status.name,
-            answer = result.finalAnswer,
+            answer = sanitizePlainText(result.finalAnswer),
             pendingToolName = result.pendingApprovalToolCall?.name,
             pendingToolArguments = result.pendingApprovalToolCall?.arguments
         )
@@ -60,10 +60,22 @@ class AiChatController(
         val response = AiChatResponse(
             sessionId = result.sessionId,
             status = result.status.name,
-            answer = result.finalAnswer,
+            answer = sanitizePlainText(result.finalAnswer),
             pendingToolName = result.pendingApprovalToolCall?.name,
             pendingToolArguments = result.pendingApprovalToolCall?.arguments
         )
         return ApiResponse.success(response)
+    }
+
+    /**
+     * LLM이 습관적으로 생성하는 마크다운 강조 기호(** 등)와 줄바꿈(\n)을 제거하여
+     * Swagger 및 일반 클라이언트에서 깔끔한 단일 평문(Plain Text)으로 표시되도록 정제합니다.
+     */
+    private fun sanitizePlainText(text: String): String {
+        if (text.isBlank()) return text
+        return text
+            .replace("**", "")
+            .replace(Regex("\\s*\\r?\\n+\\s*"), " ")
+            .trim()
     }
 }
