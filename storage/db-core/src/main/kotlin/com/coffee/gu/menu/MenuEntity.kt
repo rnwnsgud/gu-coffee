@@ -11,6 +11,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.math.BigDecimal
+import java.time.temporal.ChronoUnit
 
 @Table(
     name = "menu",
@@ -69,7 +70,7 @@ class MenuEntity(
                 containedAllergens = containedAllergens,
                 mayContainAllergens = mayContainAllergens,
             ),
-            createdAt = createdAt,
+            createdAt = createdAt.truncatedTo(ChronoUnit.MICROS),
         )
     }
 

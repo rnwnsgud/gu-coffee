@@ -4,6 +4,7 @@ import com.coffee.gu.OffsetLimit
 import com.coffee.gu.Page
 import com.coffee.gu.TestApplication
 import com.coffee.gu.enums.MenuType
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -38,6 +39,9 @@ class MenuServiceIntegrationTest {
 
     @Autowired
     private lateinit var menuOptionGroupRepository: MenuOptionGroupJpaRepository
+
+    @Autowired
+    private lateinit var entityManager: EntityManager
 
     private val categoryId = 1L
     private var menuId: Long = 0L
@@ -131,6 +135,7 @@ class MenuServiceIntegrationTest {
             menuRepository.saveAndFlush(menu)
             menuCategoryRepository.saveAndFlush(MenuCategoryEntity(menuId = menu.id, categoryId = categoryId))
         }
+        entityManager.clear()
 
         // 1페이지 조회
         val page1 = menuService.findMenus(categoryId, pageSize = 2, cursor = null, lastId = null)

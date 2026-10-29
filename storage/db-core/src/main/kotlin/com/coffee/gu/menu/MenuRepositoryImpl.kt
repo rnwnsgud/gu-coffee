@@ -10,6 +10,7 @@ import com.querydsl.core.types.dsl.BooleanExpression
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Optional
 
 @Repository
@@ -84,7 +85,8 @@ class MenuRepositoryImpl(
         if (cursor == null) {
             return null
         }
-        return menuEntity.createdAt.before(cursor)
-            .or(menuEntity.createdAt.eq(cursor).and(menuEntity.id.lt(lastId)))
+        val normalizedCursor = cursor.truncatedTo(ChronoUnit.MICROS)
+        return menuEntity.createdAt.before(normalizedCursor)
+            .or(menuEntity.createdAt.eq(normalizedCursor).and(menuEntity.id.lt(lastId)))
     }
 }
