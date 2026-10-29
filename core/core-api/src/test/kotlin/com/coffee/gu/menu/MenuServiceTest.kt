@@ -65,6 +65,30 @@ class MenuServiceTest {
             assertThat(result.content).hasSize(1)
             assertThat(result.content[0].name).isEqualTo("Americano")
         }
+
+        @Test
+        @DisplayName("카테고리 ID와 커서 기반 페이징 정보로 메뉴 목록을 조회한다")
+        fun it_returns_paged_menus_by_cursor() {
+            // given
+            val categoryId = 1L
+            val pageSize = 10
+            val cursor = java.time.LocalDateTime.now()
+            val lastId = 10L
+            val menus = listOf(createMenu(1L, "Americano"))
+            val page = Page(menus, true, cursor, lastId)
+
+            given(menuFinder.findByCategory(categoryId, pageSize, cursor, lastId)).willReturn(page)
+
+            // when
+            val result = menuService.findMenus(categoryId, pageSize, cursor, lastId)
+
+            // then
+            assertThat(result.content).hasSize(1)
+            assertThat(result.content[0].name).isEqualTo("Americano")
+            assertThat(result.hasNext).isTrue()
+            assertThat(result.nextCursor).isEqualTo(cursor)
+            assertThat(result.nextLastId).isEqualTo(lastId)
+        }
     }
 
     @Nested

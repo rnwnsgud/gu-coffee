@@ -30,10 +30,10 @@ class MenuController(
     fun findMenus(
         @RequestParam("categoryId") categoryId: Long,
         @RequestParam("pageSize", defaultValue = "10") pageSize: Int,
-        @RequestParam("cursor") cursor: LocalDateTime?,
-        @RequestParam("lastId") lastId: Long?,
+        @RequestParam("cursor", required = false) cursor: LocalDateTime?,
+        @RequestParam("lastId", required = false) lastId: Long?,
     ): ApiResponse<PageResponse<MenuResponse>> {
-        val menus = menuService.findMenus(categoryId, pageSize, cursor ?: LocalDateTime.MIN, lastId ?: 0L)
+        val menus = menuService.findMenus(categoryId, pageSize, cursor, lastId)
         return ApiResponse.success(PageResponse(MenuResponse.from(menus.content), menus.hasNext, menus.nextCursor, menus.nextLastId))
     }
 

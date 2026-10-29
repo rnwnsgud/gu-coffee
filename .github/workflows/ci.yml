@@ -37,7 +37,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Tests & Verification (Unit, Integration, ArchUnit)
-        run: ./gradlew test --continue
+        run: |
+          rm -rf .gradle/*/fileHashes
+          ./gradlew test --continue
 
       - name: Generate RestDocs & OpenAPI 3.0 Spec
         run: ./gradlew :core:core-api:asciidoctor :core:core-api:openapi3

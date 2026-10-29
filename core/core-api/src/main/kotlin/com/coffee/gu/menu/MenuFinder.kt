@@ -15,9 +15,14 @@ class MenuFinder(
         return Page.of(menus, pageSize)
     }
 
-    fun findByCategory(categoryId: Long, pageSize: Int, cursor: LocalDateTime, lastId: Long): Page<Menu> {
+    fun findByCategory(categoryId: Long, pageSize: Int, cursor: LocalDateTime? = null, lastId: Long? = null): Page<Menu> {
         val menus = menuRepository.findByCategoryId(categoryId, cursor, lastId, pageSize)
-        return Page.of(menus, pageSize)
+        return Page.of(
+            items = menus,
+            pageSize = pageSize,
+            cursorExtractor = { it.createdAt },
+            idExtractor = { it.id },
+        )
     }
 
     fun getById(menuId: Long): Menu {

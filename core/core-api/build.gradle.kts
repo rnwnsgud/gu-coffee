@@ -28,6 +28,7 @@ dependencies {
     implementation(project(":support:pg"))
     implementation(project(":support:event"))
     implementation(project(":support:lock"))
+    implementation(project(":support:ai"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")

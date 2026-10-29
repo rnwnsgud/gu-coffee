@@ -8,10 +8,20 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.math.BigDecimal
+import java.time.temporal.ChronoUnit
 
-@Table(name = "menu")
+@Table(
+    name = "menu",
+    indexes = [
+        Index(
+            name = "idx_menu_status_created_id",
+            columnList = "entityStatus, createdAt, id",
+        ),
+    ],
+)
 @Entity
 class MenuEntity(
     @Id
@@ -60,6 +70,7 @@ class MenuEntity(
                 containedAllergens = containedAllergens,
                 mayContainAllergens = mayContainAllergens,
             ),
+            createdAt = createdAt.truncatedTo(ChronoUnit.MICROS),
         )
     }
 

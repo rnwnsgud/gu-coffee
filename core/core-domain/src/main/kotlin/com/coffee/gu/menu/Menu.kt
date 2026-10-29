@@ -2,6 +2,7 @@ package com.coffee.gu.menu
 
 import com.coffee.gu.enums.MenuType
 import java.math.BigDecimal
+import java.time.LocalDateTime
 
 class Menu(
     val id: Long = 0,
@@ -11,6 +12,7 @@ class Menu(
     val imageUrl: String? = null,
     val description: String? = null,
     val detail: MenuDetail? = null,
+    val createdAt: LocalDateTime = LocalDateTime.now(),
 ) {
     val isStampEligible: Boolean
         get() = type == MenuType.DRINK

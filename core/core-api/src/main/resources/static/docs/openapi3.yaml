@@ -143,6 +143,60 @@ paths:
                 payment-create:
                   value: "{\"status\":\"SUCCESS\",\"data\":{\"paymentId\":10},\"error\"\
                     :null}"
+  /v1/ai/approve:
+    post:
+      tags:
+      - v1
+      operationId: ai-approve
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/v1-ai-approve462053790"
+            examples:
+              ai-approve:
+                value: "{\"sessionId\":\"sess_test_1\",\"approved\":true,\"rejectionReason\"\
+                  :\"사용자가 해당 작업 실행을 거절했습니다.\"}"
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-ai-approve-1951864208"
+              examples:
+                ai-approve:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"sessionId\":\"sess_test_1\"\
+                    ,\"status\":\"COMPLETED\",\"answer\":\"ORD-101 주문 취소 및 환불 처리가\
+                    \ 완료되었습니다.\",\"pendingToolName\":null,\"pendingToolArguments\"\
+                    :null},\"error\":null}"
+  /v1/ai/chat:
+    post:
+      tags:
+      - v1
+      operationId: ai-chat
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/v1-ai-chat-834565976"
+            examples:
+              ai-chat:
+                value: "{\"prompt\":\"ORD-101 주문 취소해줘\",\"sessionId\":\"sess_test_1\"\
+                  }"
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-ai-chat-34505470"
+              examples:
+                ai-chat:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"sessionId\":\"sess_test_1\"\
+                    ,\"status\":\"WAITING_FOR_APPROVAL\",\"answer\":\"\",\"pendingToolName\"\
+                    :\"cancelOrder\",\"pendingToolArguments\":{\"orderKey\":\"ORD-101\"\
+                    ,\"reason\":\"단순 변심\"}},\"error\":null}"
   /v1/cart/items:
     post:
       tags:
@@ -648,6 +702,18 @@ components:
         menuId:
           type: number
           description: 메뉴 식별자
+    v1-ai-chat-834565976:
+      required:
+      - prompt
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: 세션 식별자 (생략 시 자동 생성)
+          nullable: true
+        prompt:
+          type: string
+          description: "고객 자연어 질문 (예: 'ORD-101 주문 취소해줘')"
     v2-menus1003972509:
       required:
       - error
@@ -746,6 +812,39 @@ components:
         status:
           type: string
           description: 응답 상태
+    v1-ai-chat-34505470:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - answer
+          - sessionId
+          - status
+          type: object
+          properties:
+            answer:
+              type: string
+              description: 에이전트 최종 답변 (승인 대기 중일 때는 빈 문자열)
+            pendingToolName:
+              type: string
+              description: 사람의 승인을 대기 중인 도구 이름
+              nullable: true
+            pendingToolArguments:
+              type: object
+              description: 승인 대기 중인 도구 호출 인자 Map
+              nullable: true
+            sessionId:
+              type: string
+              description: 에이전트 대화 세션 ID
+            status:
+              type: string
+              description: 에이전트 루프 상태 (COMPLETED / WAITING_FOR_APPROVAL / MAX_STEPS_EXCEEDED)
+        status:
+          type: string
+          description: 응답 상태
     v1-payments-178569976:
       required:
       - error
@@ -760,6 +859,55 @@ components:
             paymentId:
               type: number
               description: 생성된 결제 식별자
+        status:
+          type: string
+          description: 응답 상태
+    v1-ai-approve462053790:
+      required:
+      - approved
+      - sessionId
+      type: object
+      properties:
+        approved:
+          type: boolean
+          description: "승인 여부 (true: 승인 및 실행, false: 거절)"
+        sessionId:
+          type: string
+          description: 승인 대기 중인 세션 ID
+        rejectionReason:
+          type: string
+          description: 거절 시 사유 메시지
+          nullable: true
+    v1-ai-approve-1951864208:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - answer
+          - sessionId
+          - status
+          type: object
+          properties:
+            answer:
+              type: string
+              description: 에이전트 최종 답변
+            pendingToolName:
+              type: string
+              description: 승인 대기 도구 이름 (완료 시 null)
+              nullable: true
+            pendingToolArguments:
+              type: object
+              description: 승인 대기 도구 인자 (완료 시 null)
+              nullable: true
+            sessionId:
+              type: string
+              description: 에이전트 대화 세션 ID
+            status:
+              type: string
+              description: 에이전트 루프 상태 (COMPLETED)
         status:
           type: string
           description: 응답 상태
