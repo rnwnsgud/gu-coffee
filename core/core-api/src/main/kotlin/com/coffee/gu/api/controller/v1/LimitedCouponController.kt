@@ -2,13 +2,16 @@ package com.coffee.gu.api.controller.v1
 
 import com.coffee.gu.Principal
 import com.coffee.gu.api.controller.v1.response.IssuedCouponResponse
+import com.coffee.gu.api.controller.v1.response.LimitedCouponIssueClaimResponse
 import com.coffee.gu.api.controller.v1.response.LimitedCouponResponse
 import com.coffee.gu.auth.Authenticated
 import com.coffee.gu.coupon.LimitedCouponService
 import com.coffee.gu.response.ApiResponse
+import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
@@ -29,5 +32,15 @@ class LimitedCouponController(
     ): ApiResponse<IssuedCouponResponse> {
         val issuedCoupon = limitedCouponService.issue(principal, limitedCouponId)
         return ApiResponse.success(IssuedCouponResponse.from(issuedCoupon))
+    }
+
+    @PostMapping("/v2/limited-coupons/{limitedCouponId}/issue")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    fun issueV2(
+        @Authenticated principal: Principal,
+        @PathVariable limitedCouponId: Long,
+    ): ApiResponse<LimitedCouponIssueClaimResponse> {
+        val receipt = limitedCouponService.issueAsync(principal, limitedCouponId)
+        return ApiResponse.success(LimitedCouponIssueClaimResponse.accepted(receipt.eventId))
     }
 }

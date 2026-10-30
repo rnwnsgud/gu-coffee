@@ -3,6 +3,8 @@ package com.coffee.gu
 import com.coffee.gu.config.CoreDataSourceConfig
 import com.coffee.gu.config.CoreJpaConfig
 import com.coffee.gu.config.QuerydslConfig
+import com.coffee.gu.coupon.LocalLimitedCouponClaimer
+import com.coffee.gu.lock.LimitedCouponClaimer
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.TopicPartition
 import org.mockito.ArgumentMatchers
@@ -62,5 +64,11 @@ class TestApplication {
         Mockito.`when`(template.send(ArgumentMatchers.anyString(), ArgumentMatchers.any()))
             .thenReturn(CompletableFuture.completedFuture(sendResult))
         return template
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = ["spring.lock.type"], havingValue = "local", matchIfMissing = false)
+    fun localLimitedCouponClaimer(): LimitedCouponClaimer {
+        return LocalLimitedCouponClaimer()
     }
 }

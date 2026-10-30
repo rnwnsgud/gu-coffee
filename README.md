@@ -188,7 +188,31 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>8. 멀티스레드 동시성 회귀 테스트 자동화</b></summary>
+<summary><b>8. 대규모 트래픽 대비 선착순 쿠폰 발급의 비동기 대기열 및 2중 방어선</b></summary>
+
+- **문제 정의**:
+  - 동기식 분산 락(`RedissonLockManager`)은 1개의 락 키를 두고 수만 개 요청이 경합하므로, 톰캣 워커 스레드가 락 대기에 묶여 스레드 고갈 및 전체 서비스 먹통유발 위험.
+  - 외부 인입 속도와 DB 영속화 속도가 직결되어 HikariCP 커넥션 풀 고갈 및 트랜잭션 락 경합 발생.
+- **해결 방안**:
+  - **1차 인메모리 사전 차단 (Redis Lua Script & Fast-Fail)**:
+    - 락 대기 없이 단일 RTT로 원자 실행되는 Lua Script(`RedisLimitedCouponClaimer`) 구축.
+    - `SISMEMBER`로 1인 1매 중복 여부를 $O(1)$ 확인하고, `DECR` 후 잔여 수량이 0 미만이면 `INCR`로 즉시 원복 후 소진(`SOLD_OUT`) 반환.
+    - 정원 N명을 초과한 99% 이상의 트래픽은 DB나 메시지 큐에 도달하기 전 1ms 안에 인메모리에서 즉시 탈락시켜 WAS 스레드와 DB 부하 원천 차단.
+    - Redis 재고 키가 누락된 Cold Cache 환경에서도 `setIfAbsent`(= `SETNX`)를 통해 단 1회만 안전하게 지연 초기화(Lazy Initialization) 지원.
+  - **2차 비동기 대기열 및 속도 조절 (Kafka Rate Leveling)**:
+    - 정원 내 진입에 성공한 요청만 `coffee.coupon.limited-issue.v1` 토픽으로 비동기 이벤트(`LimitedCouponIssueEvent`) 발행 후 클라이언트에 `202 Accepted` 즉시 응답.
+    - 백그라운드 Kafka 컨슈머(`LimitedCouponIssueConsumer`)가 고정된 스레드 수(`concurrency = 3`)로 순차 처리하여 HikariCP 커넥션 풀을 대규모 트래픽으로부터 물리적 격리.
+  - **보상 트랜잭션 및 멱등성**:
+    - DB 일시 장애 등으로 영구 실패 시 `rollbackClaim`을 호출하여 Redis 재고(`INCR`) 및 발급자 Set(`SREM`)을 원자적으로 환원.
+    - 네트워크 재전송 시 DB `issued_coupon`의 `uk_issued_coupon_principal_coupon` 복합 유니크 제약조건을 통해 멱등 차단.
+  - **E2E 검증**:
+    - 100명 동시 요청(수량 30개) 시 정확히 30건 성공 및 70건 즉시 소진 차단, DB 최종 적재 30건 및 오버이슈 0건 검증 완료.
+    - 동일 유저 10회 동시 요청 시 1건만 접수되고 9건은 `COUPON_ALREADY_DOWNLOADED`로 즉시 차단됨을 검증.
+
+</details>
+
+<details>
+<summary><b>9. 멀티스레드 동시성 회귀 테스트 자동화</b></summary>
 
 - **문제 정의**: 락 획득 타이밍이나 트랜잭션 경계 리팩토링 시 일반 단위 테스트만으로는 동시성 버그 감지 불가.
 - **해결 방안**:
@@ -199,7 +223,7 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>9. RestDocs 기반 OpenAPI 3.0 스펙 자동화</b></summary>
+<summary><b>10. RestDocs 기반 OpenAPI 3.0 스펙 자동화</b></summary>
 
 - **설계**: `com.epages.restdocs-api-spec`을 파이프라인에 연결하여 RestDocs 테스트 통과 시 `openapi3.yaml`이 자동 생성되도록 구성.
 - **동기화**: Gradle `copyDocs` 태스크를 통해 빌드 산출물 및 정적 웹 리소스 디렉터리에 Swagger UI 스펙이 자동 동기화되도록 연동.
@@ -267,7 +291,8 @@ sequenceDiagram
 | **Coupon** | `GET` | `/v1/issued-coupons` | 보유 발급 쿠폰 목록 조회 |
 | | `POST` | `/v1/coupons/{couponId}/download` | 일반 쿠폰 다운로드 |
 | **Limited Coupon** | `GET` | `/v1/limited-coupons/{limitedCouponId}` | 선착순 쿠폰 정보 및 잔여 수량 조회 |
-| | `POST` | `/v1/limited-coupons/{limitedCouponId}/issue` | 선착순 쿠폰 발급 (분산 락) |
+| | `POST` | `/v1/limited-coupons/{limitedCouponId}/issue` | 선착순 쿠폰 동기 발급 (분산 락) |
+| | `POST` | `/v2/limited-coupons/{limitedCouponId}/issue` | 선착순 쿠폰 비동기 대기열 발급 접수 (`202 Accepted`) |
 | **Stamp** | `GET` | `/v1/stamps` | 사용자 스탬프 적립 현황 조회 |
 | | `GET` | `/v1/stamps/histories` | 스탬프 히스토리 내역 조회 |
 | **Store** | `GET` | `/v1/stores` | 위치 반경 기반 매장 검색 |
