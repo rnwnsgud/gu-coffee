@@ -1,7 +1,5 @@
 package com.coffee.gu.order
 
-import com.coffee.gu.CoreException
-import com.coffee.gu.ErrorType
 import com.coffee.gu.Principal
 import com.coffee.gu.enums.OrderState
 import com.coffee.gu.menu.LimitedMenuStockManager
@@ -16,11 +14,8 @@ class OrderService(
     private val limitedMenuStockManager: LimitedMenuStockManager,
 ) {
     fun create(newOrder: NewOrder): String {
-        val orderMenuIds = newOrder.lines.map { it.menuId }.toSet()
-        val menus = menuFinder.findAllByIdIn(orderMenuIds.toList())
-        val orderMenus = OrderMenus.from(menus)
-        if (menus.isEmpty()) throw CoreException(ErrorType.NOT_FOUND_DATA)
-        if (!orderMenus.matches(orderMenuIds)) throw CoreException(ErrorType.MENU_MISMATCH_IN_ORDER)
+        val menus = menuFinder.findAllByIdIn(newOrder.menuIds.toList())
+        val orderMenus = OrderMenus.from(menus, newOrder.menuIds)
         val orderKey = Order.generateKey()
         val menuQuantities = newOrder.toMenuQuantityMap()
         limitedMenuStockManager.reserveIfLimited(
@@ -29,7 +24,7 @@ class OrderService(
             menuQuantities = menuQuantities,
         )
         return try {
-            orderManager.create(newOrder.principal, newOrder, orderMenus, orderKey)
+            orderManager.create(newOrder, orderMenus, orderKey)
         } catch (e: Exception) {
             limitedMenuStockManager.releaseIfLimited(
                 orderKey = orderKey,

@@ -7,6 +7,9 @@ data class NewOrder(
     val storeId: Long,
     val lines: List<NewOrderLine>,
 ) {
+    val menuIds: Set<Long>
+        get() = lines.map { it.menuId }.toSet()
+
     fun toMenuQuantityMap(): Map<Long, Int> =
         lines.groupBy { it.menuId }.mapValues { (_, items) -> items.sumOf { it.quantity }.toInt() }
 }
