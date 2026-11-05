@@ -5,6 +5,9 @@ import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.domain.JavaClasses
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
+import com.tngtech.archunit.lang.ArchCondition
+import com.tngtech.archunit.lang.ConditionEvents
+import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.conditions.ArchConditions.be
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
@@ -38,6 +41,14 @@ class ArchitectureTest {
     private val resideInAdminApi = DescribedPredicate.describe<JavaClass>("reside in admin-api module") { javaClass ->
         val uri = javaClass.source.orElse(null)?.uri?.toString() ?: ""
         uri.contains("admin-api")
+    }
+
+    private val isLogicLayer = DescribedPredicate.describe<JavaClass>("be in logic layer") { javaClass ->
+        val name = javaClass.simpleName
+        name.endsWith("Manager") || name.endsWith("Finder") || name.endsWith("Reader") ||
+            name.endsWith("Validator") || name.endsWith("Preparer") || name.endsWith("Completer") ||
+            name.endsWith("Rollbacker") || name.endsWith("Processor") || name.endsWith("Handler") ||
+            name.endsWith("Executor") || name.endsWith("Recorder") || name.endsWith("TxHandler")
     }
 
     @BeforeAll
@@ -108,6 +119,47 @@ class ArchitectureTest {
         slices().matching("com.coffee.gu.(*)..")
             .should().beFreeOfCycles()
             .because("하위 패키지 간의 상호 순환 참조는 유지보수성과 확장성을 저해합니다.")
+            .check(importedClasses)
+    }
+
+    @Test
+    @DisplayName("[규칙 7] Business Layer(Service)는 다른 Service를 직접 참조하지 않아야 한다 (동일 레이어 참조 금지)")
+    fun servicesShouldNotDependOnOtherServices() {
+        noClasses()
+            .that(resideInCoreApi).and().haveSimpleNameEndingWith("Service")
+            .should(object : ArchCondition<JavaClass>("depend on another Service") {
+                override fun check(item: JavaClass, events: ConditionEvents) {
+                    item.directDependenciesFromSelf.forEach { dep ->
+                        val target = dep.targetClass
+                        if (target.simpleName.endsWith("Service") && target.name != item.name) {
+                            val message = "${item.name}이 다른 Service(${target.name})를 참조합니다. 비즈니스 레이어 간 상호 참조는 금지됩니다."
+                            events.add(SimpleConditionEvent.violated(dep, message))
+                        }
+                    }
+                }
+            })
+            .because("비즈니스 레이어(Service) 간에는 서로 직접 참조할 수 없으며, 도메인 로직 공유 및 협력은 Logic Layer(*Manager, *Finder, *Handler 등)를 통해 이루어져야 합니다.")
+            .check(importedClasses)
+    }
+
+    @Test
+    @DisplayName("[규칙 8] Logic Layer(*Manager, *Finder, *Reader 등)는 상위 Business Layer(Service)를 역참조하지 않아야 한다 (역류 금지)")
+    fun logicLayerShouldNotDependOnServices() {
+        noClasses()
+            .that(resideInCoreApi.and(isLogicLayer))
+            .should().dependOnClassesThat().haveSimpleNameEndingWith("Service")
+            .because("하위 레이어인 Logic Layer는 상위 레이어인 Business Layer(Service)를 역참조할 수 없습니다.")
+            .check(importedClasses)
+    }
+
+    @Test
+    @DisplayName("[규칙 9] Presentation Layer(Controller)는 Business Layer(Service)를 건너뛰고 Logic Layer나 Repository를 직접 참조하지 않아야 한다 (건너뛰기 금지)")
+    fun controllersShouldNotSkipBusinessLayer() {
+        noClasses()
+            .that(resideInCoreApi).and().haveSimpleNameEndingWith("Controller")
+            .should().dependOnClassesThat(isLogicLayer)
+            .orShould().dependOnClassesThat().haveSimpleNameEndingWith("Repository")
+            .because("Presentation Layer(Controller)는 Business Layer(Service)를 건너뛰고 하위 Logic Layer나 Data Access Layer를 직접 참조할 수 없습니다.")
             .check(importedClasses)
     }
 }

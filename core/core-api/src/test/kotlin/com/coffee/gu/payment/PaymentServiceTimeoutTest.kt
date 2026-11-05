@@ -7,6 +7,7 @@ import com.coffee.gu.Principal
 import com.coffee.gu.enums.OrderState
 import com.coffee.gu.enums.PaymentMethod
 import com.coffee.gu.enums.PaymentState
+import com.coffee.gu.menu.LimitedMenuStockManager
 import com.coffee.gu.order.Order
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -43,7 +44,10 @@ class PaymentServiceTimeoutTest {
     @Mock
     private lateinit var paymentReader: PaymentReader
 
-    @InjectMocks
+    @Mock
+    private lateinit var limitedMenuStockManager: LimitedMenuStockManager
+
+    private lateinit var paymentApprovalFailureResolver: PaymentApprovalFailureResolver
     private lateinit var paymentService: PaymentService
 
     private lateinit var order: Order
@@ -69,6 +73,22 @@ class PaymentServiceTimeoutTest {
 
     @BeforeEach
     fun setUp() {
+        paymentApprovalFailureResolver = PaymentApprovalFailureResolver(
+            paymentGatewayProcessor = paymentGatewayProcessor,
+            paymentCompleter = paymentCompleter,
+            limitedMenuStockManager = limitedMenuStockManager,
+        )
+
+        paymentService = PaymentService(
+            paymentGatewayProcessor = paymentGatewayProcessor,
+            paymentPreparer = paymentPreparer,
+            paymentCompleter = paymentCompleter,
+            paymentManager = paymentManager,
+            paymentReader = paymentReader,
+            limitedMenuStockManager = limitedMenuStockManager,
+            paymentApprovalFailureResolver = paymentApprovalFailureResolver,
+        )
+
         order = Order(
             key = "ORDER-TIMEOUT-1",
             name = "아메리카노",

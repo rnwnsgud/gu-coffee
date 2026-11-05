@@ -5,6 +5,8 @@ import com.coffee.gu.config.CoreJpaConfig
 import com.coffee.gu.config.QuerydslConfig
 import com.coffee.gu.coupon.LocalLimitedCouponClaimer
 import com.coffee.gu.lock.LimitedCouponClaimer
+import com.coffee.gu.lock.LimitedMenuStockReservationManager
+import com.coffee.gu.menu.LocalLimitedMenuStockReservationManager
 import org.apache.kafka.clients.producer.RecordMetadata
 import org.apache.kafka.common.TopicPartition
 import org.mockito.ArgumentMatchers
@@ -70,5 +72,11 @@ class TestApplication {
     @ConditionalOnProperty(name = ["spring.lock.type"], havingValue = "local", matchIfMissing = false)
     fun localLimitedCouponClaimer(): LimitedCouponClaimer {
         return LocalLimitedCouponClaimer()
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = ["spring.lock.type"], havingValue = "local", matchIfMissing = false)
+    fun localLimitedMenuStockReservationManager(): LimitedMenuStockReservationManager {
+        return LocalLimitedMenuStockReservationManager()
     }
 }

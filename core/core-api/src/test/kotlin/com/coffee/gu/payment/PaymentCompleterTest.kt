@@ -10,6 +10,7 @@ import com.coffee.gu.enums.PaymentMethod
 import com.coffee.gu.enums.PaymentState
 import com.coffee.gu.enums.TransactionType
 import com.coffee.gu.event.OutboxEventPublisher
+import com.coffee.gu.menu.LimitedMenuStockManager
 import com.coffee.gu.order.Order
 import com.coffee.gu.order.OrderManager
 import com.coffee.gu.stamp.StampHandler
@@ -51,6 +52,9 @@ class PaymentCompleterTest {
 
     @Mock
     private lateinit var outboxEventPublisher: OutboxEventPublisher
+
+    @Mock
+    private lateinit var limitedMenuStockManager: LimitedMenuStockManager
 
     @Mock
     private lateinit var applicationEventPublisher: org.springframework.context.ApplicationEventPublisher

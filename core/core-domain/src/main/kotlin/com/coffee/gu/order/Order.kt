@@ -40,10 +40,21 @@ class Order(
         if (this.principal != principal) throw CoreException(ErrorType.NOT_FOUND_DATA)
     }
 
+    fun toMenuQuantityMap(): Map<Long, Int> =
+        lines.groupBy { it.menuId }.mapValues { (_, items) -> items.sumOf { it.quantity }.toInt() }
+
     companion object {
-        fun create(name: String, principal: Principal, storeId: Long, totalPrice: BigDecimal): Order {
+        fun generateKey(): String = TSID.Factory.getTsid().toString()
+
+        fun create(
+            name: String,
+            principal: Principal,
+            storeId: Long,
+            totalPrice: BigDecimal,
+            key: String = generateKey(),
+        ): Order {
             return Order(
-                key = TSID.Factory.getTsid().toString(),
+                key = key,
                 name = name,
                 principal = principal,
                 storeId = storeId,
