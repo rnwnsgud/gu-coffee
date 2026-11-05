@@ -1,7 +1,11 @@
 package com.coffee.gu.lock.config
 
+import com.coffee.gu.lock.LimitedCouponClaimer
+import com.coffee.gu.lock.LimitedMenuStockReservationManager
 import com.coffee.gu.lock.LocalLockManager
 import com.coffee.gu.lock.LockManager
+import com.coffee.gu.lock.RedisLimitedCouponClaimer
+import com.coffee.gu.lock.RedisLimitedMenuStockReservationManager
 import com.coffee.gu.lock.RedissonLockManager
 import org.redisson.Redisson
 import org.redisson.api.RedissonClient
@@ -39,5 +43,17 @@ class RedissonConfig(
     @ConditionalOnProperty(name = ["spring.lock.type"], havingValue = "local", matchIfMissing = false)
     fun localLockManager(): LockManager {
         return LocalLockManager()
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = ["spring.lock.type"], havingValue = "redisson", matchIfMissing = true)
+    fun redisLimitedCouponClaimer(redissonClient: RedissonClient): LimitedCouponClaimer {
+        return RedisLimitedCouponClaimer(redissonClient)
+    }
+
+    @Bean
+    @ConditionalOnProperty(name = ["spring.lock.type"], havingValue = "redisson", matchIfMissing = true)
+    fun redisLimitedMenuStockReservationManager(redissonClient: RedissonClient): LimitedMenuStockReservationManager {
+        return RedisLimitedMenuStockReservationManager(redissonClient)
     }
 }

@@ -113,7 +113,7 @@ gu-coffee
     - **유저별 단일 파티션 라우팅**: 유저 식별자(`principal.key`)를 파티션 키로 지정하여, 동일 유저의 스탬프 적립 이벤트가 항상 동일 파티션에 순서대로 적재되도록 보장.
     - **수동 오프셋 제어 및 멀티 파티션 병렬 소비**: `enable.auto.commit = false`와 `AckMode.RECORD`를 설정하여 레코드 단위 비즈니스 로직이 정상 처리된 후에만 오프셋을 커밋하며, 토픽 파티션 3개와 리스너 동시성(`concurrency = 3`)으로 파티션을 1:1 전담 처리.
     - **다중 계층 멱등성 방어**: DB 트랜잭션 커밋 직후 ~ Kafka 오프셋 커밋 직전 장애로 인한 재수신이나 동시성 경합 시 중복 보상이 지급되지 않도록, Outbox 이벤트 ID(`eventId`) 완료 상태 가드, 사용자별 스탬프 비관적 락(`FOR UPDATE`), DB Unique 제약조건으로 중복 처리를 차단.
-    - **재시도 및 Dead Letter Topic(DLT) 격리**: 컨슈머 처리 중 일시적 예외 발생 시 `DefaultErrorHandler`(`FixedBackOff` 1초 간격 최대 3회 재시도)를 수행하고, 최종 실패한 메시지는 `DeadLetterPublishingRecoverer`를 통해 `.dlt` 토픽(`coffee.stamp.earn.v1.dlt`)으로 격리 발행하여 파티션 소비 지연을 방지.
+    - **재시도 및 DLT 격리**: 컨슈머 처리 중 일시적 예외 발생 시 `DefaultErrorHandler`(`FixedBackOff` 1초 간격 최대 3회 재시도)를 수행하고, 최종 실패한 메시지는 `DeadLetterPublishingRecoverer`를 통해 `.dlt` 토픽(`coffee.stamp.earn.v1.dlt`)으로 격리 발행하여 파티션 소비 지연을 방지.
     - **EmbeddedKafka E2E 검증**: 임베디드 카프카 브로커 환경에서 정상 소비, 중복 발행 시 멱등성 처리, 예외 발생 시 3회 재시도 후 DLT 격리 발행까지 E2E 통합 테스트 검증 완료.
 
 ```mermaid
@@ -151,7 +151,7 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>6. Redis Cache-Aside, 캐시 스탬피드 및 장애 우회(Fail-Open) 설계</b></summary>
+<summary><b>6. Redis Cache-Aside 및 Fail-Open 설계</b></summary>
 
 - **문제 정의**:
   - 메뉴 상세 조회 시 4단계 연관 데이터 조회(Menu $\to$ MenuOptionGroup $\to$ OptionGroup $\to$ Option)로 인해 반복 호출 시 DB 부담 증가.
@@ -160,7 +160,7 @@ sequenceDiagram
 - **해결 방안**:
   - **Cache-Aside 패턴**: 단순 PK/IN 기반 조회를 유지하면서, 조립된 메뉴 상세 데이터는 Redis 기반 Cache-Aside 패턴을 구축하여 메모리에서 서빙.
   - **캐시 스탬피드 방어**: `@Cacheable(sync = true)` 동기화 락을 적용하여 동일 키에 대한 동시 DB 접근을 단 1회로 직렬화.
-  - **장애 시 자동 DB 우회 (Fail-Open)**:
+  - **Fail-Open 기반 DB 자동 우회**:
     - `CachingConfigurer.errorHandler()`를 구현하여 일반 캐시 작업 실패 시 예외를 전파하지 않고 로깅 처리.
     - `@Cacheable(sync = true)` 환경에서 Spring AOP가 기본 에러 핸들러를 거치지 않고 `Cache.get(key, valueLoader)`를 직접 호출하는 특성에 대응하기 위해, `FailOpenCacheManager` 및 `FailOpenCache` 데코레이터를 적용.
     - Redis 연결 장애 시 예외를 흡수하고 `valueLoader.call()`을 호출하여 DB 원본 조회로 자동 우회하도록 구성. 비즈니스 예외(`ValueRetrievalException`)는 정상 전파.
@@ -176,11 +176,11 @@ sequenceDiagram
   - 분산 락의 대여 시간(`leaseTime = 5초`) 만료(GC 지연, DB 지연 등) 또는 Redis 장애 조치 시 락이 조기 해제되어 복수 스레드가 동시 진입할 경우 초과 발급 및 갱신 손실 위험.
 - **해결 방안**:
   - **도메인 분리와 합성 구조**: 기존 쿠폰 도메인과의 무리한 상속을 배제하고, 선착순 재고 수명주기를 독립 전담하는 `LimitedCoupon` 모델 및 테이블을 구축. 발급 산출물은 기존 `IssuedCoupon`으로 영속화하여 기존 주문/결제 파이프라인 재사용.
-  - **1차 방어선 (Redisson 분산 락 & Fail-Closed)**:
+  - **1차 방어선: Redisson 분산 락**:
     - Redis Pub/Sub 기반 `RedissonClient`를 채택하여 락 획득 대기 오버헤드를 낮추고, `LockManager` 인터페이스로 인프라를 추상화.
     - 재고 정합성 보호를 위해 Redis 연결 실패 시 요청을 차단(`COUPON_LOCK_ACQUISITION_FAILED`)하는 Fail-Closed 정책 적용.
     - 비즈니스 로직 정상 완료 후 `finally` 블록의 락 해제 예외가 성공 응답을 훼손하지 않도록 안전 해제 처리.
-  - **2차 방어선 (DB 비관적 락)**:
+  - **2차 방어선: DB 비관적 락**:
     - 분산 락 내부 트랜잭션(`LimitedCouponIssueExecutor.execute`)에서 `findByIdForUpdate`(`SELECT ... FOR UPDATE` 비관적 락)를 적용하여, 락 만료나 지연으로 복수 요청이 진입하더라도 DB 레벨에서 행 잠금을 통해 정합성을 보장.
   - **수명주기 분리**: 트랜잭션 커밋 전에 락이 조기 해제되는 현상을 방지하기 위해, 트랜잭션 외부에서 락을 획득/해제하고 내부에서 DB 커밋까지 마치는 수명주기(`LimitedCouponService` $\to$ `LimitedCouponIssueExecutor`) 적용.
   - **1인 1매 정책**: 분산 락 내부 검증 및 DB `issued_coupon`의 `(principal_key, coupon_id)` 복합 유니크 제약조건으로 이중 방어.
@@ -188,7 +188,31 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>8. 멀티스레드 동시성 회귀 테스트 자동화</b></summary>
+<summary><b>8. 대규모 트래픽 대비 선착순 쿠폰 발급의 비동기 대기열 및 2중 방어선</b></summary>
+
+- **문제 정의**:
+  - 동기식 분산 락(`RedissonLockManager`)은 1개의 락 키를 두고 많은 요청이 경합하므로, 톰캣 워커 스레드가 락 대기에 묶여 스레드 풀 고갈 및 서비스 지연 위험 발생.
+  - 외부 인입 속도와 DB 영속화 속도가 직결되어 HikariCP 커넥션 풀 고갈 및 트랜잭션 락 경합 발생.
+- **해결 방안**:
+  - **1차 인메모리 사전 차단**:
+    - 락 대기 없이 단일 RTT로 원자 실행되는 Lua Script(`RedisLimitedCouponClaimer`) 구축.
+    - `SISMEMBER`로 1인 1매 중복 여부를 $O(1)$ 확인하고, `DECR` 후 잔여 수량이 0 미만이면 `INCR`로 즉시 원복 후 소진(`SOLD_OUT`) 반환.
+    - 정원을 초과한 유입 트래픽은 인메모리 단계에서 즉시 거절하여 데이터베이스 및 메시지 브로커의 부하를 방지.
+    - Redis 재고 키가 누락된 환경에서도 `setIfAbsent`를 통해 단 1회만 안전하게 지연 초기화 지원.
+  - **2차 비동기 대기열 및 속도 조절**:
+    - 정원 내 진입에 성공한 요청만 `coffee.coupon.limited-issue.v1` 토픽으로 비동기 이벤트(`LimitedCouponIssueEvent`) 발행 후 클라이언트에 `202 Accepted` 즉시 응답.
+    - 백그라운드 Kafka 컨슈머(`LimitedCouponIssueConsumer`)가 고정된 스레드 수(`concurrency = 3`)로 순차 처리하여 HikariCP 커넥션 풀을 대규모 트래픽으로부터 물리적 격리.
+  - **보상 트랜잭션 및 멱등성**:
+    - DB 일시 장애 등으로 영구 실패 시 `rollbackClaim`을 호출하여 Redis 재고(`INCR`) 및 발급자 Set(`SREM`)을 원자적으로 환원.
+    - 네트워크 재전송 시 DB `issued_coupon`의 `uk_issued_coupon_principal_coupon` 복합 유니크 제약조건을 통해 멱등 차단.
+  - **E2E 검증**:
+    - 100명 동시 요청(수량 30개) 시 정확히 30건 성공 및 70건 즉시 소진 차단, DB 최종 적재 30건 및 오버이슈 0건 검증 완료.
+    - 동일 유저 10회 동시 요청 시 1건만 접수되고 9건은 `COUPON_ALREADY_DOWNLOADED`로 정상 차단됨을 검증.
+
+</details>
+
+<details>
+<summary><b>9. 멀티스레드 동시성 회귀 테스트 자동화</b></summary>
 
 - **문제 정의**: 락 획득 타이밍이나 트랜잭션 경계 리팩토링 시 일반 단위 테스트만으로는 동시성 버그 감지 불가.
 - **해결 방안**:
@@ -199,10 +223,35 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>9. RestDocs 기반 OpenAPI 3.0 스펙 자동화</b></summary>
+<summary><b>10. RestDocs 기반 OpenAPI 3.0 스펙 자동화</b></summary>
 
 - **설계**: `com.epages.restdocs-api-spec`을 파이프라인에 연결하여 RestDocs 테스트 통과 시 `openapi3.yaml`이 자동 생성되도록 구성.
 - **동기화**: Gradle `copyDocs` 태스크를 통해 빌드 산출물 및 정적 웹 리소스 디렉터리에 Swagger UI 스펙이 자동 동기화되도록 연동.
+
+</details>
+
+<details>
+<summary><b>11. 선착순 한정 메뉴의 Redis Lua 스크립트 기반 재고 선점 및 수명주기 설계</b></summary>
+
+- **문제 정의**:
+  - **단일 트랜잭션 완결 불가 구조**: 선착순 쿠폰 발급처럼 단일 트랜잭션 내에서 즉시 차감 및 지급이 완결되는 문제와 달리, 한정 메뉴 주문은 외부 PG 결제 승인 대기 시간(수 초~수십 초)이 수반되어 DB 트랜잭션이나 단일 분산 락으로 결제 전 과정을 묶을 수 없음 (커넥션 풀 고갈 및 락 장기 점유 위험).
+  - **선점 수명주기 및 정합성 리스크**: 결제 지연 중 실시간 재고 묶임 및 고아 재고 위험 발생, 선점 TTL이 만료된 후 외부 PG 결제가 승인되어 발생하는 초과 판매 불일치 발생.
+  - **도메인 요구사항 정의**: 분산 트랜잭션 복잡성과 복수 품목 부분 롤백 실패 위험을 방어하기 위해, 선착순 한정 메뉴의 요구사항을 1회 주문당 한정 메뉴 1종류 및 최대 1개, 1인 1일 1회로 정의.
+- **해결 방안**:
+  - **Redis 해시 태그 및 5대 자료구조 기반 선점 수명주기**:
+    - `{menuId}` 해시 태그를 적용하여 단일 메뉴와 관련된 모든 Redis 키가 동일 슬롯에 위치하도록 보장하여 CROSSSLOT 에러 방지.
+    - **STRING (`stock`)**: 가용 재고 수량을 관리하며 `DECRBY`/`INCRBY`로 원자적 증감.
+    - **ZSET (`reservations:expiry`)**: 만료 시각을 점수로 관리하여, 신규 요청 인입 시 `ZRANGE ... BYSCORE`로 만료된 미결제 주문을 실시간 지연 회수.
+    - **HASH (`reservations:qty`, `reservations:user`)**: 주문별 선점 수량 및 유저 매핑을 보관하며, `HEXISTS`를 통해 네트워크 재시도 요청에 대한 멱등성 보장.
+    - **SET (`users:$dateString`)**: 일일 파티셔닝 키(`yyyyMMdd`) 기반 `SISMEMBER`를 통해 1인 1일 1회 구매 제한을 검증하고 48시간 TTL을 부여하며, 선점 만료 또는 주문 취소 시 `SREM`으로 제한 해제.
+  - **단계별 검증 및 확정 파이프라인**:
+    - **선점 (`reserve`)**: 가용 재고 확인, 동일 주문 멱등성 확인, 1인 1일 1회 구매 검증, 재고 차감 및 만료 대기열 등록을 단일 Lua 스크립트로 원자적 처리.
+    - **확정 전환 (`verifyAndConfirm`)**: 외부 PG 결제 승인 API 호출 직전 선점 TTL 유효성을 원자적으로 검증. 만료 시 `EXPIRED`를 반환하고 즉시 재고를 환원하여 외부 결제를 차단하며, 유효한 경우 만료 대기열에서 제거하여 확정 상태로 전환.
+    - **최종 DB 영속화**: PG 승인 성공 후 비관적 락 트랜잭션 내부에서 DB `limited_menu`의 판매 수량을 증가.
+    - **취소 복구 (`release`)**: 결제 실패, 망취소, 주문 취소 시 Redis 선점/확정 재고 및 유저 구매 제한을 복구.
+  - **독립 스크립트 리소스 분리 및 테스트 계약 검증**:
+    - 인라인 문자열 대신 독립된 Lua 스크립트 리소스 파일로 분리하여 IDE 구문 분석 및 문법 검사 환경 구축.
+    - 키 인덱스 상수 정의, 스크립트 정적 명령어 계약 검증 단위 테스트, 실제 Redis 기반 통합 테스트를 통해 키 순서 불일치 방어.
 
 </details>
 
@@ -239,6 +288,7 @@ sequenceDiagram
 - **주문 및 결제 취소**: 주문 취소 요청 시 PG사 결제 취소 연동 및 쿠폰/스탬프 롤백
 - **스탬프 & 리워드 쿠폰**: 결제 완료 이벤트 기반 스탬프 자동 적립, 10개 적립 시 무료 음료 쿠폰 발급
 - **선착순 한정 수량 쿠폰**: Redisson 분산 락 하에 1인 1매 검증, 원자적 재고 차감 및 실시간 소진 처리
+- **선착순 한정 메뉴**: Redis Lua 스크립트 기반 원자적 재고 선점, TTL 지연 회수, 외부 PG 결제 직전 만료 검증 및 1인 1회 구매 제한
 - **매장**: Haversine 공식 기반 사용자 위치 반경 매장 검색 및 영업 정보 조회
 
 ---
@@ -254,6 +304,7 @@ sequenceDiagram
 | **Health** | `GET` | `/health` | 서버 헬스 체크 |
 | **Menu** | `GET` | `/v1/menus` | 카테고리별 메뉴 목록 조회 |
 | | `GET` | `/v1/menus/{menuId}` | 메뉴 상세 및 옵션 목록 조회 |
+| **Limited Menu** | `GET` | `/v1/limited-menus/{menuId}` | 한정 메뉴 상세 및 잔여 가용 재고 조회 |
 | **Cart** | `GET` | `/v1/cart` | 장바구니 조회 |
 | | `POST` | `/v1/cart/items` | 장바구니 아이템 담기 |
 | | `PUT` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 수량 변경 |
@@ -267,7 +318,8 @@ sequenceDiagram
 | **Coupon** | `GET` | `/v1/issued-coupons` | 보유 발급 쿠폰 목록 조회 |
 | | `POST` | `/v1/coupons/{couponId}/download` | 일반 쿠폰 다운로드 |
 | **Limited Coupon** | `GET` | `/v1/limited-coupons/{limitedCouponId}` | 선착순 쿠폰 정보 및 잔여 수량 조회 |
-| | `POST` | `/v1/limited-coupons/{limitedCouponId}/issue` | 선착순 쿠폰 발급 (분산 락) |
+| | `POST` | `/v1/limited-coupons/{limitedCouponId}/issue` | 선착순 쿠폰 동기 발급 (분산 락) |
+| | `POST` | `/v2/limited-coupons/{limitedCouponId}/issue` | 선착순 쿠폰 비동기 대기열 발급 접수 (`202 Accepted`) |
 | **Stamp** | `GET` | `/v1/stamps` | 사용자 스탬프 적립 현황 조회 |
 | | `GET` | `/v1/stamps/histories` | 스탬프 히스토리 내역 조회 |
 | **Store** | `GET` | `/v1/stores` | 위치 반경 기반 매장 검색 |
@@ -331,7 +383,7 @@ MySQL 8.0, Redis 7.x, Kafka 3.8(KRaft) 컨테이너를 기동하고 `local-dev` 
 # 선착순 쿠폰 분산 락, DB 비관적 락 2차 방어선 및 동시성 테스트
 ./gradlew :core:core-api:test --tests "*LimitedCoupon*"
 
-# 메뉴 캐시 및 Fail-Open(DB 우회) 테스트
+# 메뉴 캐시 및 Fail-Open 테스트
 ./gradlew :core:core-api:test --tests "com.coffee.gu.menu.*"
 
 # 결제 FOR UPDATE SKIP LOCKED 복구 파이프라인 테스트
@@ -344,7 +396,7 @@ MySQL 8.0, Redis 7.x, Kafka 3.8(KRaft) 컨테이너를 기동하고 `local-dev` 
 ### 로컬 결제(Toss PG) 및 Kafka 파이프라인 수동 검증
 
 <details>
-<summary><b>Toss 결제창 연동 및 스탬프·쿠폰 비동기 발급 확인 방법 (클릭하여 펼치기)</b></summary>
+<summary><b>Toss 결제창 연동 및 스탬프·쿠폰 비동기 발급 확인 방법</b></summary>
 <br>
 
 외부 PG(토스페이먼츠)는 프론트엔드 결제창 인증이 선행되어야 백엔드 결제 승인(`POST /v1/payments/confirm`)이 가능합니다. 로컬 환경에서 주문 생성부터 PG 결제 승인, Outbox 기록, Kafka 메시지 발행·소비, 리워드 쿠폰 자동 발급까지의 전체 흐름은 내장된 테스트 페이지(`/payment-test`)와 Swagger UI를 통해 검증할 수 있습니다.
@@ -369,7 +421,7 @@ docker exec -it gu-coffee-kafka /opt/kafka/bin/kafka-console-consumer.sh \
   2. 내부적으로 `POST /v1/orders` $\to$ `GET /v1/orders/{orderKey}/checkout` $\to$ `POST /v1/payments`가 호출되며 하단 입력란에 생성된 `orderKey`와 결제 금액이 자동으로 채워집니다.
   3. **`[② 토스 결제창 열기 (카드 결제)]`** 버튼을 눌러 테스트 카드 인증을 진행합니다.
 - **방식 2 (Swagger UI 직접 호출 후 연동)**:
-  1. Swagger UI에서 인증 헤더(`Gu-Coffee-com.coffee.gu.Principal-Id: U1`, `Gu-Coffee-com.coffee.gu.Principal-Type: USER`)를 포함하여 `POST /v1/orders`와 `POST /v1/payments`를 호출합니다.
+  1. Swagger UI에서 인증 헤더(`Gu-Coffee-Principal-Id: U1`, `Gu-Coffee-Principal-Type: USER`)를 포함하여 `POST /v1/orders`와 `POST /v1/payments`를 호출합니다.
   2. 응답받은 `orderKey`를 `/payment-test` 화면의 주문 키 입력란에 붙여넣으면 체크아웃 금액이 자동으로 동기화됩니다.
   3. **`[② 토스 결제창 열기 (카드 결제)]`** 버튼을 눌러 테스트 카드 인증을 진행합니다.
 

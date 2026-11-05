@@ -1,6 +1,6 @@
 package com.coffee.gu
 
-class PaymentGatewayCancel(
+data class PaymentGatewayCancel(
     val paymentKey: String,
-    val cancelReason: String
+    val cancelReason: String,
 )

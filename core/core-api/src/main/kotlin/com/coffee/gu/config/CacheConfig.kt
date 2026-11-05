@@ -28,6 +28,7 @@ class CacheConfig : CachingConfigurer {
     companion object {
         private val log = LoggerFactory.getLogger(CacheConfig::class.java)
         const val MENU_DETAIL_CACHE = "menuDetail"
+        const val LIMITED_MENU_IDS_CACHE = "limitedMenuIds"
     }
 
     @Bean
@@ -50,9 +51,15 @@ class CacheConfig : CachingConfigurer {
             .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(menuDetailSerializer))
             .entryTtl(Duration.ofHours(1))
 
+        val limitedMenuIdsSerializer = JacksonJsonRedisSerializer(jsonMapper, List::class.java)
+        val limitedMenuIdsConfig = baseConfiguration
+            .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(limitedMenuIdsSerializer))
+            .entryTtl(Duration.ofMinutes(10))
+
         val delegate = RedisCacheManager.builder(redisConnectionFactory)
             .cacheDefaults(baseConfiguration)
             .withCacheConfiguration(MENU_DETAIL_CACHE, menuDetailConfig)
+            .withCacheConfiguration(LIMITED_MENU_IDS_CACHE, limitedMenuIdsConfig)
             .build()
 
         return FailOpenCacheManager(delegate)

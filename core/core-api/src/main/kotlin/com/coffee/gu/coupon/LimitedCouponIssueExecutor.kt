@@ -19,8 +19,8 @@ class LimitedCouponIssueExecutor(
         if (alreadyIssued) {
             throw CoreException(ErrorType.COUPON_ALREADY_DOWNLOADED)
         }
-        val updatedCoupon = limitedCoupon.issue()
-        limitedCouponManager.save(updatedCoupon)
-        return limitedCouponManager.issue(principal, updatedCoupon)
+        val consumedLimitedCoupon = limitedCoupon.increaseIssuedQuantity()
+        limitedCouponManager.save(consumedLimitedCoupon)
+        return limitedCouponManager.issueToPrincipal(principal, consumedLimitedCoupon)
     }
 }

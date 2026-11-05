@@ -7,6 +7,7 @@ import com.coffee.gu.TransactionHistoryManager
 import com.coffee.gu.coupon.IssuedCouponManager
 import com.coffee.gu.enums.TransactionType
 import com.coffee.gu.event.OutboxEventPublisher
+import com.coffee.gu.menu.LimitedMenuStockManager
 import com.coffee.gu.order.Order
 import com.coffee.gu.order.OrderManager
 import org.springframework.stereotype.Component
@@ -21,6 +22,7 @@ class PaymentCompleter(
     private val issuedCouponManager: IssuedCouponManager,
     private val transactionHistoryManager: TransactionHistoryManager,
     private val outboxEventPublisher: OutboxEventPublisher,
+    private val limitedMenuStockManager: LimitedMenuStockManager,
 ) {
     @Transactional
     fun complete(order: Order, paymentId: Long, confirmedPayment: PGConfirmResult): PaymentApprovalResult {
@@ -35,6 +37,7 @@ class PaymentCompleter(
             paymentManager.save(payment)
             return PaymentApprovalResult.failed(order.key, extKey, paidAt)
         }
+        limitedMenuStockManager.confirmSoldQuantityInDbIfLimited(order.toMenuQuantityMap())
         paymentManager.pay(payment, confirmedPayment)
         orderManager.pay(order)
         issuedCouponManager.use(payment.principal, payment.issuedCouponId)

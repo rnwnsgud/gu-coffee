@@ -3,8 +3,10 @@ package com.coffee.gu.coupon
 import com.coffee.gu.CoreException
 import com.coffee.gu.ErrorType
 import com.coffee.gu.Principal
+import com.coffee.gu.coupon.messaging.LimitedCouponIssueProducer
 import com.coffee.gu.enums.CouponType
 import com.coffee.gu.enums.PrincipalType
+import com.coffee.gu.lock.LimitedCouponClaimer
 import com.coffee.gu.lock.LockManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -14,6 +16,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -28,6 +31,8 @@ class LimitedCouponConcurrencyTest {
     private lateinit var limitedCouponFinder: LimitedCouponFinder
     private lateinit var limitedCouponIssueExecutor: LimitedCouponIssueExecutor
     private lateinit var lockManager: LockManager
+    private lateinit var limitedCouponClaimer: LimitedCouponClaimer
+    private lateinit var limitedCouponIssueProducer: LimitedCouponIssueProducer
     private lateinit var limitedCouponService: LimitedCouponService
 
     private val principal = Principal("user-123", PrincipalType.USER)
@@ -38,6 +43,8 @@ class LimitedCouponConcurrencyTest {
         limitedCouponFinder = mock()
         limitedCouponIssueExecutor = mock()
         lockManager = mock()
+        limitedCouponClaimer = mock()
+        limitedCouponIssueProducer = mock()
 
         whenever(lockManager.executeWithLock<IssuedCoupon>(any(), any(), any(), any(), any())).thenAnswer { invocation ->
             val action = invocation.getArgument<() -> IssuedCoupon>(4)
@@ -47,7 +54,9 @@ class LimitedCouponConcurrencyTest {
         limitedCouponService = LimitedCouponService(
             limitedCouponFinder = limitedCouponFinder,
             limitedCouponIssueExecutor = limitedCouponIssueExecutor,
-            lockManager = lockManager
+            lockManager = lockManager,
+            limitedCouponClaimer = limitedCouponClaimer,
+            limitedCouponIssueProducer = limitedCouponIssueProducer,
         )
     }
 
@@ -138,5 +147,48 @@ class LimitedCouponConcurrencyTest {
         assertThat(issuedCount.get()).isEqualTo(threadCount)
         assertThat(soldOutCount.get()).isEqualTo(threadCount - totalQuantity)
         verify(limitedCouponIssueExecutor, times(threadCount)).execute(any(), eq(limitedCouponId))
+    }
+
+    @Test
+    @DisplayName("비동기 선착순 발급 요청 시 claim이 성공하면 Kafka 이벤트를 발행하고 ACCEPTED 영수증을 반환한다")
+    fun testIssueAsyncSuccess() {
+        whenever(limitedCouponClaimer.claim(eq(limitedCouponId), eq(principal.key), any())).thenReturn(
+            LimitedCouponClaimer.ClaimResult.SUCCESS
+        )
+
+        val response = limitedCouponService.issueAsync(principal, limitedCouponId)
+
+        assertThat(response.eventId).isNotBlank()
+        verify(limitedCouponIssueProducer).send(any())
+    }
+
+    @Test
+    @DisplayName("비동기 선착순 발급 요청 시 재고가 소진되었으면 즉시 LIMITED_COUPON_SOLD_OUT 예외를 던진다")
+    fun testIssueAsyncSoldOut() {
+        whenever(limitedCouponClaimer.claim(eq(limitedCouponId), eq(principal.key), any())).thenReturn(
+            LimitedCouponClaimer.ClaimResult.SOLD_OUT
+        )
+
+        val exception = org.junit.jupiter.api.assertThrows<CoreException> {
+            limitedCouponService.issueAsync(principal, limitedCouponId)
+        }
+
+        assertThat(exception.errorType).isEqualTo(ErrorType.LIMITED_COUPON_SOLD_OUT)
+        verify(limitedCouponIssueProducer, never()).send(any())
+    }
+
+    @Test
+    @DisplayName("비동기 선착순 발급 요청 시 이미 받은 유저면 즉시 COUPON_ALREADY_DOWNLOADED 예외를 던진다")
+    fun testIssueAsyncAlreadyDownloaded() {
+        whenever(limitedCouponClaimer.claim(eq(limitedCouponId), eq(principal.key), any())).thenReturn(
+            LimitedCouponClaimer.ClaimResult.ALREADY_CLAIMED
+        )
+
+        val exception = org.junit.jupiter.api.assertThrows<CoreException> {
+            limitedCouponService.issueAsync(principal, limitedCouponId)
+        }
+
+        assertThat(exception.errorType).isEqualTo(ErrorType.COUPON_ALREADY_DOWNLOADED)
+        verify(limitedCouponIssueProducer, never()).send(any())
     }
 }

@@ -16,7 +16,7 @@ class LimitedCoupon(
     val remainingQuantity: Int
         get() = (totalQuantity - issuedQuantity).coerceAtLeast(0)
 
-    fun issue(): LimitedCoupon {
+    fun increaseIssuedQuantity(): LimitedCoupon {
         if (isSoldOut) {
             throw CoreException(ErrorType.LIMITED_COUPON_SOLD_OUT)
         }
@@ -27,6 +27,9 @@ class LimitedCoupon(
             issuedQuantity = this.issuedQuantity + 1,
         )
     }
+
+    @Deprecated("명확한 행위 표현을 위해 increaseIssuedQuantity() 사용을 권장합니다.", ReplaceWith("increaseIssuedQuantity()"))
+    fun issue(): LimitedCoupon = increaseIssuedQuantity()
 
     fun createIssuedCoupon(principal: Principal): IssuedCoupon {
         return IssuedCoupon.download(principal, this.coupon)

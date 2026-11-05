@@ -1,9 +1,11 @@
 package com.coffee.gu.api.controller.v1
 
 import com.coffee.gu.api.controller.RestDocsTest
+import com.coffee.gu.api.controller.v1.response.LimitedCouponIssueClaimResponse
 import com.coffee.gu.coupon.Coupon
 import com.coffee.gu.coupon.IssuedCoupon
 import com.coffee.gu.coupon.LimitedCoupon
+import com.coffee.gu.coupon.LimitedCouponClaimReceipt
 import com.coffee.gu.coupon.LimitedCouponService
 import com.coffee.gu.enums.CouponType
 import com.coffee.gu.enums.IssuedCouponState
@@ -138,6 +140,44 @@ class LimitedCouponControllerTest : RestDocsTest() {
                         fieldWithPath("data.type").description("쿠폰 할인 타입 (FIXED_AMOUNT / PERCENTAGE)"),
                         fieldWithPath("data.discount").description("할인 금액 또는 할인율"),
                         fieldWithPath("data.expiredAt").description("쿠폰 만료 일시"),
+                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    )
+                )
+            )
+    }
+
+    @Test
+    @DisplayName("선착순 쿠폰 비동기 발급 요청 API (v2)")
+    fun issueV2LimitedCoupon() {
+        val claimReceipt = LimitedCouponClaimReceipt("tsid-123456789")
+
+        given(limitedCouponService.issueAsync(any(), any())).willReturn(claimReceipt)
+
+        mockMvc.perform(
+            post("/v2/limited-coupons/{limitedCouponId}/issue", 1L)
+                .header("Gu-Coffee-com.coffee.gu.Principal-Id", "1")
+                .header("Gu-Coffee-com.coffee.gu.Principal-Type", "USER")
+        )
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.status").value("SUCCESS"))
+            .andExpect(jsonPath("$.data.status").value("ACCEPTED"))
+            .andExpect(jsonPath("$.data.eventId").value("tsid-123456789"))
+            .andExpect(jsonPath("$.data.message").value("쿠폰 발급 요청이 성공적으로 접수되었습니다."))
+            .andDo(
+                document(
+                    "limited-coupon-issue-v2",
+                    requestHeaders(
+                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                    ),
+                    pathParameters(
+                        parameterWithName("limitedCouponId").description("선착순 쿠폰 식별자")
+                    ),
+                    responseFields(
+                        fieldWithPath("status").description("응답 상태"),
+                        fieldWithPath("data.status").description("비동기 처리 상태 (ACCEPTED)"),
+                        fieldWithPath("data.eventId").description("비동기 이벤트 고유 식별자"),
+                        fieldWithPath("data.message").description("안내 메시지"),
                         fieldWithPath("error").description("에러 정보 (정상 시 null)")
                     )
                 )

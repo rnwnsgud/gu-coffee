@@ -14,7 +14,12 @@ class OrderManager(
     private val orderLineRepository: OrderLineRepository,
 ) {
     @Transactional
-    fun create(principal: Principal, newOrder: NewOrder, orderMenus: OrderMenus): String {
+    fun create(
+        principal: Principal,
+        newOrder: NewOrder,
+        orderMenus: OrderMenus,
+        orderKey: String = Order.generateKey(),
+    ): String {
         val firstLine = newOrder.lines.first()
         val menu = orderMenus.getByMenuId(firstLine.menuId) ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
         val totalPrice = newOrder.lines.fold(BigDecimal.ZERO) { acc, line ->
@@ -26,7 +31,8 @@ class OrderManager(
                 createOrderName(menu, newOrder),
                 principal,
                 newOrder.storeId,
-                totalPrice
+                totalPrice,
+                orderKey,
             )
         )
         orderLineRepository.saveAll(
