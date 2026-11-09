@@ -10,17 +10,13 @@ import org.springframework.stereotype.Component
 class LimitedMenuFinder(
     private val limitedMenuRepository: LimitedMenuRepository,
 ) {
-    @Cacheable(cacheNames = [CacheConfig.LIMITED_MENU_IDS_CACHE], sync = true)
-    fun getAllActiveMenuIds(): List<Long> {
-        return limitedMenuRepository.findAllMenuIds()
+    @Cacheable(cacheNames = [CacheConfig.LIMITED_MENU_POLICIES_CACHE], sync = true)
+    fun getAllActivePolicies(): List<LimitedMenuPolicy> {
+        return limitedMenuRepository.findAllPolicies()
     }
 
     fun getByMenuId(menuId: Long): LimitedMenu {
         return limitedMenuRepository.findByMenuId(menuId)
             ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
-    }
-
-    fun findAllByMenuIdIn(menuIds: Collection<Long>): List<LimitedMenu> {
-        return limitedMenuRepository.findAllByMenuIdIn(menuIds)
     }
 }

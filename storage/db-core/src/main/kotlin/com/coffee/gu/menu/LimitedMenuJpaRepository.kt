@@ -12,9 +12,4 @@ interface LimitedMenuJpaRepository : JpaRepository<LimitedMenuEntity, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT lm FROM LimitedMenuEntity lm WHERE lm.menuId = :menuId")
     fun findByMenuIdForUpdate(@Param("menuId") menuId: Long): LimitedMenuEntity?
-
-    fun findAllByMenuIdIn(menuIds: Collection<Long>): List<LimitedMenuEntity>
-
-    @Query("SELECT lm.menuId FROM LimitedMenuEntity lm")
-    fun findAllMenuIds(): List<Long>
 }

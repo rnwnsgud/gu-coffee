@@ -38,6 +38,13 @@ class LimitedMenuEntity(
         )
     }
 
+    fun toPolicy(): LimitedMenuPolicy {
+        return LimitedMenuPolicy(
+            menuId = menuId,
+            maxPurchasePerUser = maxPurchasePerUser,
+        )
+    }
+
     companion object {
         fun from(limitedMenu: LimitedMenu): LimitedMenuEntity {
             return LimitedMenuEntity(

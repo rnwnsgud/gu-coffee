@@ -21,20 +21,8 @@ class LimitedMenuRepositoryImpl(
         return limitedMenu.toModel(menu)
     }
 
-    override fun findAllByMenuIdIn(menuIds: Collection<Long>): List<LimitedMenu> {
-        if (menuIds.isEmpty()) return emptyList()
-        val limitedMenus = limitedMenuJpaRepository.findAllByMenuIdIn(menuIds)
-        if (limitedMenus.isEmpty()) return emptyList()
-        val menusById = menuJpaRepository.findAllById(limitedMenus.map { it.menuId })
-            .associate { it.id to it.toModel() }
-        return limitedMenus.mapNotNull { limitedMenu ->
-            val menu = menusById[limitedMenu.menuId] ?: return@mapNotNull null
-            limitedMenu.toModel(menu)
-        }
-    }
-
-    override fun findAllMenuIds(): List<Long> {
-        return limitedMenuJpaRepository.findAllMenuIds()
+    override fun findAllPolicies(): List<LimitedMenuPolicy> {
+        return limitedMenuJpaRepository.findAll().map { it.toPolicy() }
     }
 
     override fun save(limitedMenu: LimitedMenu): LimitedMenu {

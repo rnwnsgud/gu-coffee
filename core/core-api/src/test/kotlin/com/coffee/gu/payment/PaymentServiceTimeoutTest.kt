@@ -204,8 +204,8 @@ class PaymentServiceTimeoutTest {
     }
 
     @Test
-    @DisplayName("시나리오 4: PG 승인은 성공했으나 complete 내부 로직 예외 발생 시, 원자적 보상 트랜잭션(compensateApprovalFailure)을 호출한다")
-    fun approvePayment_WhenCompleteThrowsException_ShouldCompensateApprovalFailure() {
+    @DisplayName("시나리오 4-1: PG 승인은 성공했으나 complete 내부 로직 예외 발생 시, 동기 망취소를 시도하고 성공하면 failProcess로 종결한다")
+    fun approvePayment_WhenCompleteThrowsException_AndCancelSucceeds_ShouldFailProcess() {
         // given
         val preparedPayment = createPreparedPayment()
 
@@ -216,6 +216,32 @@ class PaymentServiceTimeoutTest {
             .willReturn(PGConfirmResult.success("ORDER-TIMEOUT-1", "PAY-KEY-1", PaymentMethod.CARD, "APPR-1", OffsetDateTime.now()))
         given(paymentCompleter.complete(eq(order), eq(1L), any()))
             .willThrow(RuntimeException("Coupon expired exception"))
+
+        // when
+        val result = paymentService.approvePayment(order)
+
+        // then
+        assertThat(result.paymentState).isEqualTo(PaymentState.FAILED)
+        verify(paymentGatewayProcessor).cancelPayment(any())
+        verify(paymentCompleter).failProcess(eq(order), eq(preparedPayment), eq("COMPLETION_FAILED"), eq("Coupon expired exception"))
+        verify(paymentCompleter, never()).compensateApprovalFailure(any(), any(), any(), any())
+    }
+
+    @Test
+    @DisplayName("시나리오 4-2: PG 승인은 성공했으나 complete 내부 로직 예외가 발생하고 동기 망취소마저 실패하면 원자적 보상 트랜잭션(compensateApprovalFailure)을 호출한다")
+    fun approvePayment_WhenCompleteThrowsException_AndCancelFails_ShouldCompensateApprovalFailure() {
+        // given
+        val preparedPayment = createPreparedPayment()
+
+        given(paymentReader.getByOrderKey("ORDER-TIMEOUT-1")).willReturn(payment)
+        given(paymentGatewayProcessor.getPGPayment("ORDER-TIMEOUT-1")).willReturn(initialPgPayment)
+        given(paymentPreparer.prepare(order, initialPgPayment)).willReturn(preparedPayment)
+        given(paymentGatewayProcessor.approvePayment(any()))
+            .willReturn(PGConfirmResult.success("ORDER-TIMEOUT-1", "PAY-KEY-1", PaymentMethod.CARD, "APPR-1", OffsetDateTime.now()))
+        given(paymentCompleter.complete(eq(order), eq(1L), any()))
+            .willThrow(RuntimeException("Coupon expired exception"))
+        given(paymentGatewayProcessor.cancelPayment(any()))
+            .willThrow(RuntimeException("Cancel network error"))
         given(paymentCompleter.compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any()))
             .willReturn(PaymentApprovalResult.failed("ORDER-TIMEOUT-1", "PAY-KEY-1", OffsetDateTime.now()))
 
@@ -224,6 +250,8 @@ class PaymentServiceTimeoutTest {
 
         // then
         assertThat(result.paymentState).isEqualTo(PaymentState.FAILED)
-        verify(paymentCompleter).compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any())
+        verify(paymentGatewayProcessor).cancelPayment(any())
+        verify(paymentCompleter).compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), eq("Coupon expired exception (자동 취소 실패)"))
+        verify(paymentCompleter, never()).failProcess(any(), any(), any(), any())
     }
 }

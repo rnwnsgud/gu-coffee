@@ -174,4 +174,106 @@ class PaymentApprovalFailureResolverTest {
         )
         then(paymentCompleter).should().failProcess(order, payment, "PG_APPROVE_TIMEOUT", "승인 타임아웃 후 미승인 확인")
     }
+
+    @Test
+    @DisplayName("상태 조회마저 실패하고 망취소가 성공하면 failProcess 처리한다")
+    fun resolveApprovalFailure_inquiryFails_cancelSucceeds_failsProcess() {
+        willThrow(RuntimeException("상태 조회 타임아웃"))
+            .given(paymentGatewayProcessor).getPGPayment(order.key)
+
+        val result = resolver.resolveApprovalFailure(order, payment, pgPayment, mapOf(100L to 1))
+
+        assertThat(result.paymentState).isEqualTo(PaymentState.FAILED)
+        then(paymentGatewayProcessor).should().cancelPayment(
+            PaymentGatewayCancel("PAY-KEY-1", "승인 응답 및 상태 조회 타임아웃에 따른 자동 망취소")
+        )
+        then(limitedMenuStockManager).should().releaseIfLimited(
+            orderKey = eq(order.key),
+            principalKey = eq(order.principal.key),
+            menuQuantities = eq(mapOf(100L to 1)),
+            restoreDbSoldQuantity = eq(false),
+            nowEpochMillis = any(),
+        )
+        then(paymentCompleter).should().failProcess(order, payment, "NETWORK_TIMEOUT", "승인 및 상태 조회 네트워크 타임아웃")
+    }
+
+    @Test
+    @DisplayName("상태 조회 실패 후 망취소마저 실패하면 compensateApprovalFailure를 호출한다")
+    fun resolveApprovalFailure_inquiryFails_cancelFails_compensates() {
+        willThrow(RuntimeException("상태 조회 타임아웃"))
+            .given(paymentGatewayProcessor).getPGPayment(order.key)
+        willThrow(RuntimeException("망취소 타임아웃"))
+            .given(paymentGatewayProcessor).cancelPayment(any())
+
+        val result = resolver.resolveApprovalFailure(order, payment, pgPayment, mapOf(100L to 1))
+
+        then(limitedMenuStockManager).should().releaseIfLimited(
+            orderKey = eq(order.key),
+            principalKey = eq(order.principal.key),
+            menuQuantities = eq(mapOf(100L to 1)),
+            restoreDbSoldQuantity = eq(false),
+            nowEpochMillis = any(),
+        )
+        then(paymentCompleter).should().compensateApprovalFailure(
+            eq(order),
+            eq(payment.id),
+            eq("PAY-KEY-1"),
+            eq("승인 및 상태 조회 네트워크 타임아웃 (자동 망취소 실패)")
+        )
+    }
+
+    @Test
+    @DisplayName("상태 조회가 DONE이지만 내부 complete 처리 중 예외 발생 시 동기 망취소가 성공하면 failProcess 처리한다")
+    fun resolveApprovalFailure_statusDone_completeThrows_cancelSucceeds_failsProcess() {
+        val donePgPayment = PGPayment("PAY-KEY-1", "ORD-TEST-1", BigDecimal.valueOf(10000), PaymentGatewayStatus.DONE)
+        given(paymentGatewayProcessor.getPGPayment(order.key)).willReturn(donePgPayment)
+        willThrow(RuntimeException("DB 데드락 에러"))
+            .given(paymentCompleter).complete(eq(order), eq(payment.id), any())
+
+        val result = resolver.resolveApprovalFailure(order, payment, pgPayment, mapOf(100L to 1))
+
+        assertThat(result.paymentState).isEqualTo(PaymentState.FAILED)
+        then(limitedMenuStockManager).should().releaseIfLimited(
+            orderKey = eq(order.key),
+            principalKey = eq(order.principal.key),
+            menuQuantities = eq(mapOf(100L to 1)),
+            restoreDbSoldQuantity = eq(false),
+            nowEpochMillis = any(),
+        )
+        then(paymentGatewayProcessor).should().cancelPayment(
+            PaymentGatewayCancel("PAY-KEY-1", "DB 데드락 에러")
+        )
+        then(paymentCompleter).should().failProcess(order, payment, "COMPLETION_FAILED", "DB 데드락 에러")
+        then(paymentCompleter).should(org.mockito.Mockito.never()).compensateApprovalFailure(any(), any(), any(), any())
+    }
+
+    @Test
+    @DisplayName("상태 조회가 DONE이지만 내부 complete 처리 중 예외가 발생하고 동기 망취소마저 실패하면 compensateApprovalFailure를 호출한다")
+    fun resolveApprovalFailure_statusDone_completeThrows_cancelFails_compensates() {
+        val donePgPayment = PGPayment("PAY-KEY-1", "ORD-TEST-1", BigDecimal.valueOf(10000), PaymentGatewayStatus.DONE)
+        given(paymentGatewayProcessor.getPGPayment(order.key)).willReturn(donePgPayment)
+        willThrow(RuntimeException("DB 데드락 에러"))
+            .given(paymentCompleter).complete(eq(order), eq(payment.id), any())
+        willThrow(RuntimeException("망취소 타임아웃"))
+            .given(paymentGatewayProcessor).cancelPayment(any())
+
+        resolver.resolveApprovalFailure(order, payment, pgPayment, mapOf(100L to 1))
+
+        then(limitedMenuStockManager).should().releaseIfLimited(
+            orderKey = eq(order.key),
+            principalKey = eq(order.principal.key),
+            menuQuantities = eq(mapOf(100L to 1)),
+            restoreDbSoldQuantity = eq(false),
+            nowEpochMillis = any(),
+        )
+        then(paymentGatewayProcessor).should().cancelPayment(
+            PaymentGatewayCancel("PAY-KEY-1", "DB 데드락 에러")
+        )
+        then(paymentCompleter).should().compensateApprovalFailure(
+            eq(order),
+            eq(payment.id),
+            eq("PAY-KEY-1"),
+            eq("DB 데드락 에러 (자동 취소 실패)")
+        )
+    }
 }

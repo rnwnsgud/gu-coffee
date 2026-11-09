@@ -21,7 +21,6 @@ enum class ErrorCode {
     E3002,
     E3003,
     E3004,
-    E3005,
     E3006,
 
     // 쿠폰

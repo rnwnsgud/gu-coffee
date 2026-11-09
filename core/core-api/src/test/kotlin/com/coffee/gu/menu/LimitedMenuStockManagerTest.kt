@@ -33,7 +33,12 @@ class LimitedMenuStockManagerTest {
 
     @BeforeEach
     fun setUp() {
-        given(limitedMenuFinder.getAllActiveMenuIds()).willReturn(listOf(100L, 200L))
+        given(limitedMenuFinder.getAllActivePolicies()).willReturn(
+            listOf(
+                LimitedMenuPolicy(100L, 1),
+                LimitedMenuPolicy(200L, 1),
+            )
+        )
     }
 
     private fun createLimitedMenu(id: Long, menuId: Long, totalQty: Int = 10, maxPerUser: Int = 1): LimitedMenu {
@@ -65,17 +70,81 @@ class LimitedMenuStockManagerTest {
         )
 
         // then
-        then(limitedMenuFinder).should(never()).findAllByMenuIdIn(any())
+        then(limitedMenuFinder).should(never()).getByMenuId(any())
         then(reservationManager).shouldHaveNoInteractions()
     }
 
     @Test
-    @DisplayName("한 주문에 2종류 이상의 한정판 상품이 포함되면 LIMITED_MENU_MULTIPLE_ITEMS_NOT_ALLOWED 예외가 발생한다")
-    fun reserveIfLimited_multipleLimitedMenus_throwsException() {
+    @DisplayName("한 주문에 서로 다른 종류의 한정 메뉴를 각 1개씩 포함하면 모두 정상 선점된다 (DB 조회 0회)")
+    fun reserveIfLimited_multipleLimitedMenus_success() {
         // given
-        val limitedMenu1 = createLimitedMenu(id = 1L, menuId = 100L)
-        val limitedMenu2 = createLimitedMenu(id = 2L, menuId = 200L)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L, 200L))).willReturn(listOf(limitedMenu1, limitedMenu2))
+        given(
+            reservationManager.reserve(
+                menuId = any(),
+                orderKey = any(),
+                principalKey = any(),
+                quantity = any(),
+                ttlMillis = any(),
+                nowEpochMillis = any(),
+                stockSupplier = any(),
+            )
+        ).willReturn(ReservationResult.RESERVED)
+
+        // when
+        manager.reserveIfLimited(
+            orderKey = "ORD-001",
+            principalKey = "USER-001",
+            menuQuantities = mapOf(100L to 1, 200L to 1),
+        )
+
+        // then
+        then(limitedMenuFinder).should(never()).getByMenuId(any())
+        then(reservationManager).should().reserve(
+            menuId = eq(100L),
+            orderKey = eq("ORD-001"),
+            principalKey = eq("USER-001"),
+            quantity = eq(1),
+            ttlMillis = any(),
+            nowEpochMillis = any(),
+            stockSupplier = any(),
+        )
+        then(reservationManager).should().reserve(
+            menuId = eq(200L),
+            orderKey = eq("ORD-001"),
+            principalKey = eq("USER-001"),
+            quantity = eq(1),
+            ttlMillis = any(),
+            nowEpochMillis = any(),
+            stockSupplier = any(),
+        )
+    }
+
+    @Test
+    @DisplayName("복수 종류 한정 메뉴 선점 중 두 번째 품목이 품절되면 이미 선점된 첫 번째 품목을 즉시 보상 해제(release)한다")
+    fun reserveIfLimited_multipleLimitedMenus_secondSoldOut_releasesFirst() {
+        // given
+        given(
+            reservationManager.reserve(
+                menuId = eq(100L),
+                orderKey = any(),
+                principalKey = any(),
+                quantity = any(),
+                ttlMillis = any(),
+                nowEpochMillis = any(),
+                stockSupplier = any(),
+            )
+        ).willReturn(ReservationResult.RESERVED)
+        given(
+            reservationManager.reserve(
+                menuId = eq(200L),
+                orderKey = any(),
+                principalKey = any(),
+                quantity = any(),
+                ttlMillis = any(),
+                nowEpochMillis = any(),
+                stockSupplier = any(),
+            )
+        ).willReturn(ReservationResult.SOLD_OUT)
 
         // when & then
         assertThatThrownBy {
@@ -85,17 +154,21 @@ class LimitedMenuStockManagerTest {
                 menuQuantities = mapOf(100L to 1, 200L to 1),
             )
         }.isInstanceOf(CoreException::class.java)
-            .hasFieldOrPropertyWithValue("errorType", ErrorType.LIMITED_MENU_MULTIPLE_ITEMS_NOT_ALLOWED)
+            .hasFieldOrPropertyWithValue("errorType", ErrorType.LIMITED_MENU_SOLD_OUT)
 
-        then(reservationManager).shouldHaveNoInteractions()
+        then(reservationManager).should().release(
+            menuId = eq(100L),
+            orderKey = eq("ORD-001"),
+            principalKey = eq("USER-001"),
+            quantity = eq(1),
+            nowEpochMillis = any(),
+        )
     }
 
     @Test
     @DisplayName("1인당 최대 구매 수량을 초과하여 요청하면 LIMITED_MENU_EXCEED_MAX_PURCHASE_QUANTITY 예외가 발생한다")
     fun reserveIfLimited_exceedsMaxPurchasePerUser_throwsException() {
-        // given
-        val limitedMenu = createLimitedMenu(id = 1L, menuId = 100L, maxPerUser = 1)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L))).willReturn(listOf(limitedMenu))
+        // given (100L의 maxPurchasePerUser는 1)
 
         // when & then
         assertThatThrownBy {
@@ -111,11 +184,9 @@ class LimitedMenuStockManagerTest {
     }
 
     @Test
-    @DisplayName("단일 한정 메뉴 정상 선점 성공 시 예외 없이 완료된다")
+    @DisplayName("단일 한정 메뉴 정상 선점 성공 시 예외 없이 완료된다 (DB 조회 0회)")
     fun reserveIfLimited_singleItem_success() {
         // given
-        val limitedMenu = createLimitedMenu(id = 1L, menuId = 100L, maxPerUser = 2)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L))).willReturn(listOf(limitedMenu))
         given(
             reservationManager.reserve(
                 menuId = any(),
@@ -136,6 +207,7 @@ class LimitedMenuStockManagerTest {
         )
 
         // then
+        then(limitedMenuFinder).should(never()).getByMenuId(any())
         then(reservationManager).should().reserve(
             menuId = any(),
             orderKey = any(),
@@ -151,8 +223,6 @@ class LimitedMenuStockManagerTest {
     @DisplayName("재고 부족으로 SOLD_OUT 결과 반환 시 LIMITED_MENU_SOLD_OUT 예외가 발생한다")
     fun reserveIfLimited_soldOut_throwsException() {
         // given
-        val limitedMenu = createLimitedMenu(id = 1L, menuId = 100L)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L))).willReturn(listOf(limitedMenu))
         given(
             reservationManager.reserve(
                 menuId = any(),
@@ -184,26 +254,26 @@ class LimitedMenuStockManagerTest {
         // when
         val result = manager.verifyAndConfirmIfLimited(
             orderKey = "ORD-001",
+            principalKey = "USER-001",
             menuQuantities = mapOf(1L to 1),
         )
 
         // then
         assertThat(result).isEqualTo(ConfirmationResult.CONFIRMED)
-        then(limitedMenuFinder).should(never()).findAllByMenuIdIn(any())
+        then(limitedMenuFinder).should(never()).getByMenuId(any())
         then(reservationManager).shouldHaveNoInteractions()
     }
 
     @Test
     @DisplayName("verifyAndConfirmIfLimited는 주문 수량이 1인당 최대 구매 수량을 초과하면 LIMITED_MENU_EXCEED_MAX_PURCHASE_QUANTITY 예외가 발생한다")
     fun verifyAndConfirmIfLimited_exceedsMaxPurchasePerUser_throwsException() {
-        // given
-        val limitedMenu = createLimitedMenu(id = 1L, menuId = 100L, maxPerUser = 1)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L))).willReturn(listOf(limitedMenu))
+        // given (100L의 maxPurchasePerUser는 1)
 
         // when & then
         assertThatThrownBy {
             manager.verifyAndConfirmIfLimited(
                 orderKey = "ORD-001",
+                principalKey = "USER-001",
                 menuQuantities = mapOf(100L to 2),
             )
         }.isInstanceOf(CoreException::class.java)
@@ -216,8 +286,6 @@ class LimitedMenuStockManagerTest {
     @DisplayName("confirmSoldQuantityInDbIfLimited는 단일 한정 메뉴의 DB 판매 수량을 증가시킨다")
     fun confirmSoldQuantityInDbIfLimited_singleItem_increasesSoldQuantity() {
         // given
-        val limitedMenu = createLimitedMenu(id = 1L, menuId = 100L)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L))).willReturn(listOf(limitedMenu))
 
         // when
         manager.confirmSoldQuantityInDbIfLimited(mapOf(100L to 1))
@@ -230,9 +298,6 @@ class LimitedMenuStockManagerTest {
     @DisplayName("confirmSoldQuantityInDbIfLimited는 여러 한정 메뉴가 포함되어도 각각의 DB 판매 수량을 증가시킨다")
     fun confirmSoldQuantityInDbIfLimited_multipleItems_increasesEachSoldQuantity() {
         // given
-        val limitedMenu1 = createLimitedMenu(id = 1L, menuId = 100L)
-        val limitedMenu2 = createLimitedMenu(id = 2L, menuId = 200L)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L, 200L))).willReturn(listOf(limitedMenu1, limitedMenu2))
 
         // when
         manager.confirmSoldQuantityInDbIfLimited(mapOf(100L to 2, 200L to 3))
@@ -243,12 +308,9 @@ class LimitedMenuStockManagerTest {
     }
 
     @Test
-    @DisplayName("verifyAndConfirmIfLimited는 여러 한정 메뉴 중 하나라도 만료(EXPIRED)되면 EXPIRED를 반환한다")
+    @DisplayName("verifyAndConfirmIfLimited는 여러 한정 메뉴 중 하나라도 만료(EXPIRED)되면 이미 확정된 품목을 롤백(release)하고 EXPIRED를 반환한다")
     fun verifyAndConfirmIfLimited_multipleItems_oneExpired_returnsExpired() {
         // given
-        val limitedMenu1 = createLimitedMenu(id = 1L, menuId = 100L)
-        val limitedMenu2 = createLimitedMenu(id = 2L, menuId = 200L)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L, 200L))).willReturn(listOf(limitedMenu1, limitedMenu2))
         given(reservationManager.verifyAndConfirm(eq(100L), eq("ORD-001"), any()))
             .willReturn(ConfirmationResult.CONFIRMED)
         given(reservationManager.verifyAndConfirm(eq(200L), eq("ORD-001"), any()))
@@ -257,6 +319,7 @@ class LimitedMenuStockManagerTest {
         // when
         val result = manager.verifyAndConfirmIfLimited(
             orderKey = "ORD-001",
+            principalKey = "USER-001",
             menuQuantities = mapOf(100L to 1, 200L to 1),
         )
 
@@ -264,15 +327,19 @@ class LimitedMenuStockManagerTest {
         assertThat(result).isEqualTo(ConfirmationResult.EXPIRED)
         then(reservationManager).should().verifyAndConfirm(eq(100L), eq("ORD-001"), any())
         then(reservationManager).should().verifyAndConfirm(eq(200L), eq("ORD-001"), any())
+        then(reservationManager).should().release(
+            menuId = eq(100L),
+            orderKey = eq("ORD-001"),
+            principalKey = eq("USER-001"),
+            quantity = eq(1),
+            nowEpochMillis = any(),
+        )
     }
 
     @Test
     @DisplayName("verifyAndConfirmIfLimited는 모든 한정 메뉴가 유효하면 CONFIRMED를 반환한다")
     fun verifyAndConfirmIfLimited_multipleItems_allConfirmed_returnsConfirmed() {
         // given
-        val limitedMenu1 = createLimitedMenu(id = 1L, menuId = 100L)
-        val limitedMenu2 = createLimitedMenu(id = 2L, menuId = 200L)
-        given(limitedMenuFinder.findAllByMenuIdIn(listOf(100L, 200L))).willReturn(listOf(limitedMenu1, limitedMenu2))
         given(reservationManager.verifyAndConfirm(eq(100L), eq("ORD-001"), any()))
             .willReturn(ConfirmationResult.CONFIRMED)
         given(reservationManager.verifyAndConfirm(eq(200L), eq("ORD-001"), any()))
@@ -281,6 +348,7 @@ class LimitedMenuStockManagerTest {
         // when
         val result = manager.verifyAndConfirmIfLimited(
             orderKey = "ORD-001",
+            principalKey = "USER-001",
             menuQuantities = mapOf(100L to 1, 200L to 1),
         )
 
@@ -288,5 +356,6 @@ class LimitedMenuStockManagerTest {
         assertThat(result).isEqualTo(ConfirmationResult.CONFIRMED)
         then(reservationManager).should().verifyAndConfirm(eq(100L), eq("ORD-001"), any())
         then(reservationManager).should().verifyAndConfirm(eq(200L), eq("ORD-001"), any())
+        then(reservationManager).should(never()).release(any(), any(), any(), any(), any())
     }
 }
