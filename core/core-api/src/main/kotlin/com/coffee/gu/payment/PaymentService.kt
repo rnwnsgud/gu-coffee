@@ -1,7 +1,5 @@
 package com.coffee.gu.payment
 
-import com.coffee.gu.CoreException
-import com.coffee.gu.ErrorType
 import com.coffee.gu.PGConfirmResult
 import com.coffee.gu.PaymentGatewayConfirm
 import com.coffee.gu.lock.LimitedMenuStockReservationManager.ConfirmationResult
@@ -31,6 +29,7 @@ class PaymentService(
         val menuQuantities = order.toMenuQuantityMap()
         val confirmationResult = limitedMenuStockManager.verifyAndConfirmIfLimited(
             orderKey = order.key,
+            principalKey = order.principal.key,
             menuQuantities = menuQuantities,
         )
         if (confirmationResult == ConfirmationResult.EXPIRED) {
@@ -45,34 +44,13 @@ class PaymentService(
         }
         return try {
             paymentCompleter.complete(order, payment.id, pgConfirmResult)
-        } catch (e: CoreException) {
-            limitedMenuStockManager.releaseIfLimited(
-                orderKey = order.key,
-                principalKey = order.principal.key,
-                menuQuantities = menuQuantities,
-                restoreDbSoldQuantity = false,
-            )
-            if (e.errorType == ErrorType.LIMITED_MENU_SOLD_OUT) {
-                paymentApprovalFailureResolver.autoCancelOversoldPayment(order, payment, pgConfirmResult.paymentKey)
-            }
-            paymentCompleter.compensateApprovalFailure(
-                order,
-                payment.id,
-                pgConfirmResult.paymentKey,
-                e.message ?: "결제 승인 후 내부 완료 처리 실패"
-            )
         } catch (e: Exception) {
-            limitedMenuStockManager.releaseIfLimited(
-                orderKey = order.key,
-                principalKey = order.principal.key,
+            paymentApprovalFailureResolver.resolveCompletionFailure(
+                order = order,
+                payment = payment,
+                paymentKey = pgConfirmResult.paymentKey,
                 menuQuantities = menuQuantities,
-                restoreDbSoldQuantity = false,
-            )
-            paymentCompleter.compensateApprovalFailure(
-                order,
-                payment.id,
-                pgConfirmResult.paymentKey,
-                e.message ?: "결제 승인 후 내부 완료 처리 실패"
+                exception = e,
             )
         }
     }

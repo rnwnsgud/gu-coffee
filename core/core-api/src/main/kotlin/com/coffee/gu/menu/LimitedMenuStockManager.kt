@@ -34,79 +34,99 @@ class LimitedMenuStockManager(
         ttlMillis: Long = defaultReservationTtlMillis,
         nowEpochMillis: Long = System.currentTimeMillis(),
     ) {
-        val limitedMenus = findLimitedMenusInOrder(menuQuantities)
-        if (limitedMenus.isEmpty()) return
+        val policies = findLimitedMenuPoliciesInOrder(menuQuantities).sortedBy { it.menuId }
+        if (policies.isEmpty()) return
 
-        if (limitedMenus.size > 1) {
-            throw CoreException(ErrorType.LIMITED_MENU_MULTIPLE_ITEMS_NOT_ALLOWED)
+        policies.forEach { policy ->
+            val requestQuantity = menuQuantities[policy.menuId] ?: return@forEach
+            policy.validateOrderQuantity(requestQuantity)
         }
 
-        for (limitedMenu in limitedMenus) {
-            val menuId = limitedMenu.menu.id
-            val reqQty = menuQuantities[menuId] ?: continue
-            if (reqQty > limitedMenu.maxPurchasePerUser) {
-                throw CoreException(ErrorType.LIMITED_MENU_EXCEED_MAX_PURCHASE_QUANTITY)
+        val reservedMenus = mutableListOf<Pair<Long, Int>>()
+        try {
+            for (policy in policies) {
+                val reqQty = menuQuantities[policy.menuId] ?: continue
+                val result = reservationManager.reserve(
+                    menuId = policy.menuId,
+                    orderKey = orderKey,
+                    principalKey = principalKey,
+                    quantity = reqQty,
+                    ttlMillis = ttlMillis,
+                    nowEpochMillis = nowEpochMillis,
+                ) {
+                    limitedMenuFinder.getByMenuId(policy.menuId).remainingQuantity
+                }
+
+                when (result) {
+                    ReservationResult.RESERVED -> reservedMenus.add(policy.menuId to reqQty)
+                    ReservationResult.SOLD_OUT -> throw CoreException(ErrorType.LIMITED_MENU_SOLD_OUT)
+                    ReservationResult.ALREADY_PURCHASED -> throw CoreException(ErrorType.LIMITED_MENU_ALREADY_PURCHASED)
+                }
             }
-        }
-
-        val limitedMenu = limitedMenus.first()
-        val menuId = limitedMenu.menu.id
-        val reqQty = menuQuantities[menuId] ?: return
-
-        val result = reservationManager.reserve(
-            menuId = menuId,
-            orderKey = orderKey,
-            principalKey = principalKey,
-            quantity = reqQty,
-            ttlMillis = ttlMillis,
-            nowEpochMillis = nowEpochMillis,
-        ) {
-            limitedMenu.remainingQuantity
-        }
-
-        when (result) {
-            ReservationResult.RESERVED -> return
-            ReservationResult.SOLD_OUT -> throw CoreException(ErrorType.LIMITED_MENU_SOLD_OUT)
-            ReservationResult.ALREADY_PURCHASED -> throw CoreException(ErrorType.LIMITED_MENU_ALREADY_PURCHASED)
+        } catch (e: Exception) {
+            for ((reservedMenuId, reservedQty) in reservedMenus) {
+                reservationManager.release(
+                    menuId = reservedMenuId,
+                    orderKey = orderKey,
+                    principalKey = principalKey,
+                    quantity = reservedQty,
+                    nowEpochMillis = nowEpochMillis,
+                )
+            }
+            throw e
         }
     }
 
     fun verifyAndConfirmIfLimited(
         orderKey: String,
+        principalKey: String,
         menuQuantities: Map<Long, Int>,
         nowEpochMillis: Long = System.currentTimeMillis(),
     ): ConfirmationResult {
-        val limitedMenus = findLimitedMenusInOrder(menuQuantities)
-        if (limitedMenus.isEmpty()) return ConfirmationResult.CONFIRMED
+        val policies = findLimitedMenuPoliciesInOrder(menuQuantities).sortedBy { it.menuId }
+        if (policies.isEmpty()) return ConfirmationResult.CONFIRMED
 
-        for (limitedMenu in limitedMenus) {
-            val quantity = menuQuantities[limitedMenu.menu.id] ?: continue
-            if (quantity > limitedMenu.maxPurchasePerUser) {
-                throw CoreException(ErrorType.LIMITED_MENU_EXCEED_MAX_PURCHASE_QUANTITY)
-            }
+        policies.forEach { policy ->
+            val requestQuantity = menuQuantities[policy.menuId] ?: return@forEach
+            policy.validateOrderQuantity(requestQuantity)
         }
 
+        val confirmedMenus = mutableListOf<Pair<Long, Int>>()
         var finalResult = ConfirmationResult.CONFIRMED
-        for (limitedMenu in limitedMenus) {
+        for ((menuId) in policies) {
+            val quantity = menuQuantities[menuId] ?: continue
             val result = reservationManager.verifyAndConfirm(
-                menuId = limitedMenu.menu.id,
+                menuId = menuId,
                 orderKey = orderKey,
                 nowEpochMillis = nowEpochMillis,
             )
             if (result == ConfirmationResult.EXPIRED) {
                 finalResult = ConfirmationResult.EXPIRED
+            } else {
+                confirmedMenus.add(menuId to quantity)
+            }
+        }
+        if (finalResult == ConfirmationResult.EXPIRED) {
+            for ((confirmedMenuId, confirmedQty) in confirmedMenus) {
+                reservationManager.release(
+                    menuId = confirmedMenuId,
+                    orderKey = orderKey,
+                    principalKey = principalKey,
+                    quantity = confirmedQty,
+                    nowEpochMillis = nowEpochMillis,
+                )
             }
         }
         return finalResult
     }
 
     fun confirmSoldQuantityInDbIfLimited(menuQuantities: Map<Long, Int>) {
-        val limitedMenus = findLimitedMenusInOrder(menuQuantities)
-        if (limitedMenus.isEmpty()) return
+        val limitedMenuIds = findLimitedMenuIdsInOrder(menuQuantities)
+        if (limitedMenuIds.isEmpty()) return
 
-        for (limitedMenu in limitedMenus) {
-            val quantity = menuQuantities[limitedMenu.menu.id] ?: continue
-            limitedMenuManager.increaseSoldQuantity(limitedMenu.menu.id, quantity)
+        for (menuId in limitedMenuIds) {
+            val quantity = menuQuantities[menuId] ?: continue
+            limitedMenuManager.increaseSoldQuantity(menuId, quantity)
         }
     }
 
@@ -117,11 +137,10 @@ class LimitedMenuStockManager(
         restoreDbSoldQuantity: Boolean = false,
         nowEpochMillis: Long = System.currentTimeMillis(),
     ) {
-        val limitedMenus = findLimitedMenusInOrder(menuQuantities)
-        if (limitedMenus.isEmpty()) return
+        val limitedMenuIds = findLimitedMenuIdsInOrder(menuQuantities)
+        if (limitedMenuIds.isEmpty()) return
 
-        for (limitedMenu in limitedMenus) {
-            val menuId = limitedMenu.menu.id
+        for (menuId in limitedMenuIds) {
             val quantity = menuQuantities[menuId] ?: continue
             if (restoreDbSoldQuantity) {
                 limitedMenuManager.decreaseSoldQuantity(menuId, quantity)
@@ -136,11 +155,17 @@ class LimitedMenuStockManager(
         }
     }
 
-    private fun findLimitedMenusInOrder(menuQuantities: Map<Long, Int>): List<LimitedMenu> {
+    private fun findLimitedMenuPoliciesInOrder(menuQuantities: Map<Long, Int>): List<LimitedMenuPolicy> {
         if (menuQuantities.isEmpty()) return emptyList()
-        val activeMenuIds = limitedMenuFinder.getAllActiveMenuIds()
-        val requestedLimitedMenuIds = menuQuantities.keys.filter { it in activeMenuIds }
-        if (requestedLimitedMenuIds.isEmpty()) return emptyList()
-        return limitedMenuFinder.findAllByMenuIdIn(requestedLimitedMenuIds)
+        val policies = limitedMenuFinder.getAllActivePolicies()
+        val requestedIds = menuQuantities.keys
+        return policies.filter { it.menuId in requestedIds }
+    }
+
+    private fun findLimitedMenuIdsInOrder(menuQuantities: Map<Long, Int>): List<Long> {
+        if (menuQuantities.isEmpty()) return emptyList()
+        val policies = limitedMenuFinder.getAllActivePolicies()
+        val requestedIds = menuQuantities.keys
+        return policies.map { it.menuId }.filter { it in requestedIds }
     }
 }

@@ -40,30 +40,13 @@ class PaymentApprovalFailureResolver(
         payment: Payment,
         paymentKey: String,
     ): Nothing {
-        val cancelFailed = try {
-            paymentGatewayProcessor.cancelPayment(
-                PaymentGatewayCancel(paymentKey, ErrorType.LIMITED_MENU_OVERSOLD_AUTO_CANCELED.message)
-            )
-            false
-        } catch (cancelEx: Exception) {
-            true
-        }
-
-        if (cancelFailed) {
-            paymentCompleter.compensateApprovalFailure(
-                order,
-                payment.id,
-                paymentKey,
-                ErrorType.LIMITED_MENU_OVERSOLD_AUTO_CANCELED.message,
-            )
-        } else {
-            paymentCompleter.failProcess(
-                order,
-                payment,
-                ErrorType.LIMITED_MENU_OVERSOLD_AUTO_CANCELED.code.name,
-                ErrorType.LIMITED_MENU_OVERSOLD_AUTO_CANCELED.message,
-            )
-        }
+        cancelOrCompensate(
+            order = order,
+            payment = payment,
+            paymentKey = paymentKey,
+            cancelReason = ErrorType.LIMITED_MENU_OVERSOLD_AUTO_CANCELED.message,
+            failCode = ErrorType.LIMITED_MENU_OVERSOLD_AUTO_CANCELED.code.name,
+        )
         throw CoreException(ErrorType.LIMITED_MENU_OVERSOLD_AUTO_CANCELED)
     }
 
@@ -73,55 +56,140 @@ class PaymentApprovalFailureResolver(
         pgPayment: PGPayment,
         menuQuantities: Map<Long, Int>,
     ): PaymentApprovalResult {
-        return try {
-            val currentPg = paymentGatewayProcessor.getPGPayment(order.key)
-            if (currentPg.status == PaymentGatewayStatus.DONE) {
-                val recoveredResult = PGConfirmResult.success(
-                    currentPg.orderKey,
-                    currentPg.paymentKey,
-                    payment.method,
-                    payment.approveCode,
-                    payment.paidAt
-                )
-                paymentCompleter.complete(order, payment.id, recoveredResult)
-            } else {
-                limitedMenuStockManager.releaseIfLimited(
-                    orderKey = order.key,
-                    principalKey = order.principal.key,
-                    menuQuantities = menuQuantities,
-                    restoreDbSoldQuantity = false,
-                )
-                paymentCompleter.failProcess(order, payment, "PG_APPROVE_TIMEOUT", "승인 타임아웃 후 미승인 확인")
-                PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", OffsetDateTime.now())
-            }
+        val currentPg = try {
+            paymentGatewayProcessor.getPGPayment(order.key)
         } catch (inquiryEx: Exception) {
-            val cancelFailed = try {
-                paymentGatewayProcessor.cancelPayment(
-                    PaymentGatewayCancel(pgPayment.paymentKey, "승인 응답 및 상태 조회 타임아웃에 따른 자동 망취소")
-                )
-                false
-            } catch (cancelEx: Exception) {
-                true
-            }
+            return handleInquiryFailure(order, payment, pgPayment, menuQuantities)
+        }
 
-            limitedMenuStockManager.releaseIfLimited(
-                orderKey = order.key,
-                principalKey = order.principal.key,
-                menuQuantities = menuQuantities,
-                restoreDbSoldQuantity = false,
+        return if (currentPg.status == PaymentGatewayStatus.DONE) {
+            handleApprovedRecovery(order, payment, currentPg, menuQuantities)
+        } else {
+            handleUnapprovedFailure(order, payment, menuQuantities)
+        }
+    }
+
+    fun resolveCompletionFailure(
+        order: Order,
+        payment: Payment,
+        paymentKey: String,
+        menuQuantities: Map<Long, Int>,
+        exception: Exception,
+    ): PaymentApprovalResult {
+        limitedMenuStockManager.releaseIfLimited(
+            orderKey = order.key,
+            principalKey = order.principal.key,
+            menuQuantities = menuQuantities,
+            restoreDbSoldQuantity = false,
+        )
+        if (exception is CoreException && exception.errorType == ErrorType.LIMITED_MENU_SOLD_OUT) {
+            autoCancelOversoldPayment(order, payment, paymentKey)
+        } else {
+            val reason = exception.message ?: "결제 승인 후 내부 완료 처리 실패"
+            return cancelOrCompensate(
+                order = order,
+                payment = payment,
+                paymentKey = paymentKey,
+                cancelReason = reason,
+                failCode = "COMPLETION_FAILED",
+                failMessage = reason,
+                compensateReason = "$reason (자동 취소 실패)",
             )
+        }
+    }
 
-            if (cancelFailed) {
-                paymentCompleter.compensateApprovalFailure(
-                    order,
-                    payment.id,
-                    pgPayment.paymentKey,
-                    "승인 및 상태 조회 네트워크 타임아웃 (자동 망취소 실패)"
-                )
-            } else {
-                paymentCompleter.failProcess(order, payment, "NETWORK_TIMEOUT", "승인 및 상태 조회 네트워크 타임아웃")
-                PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", OffsetDateTime.now())
-            }
+    private fun handleInquiryFailure(
+        order: Order,
+        payment: Payment,
+        pgPayment: PGPayment,
+        menuQuantities: Map<Long, Int>,
+    ): PaymentApprovalResult {
+        limitedMenuStockManager.releaseIfLimited(
+            orderKey = order.key,
+            principalKey = order.principal.key,
+            menuQuantities = menuQuantities,
+            restoreDbSoldQuantity = false,
+        )
+        return cancelOrCompensate(
+            order = order,
+            payment = payment,
+            paymentKey = pgPayment.paymentKey,
+            cancelReason = "승인 응답 및 상태 조회 타임아웃에 따른 자동 망취소",
+            failCode = "NETWORK_TIMEOUT",
+            failMessage = "승인 및 상태 조회 네트워크 타임아웃",
+            compensateReason = "승인 및 상태 조회 네트워크 타임아웃 (자동 망취소 실패)",
+        )
+    }
+
+    private fun handleApprovedRecovery(
+        order: Order,
+        payment: Payment,
+        currentPg: PGPayment,
+        menuQuantities: Map<Long, Int>,
+    ): PaymentApprovalResult {
+        val recoveredResult = PGConfirmResult.success(
+            currentPg.orderKey,
+            currentPg.paymentKey,
+            payment.method,
+            payment.approveCode,
+            payment.paidAt
+        )
+        return try {
+            paymentCompleter.complete(order, payment.id, recoveredResult)
+        } catch (e: Exception) {
+            resolveCompletionFailure(
+                order = order,
+                payment = payment,
+                paymentKey = currentPg.paymentKey,
+                menuQuantities = menuQuantities,
+                exception = e,
+            )
+        }
+    }
+
+    private fun handleUnapprovedFailure(
+        order: Order,
+        payment: Payment,
+        menuQuantities: Map<Long, Int>,
+    ): PaymentApprovalResult {
+        limitedMenuStockManager.releaseIfLimited(
+            orderKey = order.key,
+            principalKey = order.principal.key,
+            menuQuantities = menuQuantities,
+            restoreDbSoldQuantity = false,
+        )
+        paymentCompleter.failProcess(order, payment, "PG_APPROVE_TIMEOUT", "승인 타임아웃 후 미승인 확인")
+        return PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", OffsetDateTime.now())
+    }
+
+    private fun cancelOrCompensate(
+        order: Order,
+        payment: Payment,
+        paymentKey: String,
+        cancelReason: String,
+        failCode: String,
+        failMessage: String = cancelReason,
+        compensateReason: String = cancelReason,
+    ): PaymentApprovalResult {
+        val cancelFailed = try {
+            paymentGatewayProcessor.cancelPayment(
+                PaymentGatewayCancel(paymentKey, cancelReason)
+            )
+            false
+        } catch (cancelEx: Exception) {
+            true
+        }
+
+        return if (cancelFailed) {
+            paymentCompleter.compensateApprovalFailure(
+                order,
+                payment.id,
+                paymentKey,
+                compensateReason,
+            )
+        } else {
+            paymentCompleter.failProcess(order, payment, failCode, failMessage)
+            PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: paymentKey, OffsetDateTime.now())
         }
     }
 }
