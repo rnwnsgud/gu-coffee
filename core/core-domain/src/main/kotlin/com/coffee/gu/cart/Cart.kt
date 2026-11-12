@@ -3,6 +3,7 @@ package com.coffee.gu.cart
 import com.coffee.gu.CoreException
 import com.coffee.gu.ErrorType
 import com.coffee.gu.Principal
+import com.coffee.gu.enums.OrderChannel
 import com.coffee.gu.order.NewOrder
 import com.coffee.gu.order.NewOrderLine
 import java.math.BigDecimal
@@ -28,6 +29,7 @@ class Cart(
             principal = principal,
             storeId = storeId,
             lines = lines,
+            channel = OrderChannel.CART,
         )
     }
 }

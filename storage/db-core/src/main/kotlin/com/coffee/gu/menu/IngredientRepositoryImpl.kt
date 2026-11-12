@@ -1,16 +1,11 @@
 package com.coffee.gu.menu
 
-import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Repository
 
 @Repository
 class IngredientRepositoryImpl(
     private val ingredientJpaRepository: IngredientJpaRepository,
 ) : IngredientRepository {
-
-    override fun findById(id: Long): Ingredient? {
-        return ingredientJpaRepository.findByIdOrNull(id)?.toModel()
-    }
 
     override fun findByStoreIdAndIngredientId(storeId: Long, ingredientId: Long): Ingredient? {
         return ingredientJpaRepository.findByStoreIdAndIngredientId(storeId, ingredientId)?.toModel()

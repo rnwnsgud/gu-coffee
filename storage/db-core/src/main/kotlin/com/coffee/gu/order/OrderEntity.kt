@@ -2,6 +2,7 @@ package com.coffee.gu.order
 
 import com.coffee.gu.BaseCustomIdEntity
 import com.coffee.gu.Principal
+import com.coffee.gu.enums.OrderChannel
 import com.coffee.gu.enums.OrderState
 import com.coffee.gu.enums.PrincipalType
 import jakarta.persistence.Entity
@@ -24,6 +25,8 @@ class OrderEntity(
     val totalPrice: BigDecimal,
     @Enumerated(EnumType.STRING)
     var state: OrderState,
+    @Enumerated(EnumType.STRING)
+    val orderChannel: OrderChannel = OrderChannel.APP,
     isNewEntity: Boolean = true,
 ) : BaseCustomIdEntity<String>(isNewEntity) {
 
@@ -38,6 +41,7 @@ class OrderEntity(
             totalPrice = totalPrice,
             state = state,
             lines = emptyList(),
+            channel = orderChannel,
         )
     }
 
@@ -50,6 +54,7 @@ class OrderEntity(
             storeId = order.storeId,
             totalPrice = order.totalPrice,
             state = order.state,
+            orderChannel = order.channel,
             isNewEntity = true,
         )
 
@@ -61,6 +66,7 @@ class OrderEntity(
             storeId = order.storeId,
             totalPrice = order.totalPrice,
             state = order.state,
+            orderChannel = order.channel,
             isNewEntity = false,
         )
     }

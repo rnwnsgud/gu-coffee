@@ -3,6 +3,7 @@ package com.coffee.gu.order
 import com.coffee.gu.CoreException
 import com.coffee.gu.ErrorType
 import com.coffee.gu.Principal
+import com.coffee.gu.enums.OrderChannel
 import com.coffee.gu.enums.OrderState
 import io.hypersistence.tsid.TSID
 import java.math.BigDecimal
@@ -15,6 +16,7 @@ class Order(
     val totalPrice: BigDecimal,
     var state: OrderState,
     var lines: List<OrderLine>,
+    val channel: OrderChannel = OrderChannel.APP,
 ) {
     fun fillOrderLines(lines: List<OrderLine>) {
         this.lines = lines
@@ -76,6 +78,7 @@ class Order(
                 totalPrice = totalPrice,
                 state = OrderState.CREATED,
                 lines = orderLines,
+                channel = newOrder.channel,
             )
         }
 
