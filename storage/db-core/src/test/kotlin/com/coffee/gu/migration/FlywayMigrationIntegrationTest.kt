@@ -41,11 +41,11 @@ class FlywayMigrationIntegrationTest {
     private lateinit var coreDataSource: DataSource
 
     @Test
-    @DisplayName("애플리케이션 기동 시 V1, V2, V3 DDL 스크립트가 실행되어 flyway_schema_history에 정상 기록된다")
+    @DisplayName("애플리케이션 기동 시 V1, V2, V3, V4 DDL 스크립트가 실행되어 flyway_schema_history에 정상 기록된다")
     fun testFlywaySchemaHistoryRecorded() {
         val jdbcTemplate = JdbcTemplate(coreDataSource)
 
-        // 1. flyway_schema_history 테이블에 V1, V2, V3 성공 기록 검증
+        // 1. flyway_schema_history 테이블에 V1, V2, V3, V4 성공 기록 검증
         val v1Count = jdbcTemplate.queryForObject(
             "SELECT count(*) FROM \"flyway_schema_history\" WHERE \"version\" = '1' AND \"success\" = TRUE",
             Int::class.java
@@ -64,21 +64,31 @@ class FlywayMigrationIntegrationTest {
         )
         assertThat(v3Count).isEqualTo(1)
 
+        val v4Count = jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM \"flyway_schema_history\" WHERE \"version\" = '4' AND \"success\" = TRUE",
+            Int::class.java
+        )
+        assertThat(v4Count).isEqualTo(1)
+
         // 2. Flyway info API로 마이그레이션 상태 검증
         val current = flyway.info().current()
         assertThat(current).isNotNull
-        assertThat(current?.version?.version).isEqualTo("3")
-        assertThat(current?.description).isEqualTo("add limited menu")
+        assertThat(current?.version?.version).isEqualTo("4")
+        assertThat(current?.description).isEqualTo("add ingredient and recipe")
         assertThat(current?.state?.isApplied).isTrue()
     }
 
     @Test
-    @DisplayName("V1, V2, V3 스키마에 정의된 핵심 테이블 및 컬럼, 인덱스가 실제 DB에 모두 생성된다")
+    @DisplayName("V1, V2, V3, V4 스키마에 정의된 핵심 테이블 및 컬럼, 인덱스가 실제 DB에 모두 생성된다")
     fun testKeyTablesAndIndexesExist() {
         val jdbcTemplate = JdbcTemplate(coreDataSource)
 
         // 주요 테이블 조회 테스트 (MySQL 모드 백틱 적용)
-        val tables = listOf("category", "menu", "store", "`order`", "payment", "coupon", "issued_coupon", "limited_coupon", "event_log", "stamp", "limited_menu")
+        val tables = listOf(
+            "category", "menu", "store", "`order`", "payment",
+            "coupon", "issued_coupon", "limited_coupon", "event_log",
+            "stamp", "limited_menu", "ingredient", "menu_recipe"
+        )
         for (table in tables) {
             val rows = jdbcTemplate.queryForList("SELECT count(*) as cnt FROM $table")
             assertThat(rows).isNotEmpty

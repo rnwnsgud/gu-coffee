@@ -12,12 +12,14 @@ class OrderService(
     private val orderReader: OrderReader,
     private val menuFinder: MenuFinder,
     private val limitedMenuStockManager: LimitedMenuStockManager,
+    private val recipeStockValidator: RecipeStockValidator,
 ) {
     fun create(newOrder: NewOrder): String {
+        val menuQuantities = newOrder.toMenuQuantityMap()
+        recipeStockValidator.validateStock(newOrder.storeId, menuQuantities)
         val menus = menuFinder.findAllByIdIn(newOrder.menuIds.toList())
         val orderMenus = OrderMenus.from(menus, newOrder.menuIds)
         val orderKey = Order.generateKey()
-        val menuQuantities = newOrder.toMenuQuantityMap()
         limitedMenuStockManager.reserveIfLimited(
             orderKey = orderKey,
             principalKey = newOrder.principal.key,

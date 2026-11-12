@@ -28,6 +28,7 @@ enum class ErrorType(
     LIMITED_MENU_RESERVATION_EXPIRED(408, ErrorCode.E3003, "재고 선점 유효 시간이 만료되어 결제가 차단되었습니다. 다시 주문해주세요.", ErrorLogLevel.INFO),
     LIMITED_MENU_OVERSOLD_AUTO_CANCELED(409, ErrorCode.E3004, "선점 시간 만료로 재고가 소진되어 승인된 결제가 자동 취소(환불)되었습니다.", ErrorLogLevel.WARN),
     LIMITED_MENU_EXCEED_MAX_PURCHASE_QUANTITY(400, ErrorCode.E3006, "선착순 한정 상품은 품목별 1인당 최대 1개까지만 구매할 수 있습니다.", ErrorLogLevel.INFO),
+    MENU_INGREDIENT_OUT_OF_STOCK(409, ErrorCode.E3007, "재료가 소진되어 주문할 수 없는 메뉴가 포함되어 있습니다.", ErrorLogLevel.INFO),
 
     // 쿠폰
     COUPON_NOT_FOUND_OR_EXPIRED(400, ErrorCode.E4000, "쿠폰을 찾을 수 없거나 만료되었습니다.", ErrorLogLevel.INFO),

@@ -22,6 +22,7 @@ enum class ErrorCode {
     E3003,
     E3004,
     E3006,
+    E3007,
 
     // 쿠폰
     E4000,
