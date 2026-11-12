@@ -78,19 +78,23 @@ class PaymentControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "payment-create",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입")
-                    ),
-                    requestFields(
-                        fieldWithPath("orderKey").description("주문 키"),
-                        fieldWithPath("usedIssuedCouponId").description("사용할 쿠폰 식별자 (없으면 null)").optional()
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.paymentId").description("생성된 결제 식별자"),
-                        fieldWithPath("error").description("에러 정보")
+                    identifier = "payment-create",
+                    tag = "Payment",
+                    summary = "결제 생성 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입")
+                        ),
+                        requestFields(
+                            fieldWithPath("orderKey").description("주문 키"),
+                            fieldWithPath("usedIssuedCouponId").description("사용할 쿠폰 식별자 (없으면 null)").optional()
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.paymentId").description("생성된 결제 식별자"),
+                            fieldWithPath("error").description("에러 정보")
+                        )
                     )
                 )
             )
@@ -115,18 +119,22 @@ class PaymentControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "payment-confirm",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입")
-                    ),
-                    queryParameters(
-                        parameterWithName("orderId").description("주문 키")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.result").description("결제 상태"),
-                        fieldWithPath("error").description("에러 정보")
+                    identifier = "payment-confirm",
+                    tag = "Payment",
+                    summary = "결제 승인 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입")
+                        ),
+                        queryParameters(
+                            parameterWithName("orderId").description("주문 키")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.result").description("결제 상태"),
+                            fieldWithPath("error").description("에러 정보")
+                        )
                     )
                 )
             )

@@ -4,37 +4,39 @@
 -- =======================================================================
 
 -- 1. 카테고리 (Category)
-INSERT INTO category (id, name, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO category (id, name, entity_status, created_at, updated_at) VALUES
 (1, '커피 (Coffee)', 'ACTIVE', NOW(6), NOW(6)),
 (2, '콜드브루 (Cold Brew)', 'ACTIVE', NOW(6), NOW(6)),
 (3, '티 & 에이드 (Tea & Ade)', 'ACTIVE', NOW(6), NOW(6)),
 (4, '디저트 & 베이커리 (Bakery)', 'ACTIVE', NOW(6), NOW(6));
 
 -- 2. 메뉴 (Menu)
-INSERT INTO menu (id, name, type, cost_price, sales_price, image_url, description, capacity, caffeine, calories, sodium, carbohydrate, sugar, fat, saturated_fat, protein, contained_allergens, may_contain_allergens, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO menu (id, name, type, cost_price, sales_price, image_url, description, capacity, caffeine, calories, sodium, carbohydrate, sugar, fat, saturated_fat, protein, contained_allergens, may_contain_allergens, entity_status, created_at, updated_at) VALUES
 (1, '아메리카노 (Americano)', 'DRINK', 1200.00, 4500.00, 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd', '고소한 견과류 풍미와 깔끔한 바디감의 시그니처 아메리카노', 355.0, 150.0, 10.0, 5.0, 2.0, 0.0, 0.0, 0.0, 1.0, NULL, NULL, 'ACTIVE', NOW(6), NOW(6)),
 (2, '카페라떼 (Cafe Latte)', 'DRINK', 1500.00, 5000.00, 'https://images.unsplash.com/photo-1570968915860-54d5c301fa9f', '진한 에스프레소와 부드러운 스팀밀크의 완벽한 조화', 355.0, 150.0, 180.0, 115.0, 14.0, 13.0, 9.0, 5.0, 10.0, '우유', NULL, 'ACTIVE', NOW(6), NOW(6)),
 (3, '바닐라빈 라떼 (Vanilla Bean Latte)', 'DRINK', 1800.00, 5800.00, 'https://images.unsplash.com/photo-1534778101976-62847782c213', '천연 바닐라빈 시럽이 더해진 달콤하고 풍부한 풍미의 라떼', 355.0, 150.0, 240.0, 110.0, 30.0, 28.0, 8.0, 5.0, 9.0, '우유', NULL, 'ACTIVE', NOW(6), NOW(6)),
 (4, '시그니처 콜드브루 (Cold Brew)', 'DRINK', 1600.00, 5500.00, 'https://images.unsplash.com/photo-1517701550927-30cf4ba1dba5', '14시간 동안 저온 침출하여 깔끔하고 초콜릿 풍미가 돋보이는 콜드브루', 473.0, 180.0, 15.0, 10.0, 2.0, 0.0, 0.0, 0.0, 1.0, NULL, NULL, 'ACTIVE', NOW(6), NOW(6)),
-(5, '자몽 허니 블랙티 (Grapefruit Honey Black Tea)', 'DRINK', 1400.00, 5300.00, 'https://images.unsplash.com/photo-1556679343-c7306c1976bc', '새콤달콤한 자몽과 은은한 홍차가 어우러진 산뜻한 티 음료', 473.0, 70.0, 125.0, 15.0, 30.0, 28.0, 0.0, 0.0, 0.0, NULL, NULL, 'ACTIVE', NOW(6), NOW(6));
+(5, '자몽 허니 블랙티 (Grapefruit Honey Black Tea)', 'DRINK', 1400.00, 5300.00, 'https://images.unsplash.com/photo-1556679343-c7306c1976bc', '새콤달콤한 자몽과 은은한 홍차가 어우러진 산뜻한 티 음료', 473.0, 70.0, 125.0, 15.0, 30.0, 28.0, 0.0, 0.0, 0.0, NULL, NULL, 'ACTIVE', NOW(6), NOW(6)),
+(6, '모닝세트 (카페라떼 + 베이글)', 'DESSERT', 2500.00, 7500.00, 'https://images.unsplash.com/photo-1509440159596-0249088772ff', '카페라떼 1잔과 플레인 베이글 1개로 구성된 든든한 모닝 세트', 355.0, 150.0, 450.0, 420.0, 68.0, 18.0, 11.0, 6.0, 19.0, '우유,밀', NULL, 'ACTIVE', NOW(6), NOW(6));
 
 -- 3. 메뉴-카테고리 매핑 (Menu Category Mapping)
-INSERT INTO menu_category (id, menu_id, category_id, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO menu_category (id, menu_id, category_id, entity_status, created_at, updated_at) VALUES
 (1, 1, 1, 'ACTIVE', NOW(6), NOW(6)),
 (2, 2, 1, 'ACTIVE', NOW(6), NOW(6)),
 (3, 3, 1, 'ACTIVE', NOW(6), NOW(6)),
 (4, 4, 2, 'ACTIVE', NOW(6), NOW(6)),
-(5, 5, 3, 'ACTIVE', NOW(6), NOW(6));
+(5, 5, 3, 'ACTIVE', NOW(6), NOW(6)),
+(6, 6, 4, 'ACTIVE', NOW(6), NOW(6));
 
 -- 4. 옵션 그룹 (Option Group)
-INSERT INTO option_group (id, name, is_exclusive, is_required, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO option_group (id, name, is_exclusive, is_required, entity_status, created_at, updated_at) VALUES
 (1, '온도 선택 (HOT/ICE)', true, true, 'ACTIVE', NOW(6), NOW(6)),
 (2, '사이즈 선택', true, true, 'ACTIVE', NOW(6), NOW(6)),
 (3, '에스프레소 샷 추가', false, false, 'ACTIVE', NOW(6), NOW(6)),
 (4, '시럽 추가', false, false, 'ACTIVE', NOW(6), NOW(6));
 
 -- 5. 옵션 (Option)
-INSERT INTO `option` (id, option_group_id, name, extra_price, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO `option` (id, option_group_id, name, extra_price, entity_status, created_at, updated_at) VALUES
 (1, 1, 'HOT', 0.00, 'ACTIVE', NOW(6), NOW(6)),
 (2, 1, 'ICE', 0.00, 'ACTIVE', NOW(6), NOW(6)),
 (3, 2, 'Regular (기본)', 0.00, 'ACTIVE', NOW(6), NOW(6)),
@@ -47,7 +49,7 @@ INSERT INTO `option` (id, option_group_id, name, extra_price, entity_status, cre
 
 -- 6. 메뉴-옵션그룹 매핑 (Menu Option Group Mapping)
 -- 아메리카노: 온도, 사이즈, 샷추가
-INSERT INTO menu_option_group (id, menu_id, option_group_id, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO menu_option_group (id, menu_id, option_group_id, entity_status, created_at, updated_at) VALUES
 (1, 1, 1, 'ACTIVE', NOW(6), NOW(6)),
 (2, 1, 2, 'ACTIVE', NOW(6), NOW(6)),
 (3, 1, 3, 'ACTIVE', NOW(6), NOW(6)),
@@ -68,12 +70,12 @@ INSERT INTO menu_option_group (id, menu_id, option_group_id, entity_status, crea
 (14, 5, 2, 'ACTIVE', NOW(6), NOW(6));
 
 -- 7. 매장 (Store)
-INSERT INTO store (id, name, branch_code, status, address, latitude, longitude, phone_number, representative, trade_name, business_registration_number, business_address, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO store (id, name, branch_code, status, address, latitude, longitude, phone_number, representative, trade_name, business_registration_number, business_address, entity_status, created_at, updated_at) VALUES
 (1, '구커피 강남본점', 'STORE-GANGNAM-01', 'OPEN', '서울시 강남구 테헤란로 123', 37.4979, 127.0276, '02-1234-5678', '구준형', '구커피 강남', '123-45-67890', '서울시 강남구 테헤란로 123', 'ACTIVE', NOW(6), NOW(6)),
 (2, '구커피 판교역점', 'STORE-PANGYO-01', 'OPEN', '경기도 성남시 분당구 판교역로 100', 37.3948, 127.1119, '031-9876-5432', '구준형', '구커피 판교', '987-65-43210', '경기도 성남시 분당구 판교역로 100', 'ACTIVE', NOW(6), NOW(6));
 
 -- 8. 매장 영업시간 (Sales Hour)
-INSERT INTO sales_hour (id, store_id, `day`, open, close, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO sales_hour (id, store_id, `day`, open, close, entity_status, created_at, updated_at) VALUES
 (1, 1, 'MONDAY', '08:00:00', '22:00:00', 'ACTIVE', NOW(6), NOW(6)),
 (2, 1, 'TUESDAY', '08:00:00', '22:00:00', 'ACTIVE', NOW(6), NOW(6)),
 (3, 1, 'WEDNESDAY', '08:00:00', '22:00:00', 'ACTIVE', NOW(6), NOW(6)),
@@ -90,29 +92,62 @@ INSERT INTO sales_hour (id, store_id, `day`, open, close, entity_status, created
 (14, 2, 'SUNDAY', '09:00:00', '20:00:00', 'ACTIVE', NOW(6), NOW(6));
 
 -- 9. 쿠폰 마스터 (Coupon)
-INSERT INTO coupon (id, name, type, discount, expired_at, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO coupon (id, name, type, discount, expired_at, entity_status, created_at, updated_at) VALUES
 (1, '[오픈기념] 1,000원 할인 쿠폰', 'FIXED_AMOUNT', 1000.00, '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6)),
 (2, '[웰컴쿠폰] 2,000원 특별 할인 쿠폰', 'FIXED_AMOUNT', 2000.00, '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6)),
 (3, '[스탬프완성] 아메리카노 1잔 무료 교환권', 'FREE_DRINK', 4500.00, '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6));
 
 -- 10. 쿠폰 타겟 매핑 (Coupon Target)
-INSERT INTO coupon_target (id, coupon_id, target_type, target_id, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO coupon_target (id, coupon_id, target_type, target_id, entity_status, created_at, updated_at) VALUES
 (1, 1, 'MENU_CATEGORY', 1, 'ACTIVE', NOW(6), NOW(6)),
 (2, 2, 'MENU_CATEGORY', 1, 'ACTIVE', NOW(6), NOW(6)),
 (3, 3, 'MENU', 1, 'ACTIVE', NOW(6), NOW(6));
 
 -- 11. 테스트 사용자(U1)에게 쿠폰 발급 (Issued Coupon)
-INSERT INTO issued_coupon (id, principal_key, principal_type, coupon_id, state, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO issued_coupon (id, principal_key, principal_type, coupon_id, state, entity_status, created_at, updated_at) VALUES
 (1, 'U1', 'USER', 1, 'DOWNLOADED', 'ACTIVE', NOW(6), NOW(6)),
 (2, 'U1', 'USER', 2, 'DOWNLOADED', 'ACTIVE', NOW(6), NOW(6));
 
 -- 12. 테스트 사용자(U1) 스탬프 3개 적립 (Stamp)
-INSERT INTO stamp (id, order_key, principal_key, principal_type, state, expired_at, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO stamp (id, order_key, principal_key, principal_type, state, expired_at, entity_status, created_at, updated_at) VALUES
 (1, 'ORDER-SEED-01', 'U1', 'USER', 'EARNED', '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6)),
 (2, 'ORDER-SEED-01', 'U1', 'USER', 'EARNED', '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6)),
 (3, 'ORDER-SEED-02', 'U1', 'USER', 'EARNED', '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6));
 
 -- 13. 스탬프 적립 이력 (Stamp History)
-INSERT INTO stamp_history (id, principal_key, principal_type, type, store_id, store_name, quantity, recorded_at, expired_at, entity_status, created_at, updated_at) VALUES
+INSERT IGNORE INTO stamp_history (id, principal_key, principal_type, type, store_id, store_name, quantity, recorded_at, expired_at, entity_status, created_at, updated_at) VALUES
 (1, 'U1', 'USER', 'EARNED', 1, '구커피 강남본점', 2, NOW(6), '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6)),
 (2, 'U1', 'USER', 'EARNED', 1, '구커피 강남본점', 1, NOW(6), '2030-12-31 23:59:59.000000', 'ACTIVE', NOW(6), NOW(6));
+
+-- 14. 메뉴 레시피 (Menu Recipe: BOM)
+-- ingredient_id: 100(에스프레소 원두), 200(우유), 300(바닐라빈 시럽), 400(플레인 베이글)
+-- 아메리카노(1): 원두(100) 1
+-- 카페라떼(2): 원두(100) 1 + 우유(200) 1
+-- 바닐라빈 라떼(3): 원두(100) 1 + 우유(200) 1 + 바닐라빈 시럽(300) 1
+-- 모닝세트(6): 원두(100) 1 + 우유(200) 1 + 플레인 베이글(400) 1
+INSERT IGNORE INTO menu_recipe (id, menu_id, ingredient_id, required_quantity, entity_status, created_at, updated_at) VALUES
+(1, 1, 100, 1, 'ACTIVE', NOW(6), NOW(6)),
+(2, 2, 100, 1, 'ACTIVE', NOW(6), NOW(6)),
+(3, 2, 200, 1, 'ACTIVE', NOW(6), NOW(6)),
+(4, 3, 100, 1, 'ACTIVE', NOW(6), NOW(6)),
+(5, 3, 200, 1, 'ACTIVE', NOW(6), NOW(6)),
+(6, 3, 300, 1, 'ACTIVE', NOW(6), NOW(6)),
+(7, 6, 100, 1, 'ACTIVE', NOW(6), NOW(6)),
+(8, 6, 200, 1, 'ACTIVE', NOW(6), NOW(6)),
+(9, 6, 400, 1, 'ACTIVE', NOW(6), NOW(6));
+
+-- 15. 매장별 원자재 재고 (Ingredient)
+-- 강남본점(store_id=1) 및 판교역점(store_id=2) 초기 가용 재고
+INSERT IGNORE INTO ingredient (id, store_id, ingredient_id, name, stock_quantity, is_available, entity_status, created_at, updated_at) VALUES
+(1, 1, 100, '에스프레소 원두', 100, TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(2, 1, 200, '우유', 50, TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(3, 1, 300, '바닐라빈 시럽', 30, TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(4, 1, 400, '플레인 베이글', 20, TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(5, 2, 100, '에스프레소 원두', 100, TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(6, 2, 200, '우유', 50, TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(7, 2, 300, '바닐라빈 시럽', 30, TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(8, 2, 400, '플레인 베이글', 20, TRUE, 'ACTIVE', NOW(6), NOW(6));
+
+-- 16. 테스트 사용자(U1) 장바구니 아이템 (품절 전 미리 담아둔 모닝세트 시나리오 검증용)
+INSERT IGNORE INTO cart_item (id, principal_key, principal_type, menu_id, quantity, entity_status, created_at, updated_at) VALUES
+(1, 'U1', 'USER', 6, 1, 'ACTIVE', NOW(6), NOW(6));

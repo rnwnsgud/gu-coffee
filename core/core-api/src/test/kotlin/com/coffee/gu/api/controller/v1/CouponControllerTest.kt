@@ -53,15 +53,19 @@ class CouponControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "coupon-issued-list",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data").description("발급된 쿠폰 목록"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "coupon-issued-list",
+                    tag = "Coupon",
+                    summary = "발급된 쿠폰 목록 조회 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data").description("발급된 쿠폰 목록"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -80,18 +84,22 @@ class CouponControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "coupon-download",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    pathParameters(
-                        parameterWithName("couponId").description("쿠폰 식별자")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data").description("응답 데이터 (null)"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "coupon-download",
+                    tag = "Coupon",
+                    summary = "쿠폰 다운로드 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        pathParameters(
+                            parameterWithName("couponId").description("쿠폰 식별자")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data").description("응답 데이터 (null)"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )

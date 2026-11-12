@@ -265,6 +265,24 @@ sequenceDiagram
 
 </details>
 
+<details>
+<summary><b>12. 레시피 기반 매장별 원자재 가용성 검증 및 다중 채널 주문 차단 설계</b></summary>
+
+- **문제 정의**:
+  - 판매 단위 메뉴에만 품절 상태를 개별 관리할 경우, 특정 원자재가 소진되었을 때 단품 메뉴만 품절 처리되어 동일 원자재를 공유하는 세트 메뉴나 다른 제조 메뉴로 주문이 유입되고 결제 후 주방에서 수동 취소해야 하는 문제 발생.
+  - 품절 처리 이전에 장바구니에 미리 담아둔 품목을 주문하거나, 메뉴판 캐시 동기화가 지연된 외부 배달 플랫폼 및 매장 키오스크 등 다른 경로로 주문이 인입될 때 품절 메뉴가 통과하는 정합성 공백 발생.
+- **해결 방안**:
+  - **메뉴 레시피와 매장별 원자재 재고 격리**:
+    - 메뉴별 구성 원자재와 필요 수량을 정의하는 `MenuRecipe`와 매장별 원자재 재고 및 가용 상태를 관리하는 `Ingredient` 모델을 분리하고 복합 유니크 제약조건을 적용.
+    - 점포 파트너 API를 통해 특정 매장의 원자재를 수동 품절로 전환하거나 재고 수량을 변경하더라도 타 매장의 주문 처리에는 영향을 주지 않도록 매장 단위로 격리.
+  - **주문 인입 시점의 원자재 소요량 역산 및 합산 검증**:
+    - `OrderService.create` 진입 시점에 `RecipeStockValidator.validateStock`을 선행 호출하여, 한정 메뉴 Redis 선점이나 DB 주문서 저장 이전에 원자재 가용성을 먼저 판별.
+    - 주문에 포함된 모든 메뉴의 레시피를 일괄 조회한 뒤 메뉴별 주문 수량과 레시피 소요량을 곱해 원자재별 총 필요 수량을 합산함으로써, 단품과 세트 메뉴를 복합 주문하여 매장 잔여 재고를 초과하는 경우까지 일관되게 차단.
+  - **다중 주문 유입 경로 단일 파이프라인 통합**:
+    - 유입 경로를 구분하는 `OrderChannel`을 도입하고, 자체 앱 즉시 주문, 장바구니 기반 주문, 외부 배달 플랫폼 및 키오스크 주문이 모두 동일한 `OrderService.create` 검증 관문을 통과하도록 구성.
+
+</details>
+
 ---
 
 <a name="4-기술-스택"></a>
@@ -292,8 +310,9 @@ sequenceDiagram
 ## 5. 주요 도메인 기능
 
 - **메뉴**: 카테고리별 메뉴 목록, 상세 정보(영양성분, 알레르기 유발물질) 조회 및 관리자 메뉴/옵션 매핑
+- **매장별 원자재 및 레시피**: 메뉴별 레시피 구성, 매장별 원자재 재고 수량 및 수동 품절 상태 관리, 주문 시점 소요량 합산 검증
 - **장바구니**: 사용자/게스트별 장바구니 생성, 옵션별 메뉴 담기, 수량 변경 및 삭제
-- **주문**: 단일 메뉴 주문 및 장바구니 기반 주문서 생성 (TSID 고유 식별자 발급)
+- **주문**: 자체 앱 즉시 주문, 장바구니 주문, 외부 배달 플랫폼 및 키오스크 채널별 주문서 생성 (TSID 고유 식별자 발급)
 - **결제 및 PG 연동**: Toss Payments 결제 승인, 쿠폰 할인 금액 검증 및 멱등 결제 처리
 - **주문 및 결제 취소**: 주문 취소 요청 시 PG사 결제 취소 연동 및 쿠폰/스탬프 롤백
 - **스탬프 & 리워드 쿠폰**: 결제 완료 이벤트 기반 스탬프 자동 적립, 10개 적립 시 무료 음료 쿠폰 발급
@@ -319,7 +338,9 @@ sequenceDiagram
 | | `POST` | `/v1/cart/items` | 장바구니 아이템 담기 |
 | | `PUT` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 수량 변경 |
 | | `DELETE` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 삭제 |
-| **Order** | `POST` | `/v1/orders` | 주문서 생성 |
+| **Order** | `POST` | `/v1/orders` | 앱 즉시 주문서 생성 (`APP`) |
+| | `POST` | `/v1/cart-orders` | 장바구니 기반 주문서 생성 (`CART`) |
+| | `POST` | `/v1/external-orders` | 외부 배달 플랫폼 및 키오스크 주문 인입 (`DELIVERY_PARTNER`, `KIOSK`) |
 | | `GET` | `/v1/orders` | 주문 목록 조회 |
 | | `GET` | `/v1/orders/{orderKey}` | 단건 주문 상세 조회 |
 | **Payment** | `POST` | `/v1/payment/prepare` | 결제 사전 준비 및 금액 검증 |
@@ -337,9 +358,9 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>관리자 API & 문서 스펙 엔드포인트 보기</b></summary>
+<summary><b>관리자·파트너 API & 문서 스펙 엔드포인트 보기</b></summary>
 
-#### 관리자 API (`/admin/v1`)
+#### 본사 관리자 API (`/admin/v1`)
 | 도메인 | HTTP Method | Endpoint | 설명 |
 | :--- | :--- | :--- | :--- |
 | **Menu** | `POST` | `/admin/v1/menu` | 신규 메뉴 등록 |
@@ -347,6 +368,13 @@ sequenceDiagram
 | **Option** | `POST` | `/admin/v1/menu/option` | 세부 옵션(HOT/ICE, 샷 추가 등) 등록 |
 | **Mapping** | `POST` | `/admin/v1/menu/menu-option-group` | 메뉴에 옵션 그룹 매핑 |
 | | `PUT` | `/admin/v1/menu/{menuId}/option-groups` | 메뉴-옵션 그룹 매핑 일괄 변경 (`@CacheEvict`) |
+
+#### 점포 파트너 API (`/v1/partner`)
+| 도메인 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Ingredient** | `GET` | `/v1/partner/stores/{storeId}/ingredients` | 매장별 원자재 재고 및 품절 상태 목록 조회 |
+| | `PATCH` | `/v1/partner/stores/{storeId}/ingredients/{ingredientId}/availability` | 매장 특정 원자재 품절 및 판매 가능 상태 변경 |
+| | `PATCH` | `/v1/partner/stores/{storeId}/ingredients/{ingredientId}/stock` | 매장 특정 원자재 재고 수량 변경 |
 
 #### 문서 스펙
 | 문서 종류 | HTTP Method | Endpoint | 설명 |
@@ -395,6 +423,9 @@ MySQL 8.0, Redis 7.x, Kafka 3.8(KRaft) 컨테이너를 기동하고 `local-dev` 
 
 # 메뉴 캐시 및 Fail-Open 테스트
 ./gradlew :core:core-api:test --tests "com.coffee.gu.menu.*"
+
+# 레시피 기반 매장별 원자재 가용성 및 다중 채널 주문 차단 테스트
+./gradlew :core:core-api:test --tests "com.coffee.gu.order.*"
 
 # 결제 FOR UPDATE SKIP LOCKED 복구 파이프라인 테스트
 ./gradlew :core:core-api:test --tests "com.coffee.gu.payment.*"

@@ -63,23 +63,27 @@ class MenuControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "menu-list-v1",
-                    queryParameters(
-                        parameterWithName("categoryId").description("카테고리 식별자"),
-                        parameterWithName("offset").description("오프셋"),
-                        parameterWithName("limit").description("조회 제한 수")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.content").description("메뉴 목록"),
-                        fieldWithPath("data.content[].id").description("메뉴 식별자"),
-                        fieldWithPath("data.content[].name").description("메뉴 이름"),
-                        fieldWithPath("data.content[].salesPrice").description("판매가"),
-                        fieldWithPath("data.content[].imageUrl").description("이미지 URL").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.hasNext").description("다음 페이지 여부"),
-                        fieldWithPath("data.nextCursor").description("다음 페이지 커서 (v1 미사용)").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.nextLastId").description("다음 페이지 마지막 ID (v1 미사용)").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "menu-list-v1",
+                    tag = "Menu",
+                    summary = "메뉴 목록 조회 API (v1)",
+                    snippets = arrayOf(
+                        queryParameters(
+                            parameterWithName("categoryId").description("카테고리 식별자"),
+                            parameterWithName("offset").description("오프셋"),
+                            parameterWithName("limit").description("조회 제한 수")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.content").description("메뉴 목록"),
+                            fieldWithPath("data.content[].id").description("메뉴 식별자"),
+                            fieldWithPath("data.content[].name").description("메뉴 이름"),
+                            fieldWithPath("data.content[].salesPrice").description("판매가"),
+                            fieldWithPath("data.content[].imageUrl").description("이미지 URL").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.hasNext").description("다음 페이지 여부"),
+                            fieldWithPath("data.nextCursor").description("다음 페이지 커서 (v1 미사용)").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.nextLastId").description("다음 페이지 마지막 ID (v1 미사용)").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -103,24 +107,28 @@ class MenuControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "menu-list-v2",
-                    queryParameters(
-                        parameterWithName("categoryId").description("카테고리 식별자"),
-                        parameterWithName("pageSize").description("페이지 크기").optional(),
-                        parameterWithName("cursor").description("커서 (생성일시)").optional(),
-                        parameterWithName("lastId").description("마지막 조회 ID").optional()
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.content").description("메뉴 목록"),
-                        fieldWithPath("data.content[].id").description("메뉴 식별자"),
-                        fieldWithPath("data.content[].name").description("메뉴 이름"),
-                        fieldWithPath("data.content[].salesPrice").description("판매가"),
-                        fieldWithPath("data.content[].imageUrl").description("이미지 URL").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.hasNext").description("다음 페이지 여부"),
-                        fieldWithPath("data.nextCursor").description("다음 페이지 커서").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.nextLastId").description("다음 페이지 마지막 ID").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "menu-list-v2",
+                    tag = "Menu",
+                    summary = "메뉴 목록 조회 API (v2 - Cursor)",
+                    snippets = arrayOf(
+                        queryParameters(
+                            parameterWithName("categoryId").description("카테고리 식별자"),
+                            parameterWithName("pageSize").description("페이지 크기").optional(),
+                            parameterWithName("cursor").description("커서 (생성일시)").optional(),
+                            parameterWithName("lastId").description("마지막 조회 ID").optional()
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.content").description("메뉴 목록"),
+                            fieldWithPath("data.content[].id").description("메뉴 식별자"),
+                            fieldWithPath("data.content[].name").description("메뉴 이름"),
+                            fieldWithPath("data.content[].salesPrice").description("판매가"),
+                            fieldWithPath("data.content[].imageUrl").description("이미지 URL").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.hasNext").description("다음 페이지 여부"),
+                            fieldWithPath("data.nextCursor").description("다음 페이지 커서").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.nextLastId").description("다음 페이지 마지막 ID").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -147,30 +155,34 @@ class MenuControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "menu-detail",
-                    pathParameters(
-                        parameterWithName("menuId").description("메뉴 식별자")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.id").description("메뉴 식별자"),
-                        fieldWithPath("data.name").description("메뉴 이름"),
-                        fieldWithPath("data.salesPrice").description("판매가"),
-                        fieldWithPath("data.imageUrl").description("이미지 URL").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.description").description("메뉴 설명").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.capacity").description("용량").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.caffeine").description("카페인").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.calories").description("칼로리").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.sodium").description("나트륨").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.carbohydrate").description("탄수화물").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.sugar").description("당류").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.fat").description("지방").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.saturatedFat").description("포화지방").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.protein").description("단백질").optional().type(JsonNodeType.NUMBER),
-                        fieldWithPath("data.containedAllergens").description("함유 알레르기 성분").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.mayContainAllergens").description("교차 오염 가능 성분").optional().type(JsonNodeType.STRING),
-                        fieldWithPath("data.optionGroups").description("옵션 그룹 목록"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "menu-detail",
+                    tag = "Menu",
+                    summary = "메뉴 상세 조회 API",
+                    snippets = arrayOf(
+                        pathParameters(
+                            parameterWithName("menuId").description("메뉴 식별자")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.id").description("메뉴 식별자"),
+                            fieldWithPath("data.name").description("메뉴 이름"),
+                            fieldWithPath("data.salesPrice").description("판매가"),
+                            fieldWithPath("data.imageUrl").description("이미지 URL").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.description").description("메뉴 설명").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.capacity").description("용량").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.caffeine").description("카페인").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.calories").description("칼로리").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.sodium").description("나트륨").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.carbohydrate").description("탄수화물").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.sugar").description("당류").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.fat").description("지방").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.saturatedFat").description("포화지방").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.protein").description("단백질").optional().type(JsonNodeType.NUMBER),
+                            fieldWithPath("data.containedAllergens").description("함유 알레르기 성분").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.mayContainAllergens").description("교차 오염 가능 성분").optional().type(JsonNodeType.STRING),
+                            fieldWithPath("data.optionGroups").description("옵션 그룹 목록"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )

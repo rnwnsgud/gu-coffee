@@ -58,15 +58,21 @@ class LocalDataInitializerTest {
         val couponCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM coupon", Long::class.java)
         val issuedCouponCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM issued_coupon WHERE principal_key = 'U1'", Long::class.java)
         val stampCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stamp WHERE principal_key = 'U1'", Long::class.java)
+        val menuRecipeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM menu_recipe", Long::class.java)
+        val ingredientCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ingredient", Long::class.java)
+        val cartItemCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM cart_item WHERE principal_key = 'U1'", Long::class.java)
 
         assertThat(categoryCount).isEqualTo(4L)
-        assertThat(menuCount).isEqualTo(5L)
+        assertThat(menuCount).isEqualTo(6L)
         assertThat(optionGroupCount).isEqualTo(4L)
         assertThat(optionCount).isEqualTo(9L)
         assertThat(storeCount).isEqualTo(2L)
         assertThat(couponCount).isEqualTo(3L)
         assertThat(issuedCouponCount).isEqualTo(2L)
         assertThat(stampCount).isEqualTo(3L)
+        assertThat(menuRecipeCount).isEqualTo(9L)
+        assertThat(ingredientCount).isEqualTo(8L)
+        assertThat(cartItemCount).isEqualTo(1L)
     }
 
     @Test
