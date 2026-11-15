@@ -40,23 +40,23 @@ gu-coffee
 │
 ├── 🧠 core                   # 비즈니스 핵심 모듈 그룹
 │   ├── core-api              # 사용자 REST API & 오케스트레이션 서비스 (core-domain에만 의존)
-│   ├── core-domain           # 순수 비즈니스 모델, 영속성 포트(인터페이스), 도메인 이벤트 (외부 의존성 없음)
+│   ├── core-domain           # 순수 비즈니스 모델, 영속성 포트, 도메인 이벤트 (외부 의존성 없음)
 │   └── core-enum             # 공통 Enum 및 도메인 상수
 │
 ├── 💾 storage                # 영속성 구현 모듈 그룹
 │   └── db-core               # Spring Data JPA, QueryDSL 5.1, Entity, Repository 구현체
 │
 └── 🔌 support                # 공통 인프라 / 서포트 모듈 그룹
-    ├── support-auth          # Principal 기반 인증/인가 객체
-    ├── support-error         # 비즈니스 예외 계층 및 공통 ErrorType
+    ├── support-auth          # 인증/인가 주체 모델
+    ├── support-error         # 비즈니스 예외 계층 및 공통 에러 타입
     ├── support-event         # 트랜잭셔널 아웃박스 이벤트 디스패처 및 이벤트 로그
-    ├── support-lock          # Redisson 기반 분산 락 및 로컬 락 추상화(LockManager)
+    ├── support-lock          # Redisson 기반 분산 락 및 로컬 락 추상화
     ├── support-logging       # 분산 추적 로깅 모듈 (예정)
     ├── support-messaging     # Kafka Producer/Consumer 설정
     ├── support-monitoring    # 프로메테우스 메트릭 모니터링 (예정)
     ├── support-pagination    # 슬라이스/오프셋 페이징 유틸리티
     ├── support-pg            # Toss Payments PG 연동 및 WebClient 클라이언트
-    └── support-web           # 공통 ApiResponse 포맷, PrincipalArgumentResolver, 게이트웨이 내부 토큰 검증 및 Spring Web MVC 설정
+    └── support-web           # 공통 응답 포맷, 인증 리졸버, 게이트웨이 내부 토큰 검증 및 Web MVC 설정
 ```
 
 </details>
@@ -274,17 +274,17 @@ sequenceDiagram
   - 품절 처리 이전에 장바구니에 미리 담아둔 품목을 주문하거나, 메뉴판 캐시 동기화가 지연된 외부 배달 플랫폼 및 매장 키오스크 등 다른 경로로 주문이 인입될 때 품절 메뉴가 통과하는 정합성 공백 발생.
 - **해결 방안**:
   - **점주 전용 모듈 분리, 매장 소유권 인가 및 게이트웨이 신뢰 경계**:
-    - 일반 고객용 API(`core-api`) 및 본사 카탈로그 관리(`admin-api`)와 물리적으로 분리된 점포 파트너 전용 `partner-api` 모듈을 구성하고 `core-domain`을 공유하도록 설계.
-    - 점주 전용 인증 객체(`PartnerPrincipal`)와 리졸버를 통해 요청 매장에 대한 소유권을 검증함으로써 타 매장의 원자재 품절 상태를 임의로 변경할 수 없도록 차단.
-    - 일반 사용자와 점주 리졸버 모두 앞단 게이트웨이나 인증 서버의 내부 시크릿 헤더(`Gu-Coffee-Internal-Token`)를 상수 시간 비교로 검증하는 `GatewayInternalTokenValidator`를 공통 적용해, 운영 환경에서 게이트웨이를 우회한 직접 호출을 차단.
+    - 일반 고객용 API 및 본사 카탈로그 관리 모듈과 물리적으로 분리된 점포 파트너 전용 `partner-api` 모듈을 구성하고 도메인 계층을 공유하도록 설계.
+    - 점주 인증 리졸버에서 요청 매장에 대한 소유권을 검증해 타 매장의 원자재 품절 상태를 임의로 변경할 수 없도록 차단.
+    - 일반 사용자와 점주 리졸버 모두 앞단 게이트웨이나 인증 서버가 전달하는 내부 시크릿 토큰을 상수 시간 비교로 검증해, 운영 환경에서 게이트웨이를 우회한 직접 호출을 차단.
   - **메뉴 레시피와 매장별 원자재 가용 상태 격리**:
-    - 메뉴별 구성 원자재와 필요 수량(`requiredQuantity`)을 정의하는 `MenuRecipe`는 추후 발주 연동 등을 고려해 유지하고, 매장별 원자재(`Ingredient`)는 수기 수량 관리 없이 판매 가용 여부(`isAvailable`) 중심으로 단순화.
+    - 메뉴별 레시피는 추후 발주 연동 등을 고려해 필요 수량 메타데이터를 유지하고, 매장별 원자재는 수기 수량 관리 없이 가용 여부 중심으로 단순화.
     - 점포 파트너 API를 통해 특정 매장의 원자재를 품절로 전환하더라도 타 매장의 주문 처리에는 영향을 주지 않도록 매장 단위로 격리.
   - **조회 시점 매장별 품절 상태 노출 및 주문 인입 시점 가용성 검증**:
-    - 메뉴 목록 조회 시 매장 식별자가 전달되면 `MenuAvailabilityReader`를 통해 레시피 원자재 중 비가용(`isAvailable = false`) 항목이 있는지 판별하여 품절 상태(`isSoldOut`)를 반환.
-    - `OrderService.create` 진입 시점에 `RecipeStockValidator.validateStock`을 선행 호출하여, 한정 메뉴 Redis 선점이나 DB 주문서 저장 이전에 주문 메뉴에 필요한 원자재의 매장별 가용 여부를 먼저 판별.
+    - 메뉴 목록 조회 시 매장 식별자가 전달되면 레시피 원자재의 비가용 여부를 판별해 품절 상태를 반환.
+    - 주문 생성 진입 시점에 원자재 가용성 검증을 선행 호출해, 한정 메뉴 선점이나 주문 저장 이전에 매장별 품절 여부를 판별.
   - **다중 주문 유입 경로 단일 파이프라인 통합**:
-    - 유입 경로를 구분하는 `OrderChannel`을 도입하고, 자체 앱 즉시 주문, 장바구니 기반 주문, 외부 배달 플랫폼 및 키오스크 주문이 모두 동일한 `OrderService.create` 검증 관문을 통과하도록 구성.
+    - 주문 채널 구분을 도입해 자체 앱 즉시 주문, 장바구니 주문, 외부 배달 플랫폼 및 키오스크 주문이 모두 동일한 주문 생성 검증 관문을 통과하도록 구성.
 
 </details>
 
