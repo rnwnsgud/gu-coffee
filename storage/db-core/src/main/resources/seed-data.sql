@@ -136,17 +136,17 @@ INSERT IGNORE INTO menu_recipe (id, menu_id, ingredient_id, required_quantity, e
 (8, 6, 200, 1, 'ACTIVE', NOW(6), NOW(6)),
 (9, 6, 400, 1, 'ACTIVE', NOW(6), NOW(6));
 
--- 15. 매장별 원자재 재고 (Ingredient)
--- 강남본점(store_id=1) 및 판교역점(store_id=2) 초기 가용 재고
-INSERT IGNORE INTO ingredient (id, store_id, ingredient_id, name, stock_quantity, is_available, entity_status, created_at, updated_at) VALUES
-(1, 1, 100, '에스프레소 원두', 100, TRUE, 'ACTIVE', NOW(6), NOW(6)),
-(2, 1, 200, '우유', 50, TRUE, 'ACTIVE', NOW(6), NOW(6)),
-(3, 1, 300, '바닐라빈 시럽', 30, TRUE, 'ACTIVE', NOW(6), NOW(6)),
-(4, 1, 400, '플레인 베이글', 20, TRUE, 'ACTIVE', NOW(6), NOW(6)),
-(5, 2, 100, '에스프레소 원두', 100, TRUE, 'ACTIVE', NOW(6), NOW(6)),
-(6, 2, 200, '우유', 50, TRUE, 'ACTIVE', NOW(6), NOW(6)),
-(7, 2, 300, '바닐라빈 시럽', 30, TRUE, 'ACTIVE', NOW(6), NOW(6)),
-(8, 2, 400, '플레인 베이글', 20, TRUE, 'ACTIVE', NOW(6), NOW(6));
+-- 15. 매장별 원자재 가용 상태 (Ingredient)
+-- 강남본점(store_id=1) 및 판교역점(store_id=2) 초기 가용 상태
+INSERT IGNORE INTO ingredient (id, store_id, ingredient_id, name, is_available, entity_status, created_at, updated_at) VALUES
+(1, 1, 100, '에스프레소 원두', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(2, 1, 200, '우유', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(3, 1, 300, '바닐라빈 시럽', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(4, 1, 400, '플레인 베이글', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(5, 2, 100, '에스프레소 원두', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(6, 2, 200, '우유', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(7, 2, 300, '바닐라빈 시럽', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(8, 2, 400, '플레인 베이글', TRUE, 'ACTIVE', NOW(6), NOW(6));
 
 -- 16. 테스트 사용자(U1) 장바구니 아이템 (품절 전 미리 담아둔 모닝세트 시나리오 검증용)
 INSERT IGNORE INTO cart_item (id, principal_key, principal_type, menu_id, quantity, entity_status, created_at, updated_at) VALUES

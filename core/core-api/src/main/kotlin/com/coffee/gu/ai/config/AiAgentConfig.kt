@@ -12,7 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate
 import tools.jackson.databind.ObjectMapper
 import java.time.Duration
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class AiAgentConfig {
 
     @Bean

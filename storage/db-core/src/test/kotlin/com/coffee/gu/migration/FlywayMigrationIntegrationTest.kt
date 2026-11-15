@@ -41,11 +41,11 @@ class FlywayMigrationIntegrationTest {
     private lateinit var coreDataSource: DataSource
 
     @Test
-    @DisplayName("애플리케이션 기동 시 V1, V2, V3, V4 DDL 스크립트가 실행되어 flyway_schema_history에 정상 기록된다")
+    @DisplayName("애플리케이션 기동 시 V1~V5 DDL 스크립트가 실행되어 flyway_schema_history에 정상 기록된다")
     fun testFlywaySchemaHistoryRecorded() {
         val jdbcTemplate = JdbcTemplate(coreDataSource)
 
-        // 1. flyway_schema_history 테이블에 V1, V2, V3, V4 성공 기록 검증
+        // 1. flyway_schema_history 테이블에 V1~V5 성공 기록 검증
         val v1Count = jdbcTemplate.queryForObject(
             "SELECT count(*) FROM \"flyway_schema_history\" WHERE \"version\" = '1' AND \"success\" = TRUE",
             Int::class.java
@@ -70,11 +70,17 @@ class FlywayMigrationIntegrationTest {
         )
         assertThat(v4Count).isEqualTo(1)
 
+        val v5Count = jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM \"flyway_schema_history\" WHERE \"version\" = '5' AND \"success\" = TRUE",
+            Int::class.java
+        )
+        assertThat(v5Count).isEqualTo(1)
+
         // 2. Flyway info API로 마이그레이션 상태 검증
         val current = flyway.info().current()
         assertThat(current).isNotNull
-        assertThat(current?.version?.version).isEqualTo("4")
-        assertThat(current?.description).isEqualTo("add ingredient and recipe")
+        assertThat(current?.version?.version).isEqualTo("5")
+        assertThat(current?.description).isEqualTo("drop ingredient stock quantity")
         assertThat(current?.state?.isApplied).isTrue()
     }
 

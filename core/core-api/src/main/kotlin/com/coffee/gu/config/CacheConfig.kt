@@ -21,7 +21,7 @@ import tools.jackson.databind.json.JsonMapper
 import java.time.Duration
 import java.util.concurrent.Callable
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableCaching
 class CacheConfig : CachingConfigurer {
 

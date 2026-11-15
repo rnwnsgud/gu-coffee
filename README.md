@@ -35,7 +35,8 @@
 ```text
 gu-coffee
 ├── 🚀 coffee-server          # 메인 애플리케이션 실행 모듈 (Spring Boot Entry Point)
-├── 🛠️ admin-api              # 관리자 REST API (메뉴/옵션 등록 및 매핑)
+├── 🛠️ admin-api              # 본사 관리자 REST API (메뉴/옵션 등록 및 매핑)
+├── 🏪 partner-api            # 점포 파트너 POS REST API (점주 인증·소유권 인가 및 매장별 원자재 재고/품절 관리)
 │
 ├── 🧠 core                   # 비즈니스 핵심 모듈 그룹
 │   ├── core-api              # 사용자 REST API & 오케스트레이션 서비스 (core-domain에만 의존)
@@ -272,10 +273,14 @@ sequenceDiagram
   - 판매 단위 메뉴에만 품절 상태를 개별 관리할 경우, 특정 원자재가 소진되었을 때 단품 메뉴만 품절 처리되어 동일 원자재를 공유하는 세트 메뉴나 다른 제조 메뉴로 주문이 유입되고 결제 후 주방에서 수동 취소해야 하는 문제 발생.
   - 품절 처리 이전에 장바구니에 미리 담아둔 품목을 주문하거나, 메뉴판 캐시 동기화가 지연된 외부 배달 플랫폼 및 매장 키오스크 등 다른 경로로 주문이 인입될 때 품절 메뉴가 통과하는 정합성 공백 발생.
 - **해결 방안**:
+  - **점주 전용 모듈 분리 및 매장 소유권 인가**:
+    - 일반 고객용 API(`core-api`) 및 본사 카탈로그 관리(`admin-api`)와 물리적으로 분리된 점포 파트너 전용 `partner-api` 모듈을 구성하고 `core-domain`을 공유하도록 설계.
+    - 점주 전용 인증 객체(`PartnerPrincipal`)와 리졸버를 통해 요청 매장에 대한 소유권을 검증함으로써 타 매장의 원자재 재고나 품절 상태를 임의로 변경할 수 없도록 차단.
   - **메뉴 레시피와 매장별 원자재 재고 격리**:
     - 메뉴별 구성 원자재와 필요 수량을 정의하는 `MenuRecipe`와 매장별 원자재 재고 및 가용 상태를 관리하는 `Ingredient` 모델을 분리하고 복합 유니크 제약조건을 적용.
     - 점포 파트너 API를 통해 특정 매장의 원자재를 수동 품절로 전환하거나 재고 수량을 변경하더라도 타 매장의 주문 처리에는 영향을 주지 않도록 매장 단위로 격리.
-  - **주문 인입 시점의 원자재 소요량 역산 및 합산 검증**:
+  - **조회 시점 매장별 품절 상태 노출 및 주문 인입 시점 소요량 합산 검증**:
+    - 메뉴 목록 조회 시 매장 식별자가 전달되면 `MenuAvailabilityReader`를 통해 레시피 원자재 부족 여부를 판별하여 품절 상태(`isSoldOut`)를 반환.
     - `OrderService.create` 진입 시점에 `RecipeStockValidator.validateStock`을 선행 호출하여, 한정 메뉴 Redis 선점이나 DB 주문서 저장 이전에 원자재 가용성을 먼저 판별.
     - 주문에 포함된 모든 메뉴의 레시피를 일괄 조회한 뒤 메뉴별 주문 수량과 레시피 소요량을 곱해 원자재별 총 필요 수량을 합산함으로써, 단품과 세트 메뉴를 복합 주문하여 매장 잔여 재고를 초과하는 경우까지 일관되게 차단.
   - **다중 주문 유입 경로 단일 파이프라인 통합**:
@@ -372,9 +377,8 @@ sequenceDiagram
 #### 점포 파트너 API (`/v1/partner`)
 | 도메인 | HTTP Method | Endpoint | 설명 |
 | :--- | :--- | :--- | :--- |
-| **Ingredient** | `GET` | `/v1/partner/stores/{storeId}/ingredients` | 매장별 원자재 재고 및 품절 상태 목록 조회 |
+| **Ingredient** | `GET` | `/v1/partner/stores/{storeId}/ingredients` | 매장별 원자재 품절 상태 목록 조회 |
 | | `PATCH` | `/v1/partner/stores/{storeId}/ingredients/{ingredientId}/availability` | 매장 특정 원자재 품절 및 판매 가능 상태 변경 |
-| | `PATCH` | `/v1/partner/stores/{storeId}/ingredients/{ingredientId}/stock` | 매장 특정 원자재 재고 수량 변경 |
 
 #### 문서 스펙
 | 문서 종류 | HTTP Method | Endpoint | 설명 |

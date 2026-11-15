@@ -5,14 +5,15 @@ import com.coffee.gu.ErrorType
 import com.coffee.gu.Principal
 import com.coffee.gu.TestApplication
 import com.coffee.gu.api.controller.v1.ExternalOrderController
+import com.coffee.gu.api.controller.v1.MenuController
 import com.coffee.gu.api.controller.v1.OrderController
-import com.coffee.gu.api.controller.v1.PartnerIngredientController
 import com.coffee.gu.api.controller.v1.request.CreateExternalOrderLineRequest
 import com.coffee.gu.api.controller.v1.request.CreateExternalOrderRequest
 import com.coffee.gu.api.controller.v1.request.CreateOrderFromCartRequest
 import com.coffee.gu.api.controller.v1.request.CreateOrderRequest
-import com.coffee.gu.api.controller.v1.request.UpdateIngredientAvailabilityRequest
-import com.coffee.gu.api.controller.v1.request.UpdateIngredientStockRequest
+import com.coffee.gu.partner.auth.PartnerPrincipal
+import com.coffee.gu.partner.controller.v1.PartnerIngredientController
+import com.coffee.gu.partner.controller.v1.request.UpdateIngredientAvailabilityRequest
 import com.coffee.gu.cart.AddCartItem
 import com.coffee.gu.cart.CartService
 import com.coffee.gu.enums.MenuType
@@ -20,6 +21,8 @@ import com.coffee.gu.enums.OrderChannel
 import com.coffee.gu.enums.StoreStatus
 import com.coffee.gu.menu.Ingredient
 import com.coffee.gu.menu.IngredientRepository
+import com.coffee.gu.menu.MenuCategoryEntity
+import com.coffee.gu.menu.MenuCategoryJpaRepository
 import com.coffee.gu.menu.MenuEntity
 import com.coffee.gu.menu.MenuJpaRepository
 import com.coffee.gu.menu.MenuRecipe
@@ -55,6 +58,9 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
     private lateinit var externalOrderController: ExternalOrderController
 
     @Autowired
+    private lateinit var menuController: MenuController
+
+    @Autowired
     private lateinit var orderService: OrderService
 
     @Autowired
@@ -65,6 +71,9 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
 
     @Autowired
     private lateinit var menuJpaRepository: MenuJpaRepository
+
+    @Autowired
+    private lateinit var menuCategoryJpaRepository: MenuCategoryJpaRepository
 
     @Autowired
     private lateinit var ingredientRepository: IngredientRepository
@@ -94,6 +103,15 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         latteMenuId = saveMenu("카페라떼", MenuType.DRINK, BigDecimal("1500.00"), BigDecimal("5500.00"))
         morningSetMenuId = saveMenu("모닝세트(라떼+베이글)", MenuType.DESSERT, BigDecimal("3000.00"), BigDecimal("8500.00"))
 
+        val categoryId = 1L
+        menuCategoryJpaRepository.saveAll(
+            listOf(
+                MenuCategoryEntity(menuId = americanoMenuId, categoryId = categoryId),
+                MenuCategoryEntity(menuId = latteMenuId, categoryId = categoryId),
+                MenuCategoryEntity(menuId = morningSetMenuId, categoryId = categoryId),
+            )
+        )
+
         // 레시피(BOM) 구성:
         // - 아메리카노: 원두(100) 1개
         // - 카페라떼: 원두(100) 1개 + 우유(200) 1개
@@ -109,15 +127,15 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
             ),
         )
 
-        // 매장별 초기 원자재 재고 세팅 (강남점, 홍대점 모두 충분한 재고로 시작)
+        // 매장별 초기 원자재 가용 상태 세팅 (강남점, 홍대점 모두 판매 가능으로 시작)
         ingredientRepository.saveAll(
             listOf(
-                Ingredient(storeId = gangnamStoreId, ingredientId = beanIngredientId, name = "원두", stockQuantity = 100, isAvailable = true),
-                Ingredient(storeId = gangnamStoreId, ingredientId = milkIngredientId, name = "우유", stockQuantity = 50, isAvailable = true),
-                Ingredient(storeId = gangnamStoreId, ingredientId = bagelIngredientId, name = "베이글", stockQuantity = 20, isAvailable = true),
-                Ingredient(storeId = hongdaeStoreId, ingredientId = beanIngredientId, name = "원두", stockQuantity = 100, isAvailable = true),
-                Ingredient(storeId = hongdaeStoreId, ingredientId = milkIngredientId, name = "우유", stockQuantity = 50, isAvailable = true),
-                Ingredient(storeId = hongdaeStoreId, ingredientId = bagelIngredientId, name = "베이글", stockQuantity = 20, isAvailable = true),
+                Ingredient(storeId = gangnamStoreId, ingredientId = beanIngredientId, name = "원두", isAvailable = true),
+                Ingredient(storeId = gangnamStoreId, ingredientId = milkIngredientId, name = "우유", isAvailable = true),
+                Ingredient(storeId = gangnamStoreId, ingredientId = bagelIngredientId, name = "베이글", isAvailable = true),
+                Ingredient(storeId = hongdaeStoreId, ingredientId = beanIngredientId, name = "원두", isAvailable = true),
+                Ingredient(storeId = hongdaeStoreId, ingredientId = milkIngredientId, name = "우유", isAvailable = true),
+                Ingredient(storeId = hongdaeStoreId, ingredientId = bagelIngredientId, name = "베이글", isAvailable = true),
             ),
         )
     }
@@ -131,12 +149,25 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         val cartItemId = cartService.addCartItem(customer, AddCartItem(menuId = morningSetMenuId, quantity = 1L))
 
         // 2. 강남점 사장님이 파트너 API를 통해 강남점의 '우유(200)'를 품절(isAvailable = false) 처리
+        val gangnamOwner = PartnerPrincipal(partnerId = "PARTNER-GANGNAM", storeId = gangnamStoreId)
         val partnerResponse = partnerIngredientController.updateAvailability(
+            partnerPrincipal = gangnamOwner,
             storeId = gangnamStoreId,
             ingredientId = milkIngredientId,
             request = UpdateIngredientAvailabilityRequest(isAvailable = false),
         )
         assertThat(partnerResponse.data?.isAvailable).isFalse()
+
+        // [인가 차단 검증] 강남점 사장님이 타 매장(홍대점)의 우유를 품절 처리하려 시도하면 FORBIDDEN으로 차단
+        assertThatThrownBy {
+            partnerIngredientController.updateAvailability(
+                partnerPrincipal = gangnamOwner,
+                storeId = hongdaeStoreId,
+                ingredientId = milkIngredientId,
+                request = UpdateIngredientAvailabilityRequest(isAvailable = false),
+            )
+        }.isInstanceOf(CoreException::class.java)
+            .hasFieldOrPropertyWithValue("errorType", ErrorType.FORBIDDEN)
 
         // [차단 검증 1] 자체 앱 즉시 주문 (OrderChannel.APP) - 단품 카페라떼 주문 시 차단
         assertThatThrownBy {
@@ -226,16 +257,18 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
     }
 
     @Test
-    @DisplayName("점주가 원자재 재고 수량을 1개로 줄이면 단품 1개 + 세트 1개 복합 주문(총 2개 소요)은 차단되고, 재고를 보충하면 다시 통과한다")
-    fun blockAndRecoverWhenStoreOwnerUpdatesIngredientStockQuantity() {
-        // 1. 강남점 사장님이 베이글(300)은 충분하지만 우유(200) 재고를 1개로 수정
-        partnerIngredientController.updateStockQuantity(
+    @DisplayName("점주가 원자재를 품절 처리하면 복합 주문이 차단되고, 다시 판매 가능 상태로 전환하면 주문이 정상 통과한다")
+    fun blockAndRecoverWhenStoreOwnerUpdatesIngredientAvailability() {
+        // 1. 강남점 사장님이 우유(200)를 품절(isAvailable = false)로 변경
+        val gangnamOwner = PartnerPrincipal(partnerId = "PARTNER-GANGNAM", storeId = gangnamStoreId)
+        partnerIngredientController.updateAvailability(
+            partnerPrincipal = gangnamOwner,
             storeId = gangnamStoreId,
             ingredientId = milkIngredientId,
-            request = UpdateIngredientStockRequest(stockQuantity = 1),
+            request = UpdateIngredientAvailabilityRequest(isAvailable = false),
         )
 
-        // 2. 외부 배달앱을 통해 카페라떼 1잔(우유 1) + 모닝세트 1개(우유 1) = 총 우유 2개 소요 주문 인입 -> 재고 1개 초과로 차단
+        // 2. 외부 배달앱을 통해 카페라떼 1잔 + 모닝세트 1개 복합 주문 인입 -> 우유 품절로 차단
         assertThatThrownBy {
             externalOrderController.createExternalOrder(
                 CreateExternalOrderRequest(
@@ -251,11 +284,12 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         }.isInstanceOf(CoreException::class.java)
             .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
 
-        // 3. 강남점 사장님이 우유 재고를 10개로 재입고 등록
-        partnerIngredientController.updateStockQuantity(
+        // 3. 강남점 사장님이 우유를 다시 판매 가능(isAvailable = true)으로 변경
+        partnerIngredientController.updateAvailability(
+            partnerPrincipal = gangnamOwner,
             storeId = gangnamStoreId,
             ingredientId = milkIngredientId,
-            request = UpdateIngredientStockRequest(stockQuantity = 10),
+            request = UpdateIngredientAvailabilityRequest(isAvailable = true),
         )
 
         // 4. 동일한 복합 주문 재시도 -> 정상 통과
@@ -271,6 +305,46 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
             ),
         )
         assertThat(recoveredOrderRes.data?.orderKey).isNotBlank()
+    }
+
+    @Test
+    @DisplayName("원자재 품절 시 메뉴 목록 조회 API에서도 해당 매장의 관련 메뉴들만 정확히 isSoldOut=true로 노출된다")
+    fun menuListReflectsSoldOutStatusPerStore() {
+        val categoryId = 1L
+
+        // 1. 초기 상태: 강남점 우유 품절(isAvailable = false)로 설정
+        val gangnamOwner = PartnerPrincipal(partnerId = "PARTNER-GANGNAM", storeId = gangnamStoreId)
+        partnerIngredientController.updateAvailability(
+            partnerPrincipal = gangnamOwner,
+            storeId = gangnamStoreId,
+            ingredientId = milkIngredientId,
+            request = UpdateIngredientAvailabilityRequest(isAvailable = false),
+        )
+
+        // 2. 강남점 메뉴 목록 조회 (storeId = gangnamStoreId)
+        val gangnamMenusRes = menuController.findMenus(categoryId = categoryId, offset = 0, limit = 10, storeId = gangnamStoreId)
+        val gangnamMenus = gangnamMenusRes.data!!.content.associateBy { it.id }
+
+        // 원두만 쓰는 아메리카노: 판매 가능
+        assertThat(gangnamMenus[americanoMenuId]?.isSoldOut).isFalse()
+        // 우유를 쓰는 라떼: 품절
+        assertThat(gangnamMenus[latteMenuId]?.isSoldOut).isTrue()
+        // 우유와 베이글을 쓰는 모닝세트: 우유 부족으로 품절
+        assertThat(gangnamMenus[morningSetMenuId]?.isSoldOut).isTrue()
+
+        // 3. 우유 재고가 충분한 홍대점 메뉴 목록 조회 (storeId = hongdaeStoreId)
+        val hongdaeMenusRes = menuController.findMenus(categoryId = categoryId, offset = 0, limit = 10, storeId = hongdaeStoreId)
+        val hongdaeMenus = hongdaeMenusRes.data!!.content.associateBy { it.id }
+
+        // 홍대점은 우유가 50개 있으므로 모든 메뉴 판매 가능
+        assertThat(hongdaeMenus[americanoMenuId]?.isSoldOut).isFalse()
+        assertThat(hongdaeMenus[latteMenuId]?.isSoldOut).isFalse()
+        assertThat(hongdaeMenus[morningSetMenuId]?.isSoldOut).isFalse()
+
+        // 4. storeId를 전달하지 않는 글로벌 카탈로그 조회 시에는 기본적으로 isSoldOut=false
+        val globalMenusRes = menuController.findMenus(categoryId = categoryId, offset = 0, limit = 10, storeId = null)
+        val globalMenus = globalMenusRes.data!!.content.associateBy { it.id }
+        assertThat(globalMenus[latteMenuId]?.isSoldOut).isFalse()
     }
 
     private fun createStore(name: String, branchCode: String): Store {

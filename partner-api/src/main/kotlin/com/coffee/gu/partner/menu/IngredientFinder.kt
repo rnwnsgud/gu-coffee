@@ -1,5 +1,7 @@
-package com.coffee.gu.menu
+package com.coffee.gu.partner.menu
 
+import com.coffee.gu.menu.Ingredient
+import com.coffee.gu.menu.IngredientRepository
 import org.springframework.stereotype.Component
 
 @Component

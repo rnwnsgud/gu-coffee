@@ -16,7 +16,6 @@ class IngredientEntity(
     val storeId: Long,
     val ingredientId: Long,
     val name: String,
-    var stockQuantity: Int = 0,
     var isAvailable: Boolean = true,
 ) : BaseEntity() {
 
@@ -26,7 +25,6 @@ class IngredientEntity(
             storeId = storeId,
             ingredientId = ingredientId,
             name = name,
-            stockQuantity = stockQuantity,
             isAvailable = isAvailable,
         )
     }
@@ -38,7 +36,6 @@ class IngredientEntity(
                 storeId = ingredient.storeId,
                 ingredientId = ingredient.ingredientId,
                 name = ingredient.name,
-                stockQuantity = ingredient.stockQuantity,
                 isAvailable = ingredient.isAvailable,
             )
         }

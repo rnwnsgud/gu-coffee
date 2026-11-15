@@ -10,6 +10,7 @@ enum class ErrorType(
     SYSTEM_LOGIC_ERROR(500, ErrorCode.E500, "시스템 내부 로직 오류가 발생했습니다.", ErrorLogLevel.ERROR),
     INVALID_REQUEST(400, ErrorCode.E400, "요청이 올바르지 않습니다.", ErrorLogLevel.INFO),
     UNAUTHORIZED(401, ErrorCode.E401, "인증된 사용자가 아닙니다.", ErrorLogLevel.INFO),
+    FORBIDDEN(403, ErrorCode.E403, "접근 권한이 없습니다.", ErrorLogLevel.INFO),
     NOT_FOUND_DATA(404, ErrorCode.E404, "해당 데이터를 찾을 수 없습니다.", ErrorLogLevel.ERROR),
 
     // 주문

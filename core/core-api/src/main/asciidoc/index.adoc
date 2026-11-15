@@ -233,9 +233,10 @@ include::{snippets}/payment-confirm/response-fields.adoc[]
 
 == Partner Ingredient API
 
-=== 매장별 원자재 재고 및 품절 상태 목록 조회
+=== 매장별 원자재 품절 상태 목록 조회
 ==== Request
 include::{snippets}/partner-ingredient-list/http-request.adoc[]
+include::{snippets}/partner-ingredient-list/request-headers.adoc[]
 include::{snippets}/partner-ingredient-list/path-parameters.adoc[]
 
 ==== Response
@@ -245,6 +246,7 @@ include::{snippets}/partner-ingredient-list/response-fields.adoc[]
 === 매장 특정 원자재 품절 및 판매 가능 상태 변경
 ==== Request
 include::{snippets}/partner-ingredient-update-availability/http-request.adoc[]
+include::{snippets}/partner-ingredient-update-availability/request-headers.adoc[]
 include::{snippets}/partner-ingredient-update-availability/path-parameters.adoc[]
 include::{snippets}/partner-ingredient-update-availability/request-fields.adoc[]
 
@@ -252,14 +254,5 @@ include::{snippets}/partner-ingredient-update-availability/request-fields.adoc[]
 include::{snippets}/partner-ingredient-update-availability/http-response.adoc[]
 include::{snippets}/partner-ingredient-update-availability/response-fields.adoc[]
 
-=== 매장 특정 원자재 재고 수량 변경
-==== Request
-include::{snippets}/partner-ingredient-update-stock/http-request.adoc[]
-include::{snippets}/partner-ingredient-update-stock/path-parameters.adoc[]
-include::{snippets}/partner-ingredient-update-stock/request-fields.adoc[]
-
-==== Response
-include::{snippets}/partner-ingredient-update-stock/http-response.adoc[]
-include::{snippets}/partner-ingredient-update-stock/response-fields.adoc[]
 
 

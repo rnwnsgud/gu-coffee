@@ -34,7 +34,6 @@ class RecipeStockValidatorTest {
             storeId = gangnamStoreId,
             ingredientId = milkIngredientId,
             name = "우유",
-            stockQuantity = 50,
             isAvailable = false, // 강남점 점주 수동 품절 처리
         )
         val hongdaeMilkAvailable = Ingredient(
@@ -42,7 +41,6 @@ class RecipeStockValidatorTest {
             storeId = hongdaeStoreId,
             ingredientId = milkIngredientId,
             name = "우유",
-            stockQuantity = 50,
             isAvailable = true, // 홍대점은 정상 판매 중
         )
 
@@ -84,8 +82,8 @@ class RecipeStockValidatorTest {
         val milkIngredientId = 100L
         val bagelIngredientId = 200L
 
-        val milk = Ingredient(id = 1, storeId = storeId, ingredientId = milkIngredientId, name = "우유", stockQuantity = 10, isAvailable = true)
-        val bagelOutOfStock = Ingredient(id = 2, storeId = storeId, ingredientId = bagelIngredientId, name = "베이글", stockQuantity = 0, isAvailable = true)
+        val milk = Ingredient(id = 1, storeId = storeId, ingredientId = milkIngredientId, name = "우유", isAvailable = true)
+        val bagelOutOfStock = Ingredient(id = 2, storeId = storeId, ingredientId = bagelIngredientId, name = "베이글", isAvailable = false)
 
         given(menuRecipeRepository.findAllByMenuIdIn(setOf(latteMenuId)))
             .willReturn(listOf(MenuRecipe(id = 1, menuId = latteMenuId, ingredientId = milkIngredientId, requiredQuantity = 1)))
@@ -114,37 +112,8 @@ class RecipeStockValidatorTest {
     }
 
     @Test
-    @DisplayName("복합 주문 시 여러 메뉴에서 요구하는 동일 원자재 소요량이 합산되어 매장 잔여 재고를 초과하면 차단된다")
-    fun blockWhenAggregatedRequiredQuantityExceedsStock() {
-        // Given
-        val storeId = 1L
-        val latteMenuId = 10L
-        val morningSetMenuId = 20L
-        val milkIngredientId = 100L
-
-        // 해당 매장에 우유 재고가 1개뿐임
-        val milk = Ingredient(id = 1, storeId = storeId, ingredientId = milkIngredientId, name = "우유", stockQuantity = 1, isAvailable = true)
-
-        given(menuRecipeRepository.findAllByMenuIdIn(setOf(latteMenuId, morningSetMenuId)))
-            .willReturn(
-                listOf(
-                    MenuRecipe(id = 1, menuId = latteMenuId, ingredientId = milkIngredientId, requiredQuantity = 1),
-                    MenuRecipe(id = 2, menuId = morningSetMenuId, ingredientId = milkIngredientId, requiredQuantity = 1),
-                ),
-            )
-        given(ingredientRepository.findAllByStoreIdAndIngredientIdIn(storeId, setOf(milkIngredientId)))
-            .willReturn(listOf(milk))
-
-        // When & Then - 라떼 1개 + 모닝세트 1개 = 우유 2개 필요 -> 재고 1개 초과로 차단
-        assertThatThrownBy {
-            validator.validateStock(storeId, mapOf(latteMenuId to 1, morningSetMenuId to 1))
-        }.isInstanceOf(CoreException::class.java)
-            .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
-    }
-
-    @Test
-    @DisplayName("레시피 정보가 없는 일반 메뉴이거나 재고가 충분하면 검증을 정상 통과한다")
-    fun passWhenNoRecipeOrStockIsSufficient() {
+    @DisplayName("레시피 정보가 없는 일반 메뉴이거나 원자재가 가용 상태이면 검증을 정상 통과한다")
+    fun passWhenNoRecipeOrIngredientIsAvailable() {
         // Given
         val storeId = 1L
         val americanoMenuId = 99L

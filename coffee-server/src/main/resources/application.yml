@@ -22,6 +22,12 @@ gemini:
     model: gemini-3.5-flash-lite
     key: ${GEMINI_API_KEY:dummy-key}
 
+security:
+  gateway:
+    internal-token:
+      enabled: false
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET:}
+
 ---
 spring.config.activate.on-profile: local
 app:
@@ -70,12 +76,27 @@ payment:
 
 ---
 spring.config.activate.on-profile: dev
+security:
+  gateway:
+    internal-token:
+      enabled: true
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
 
 
 ---
 spring.config.activate.on-profile: staging
+security:
+  gateway:
+    internal-token:
+      enabled: true
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
 
 
 ---
 spring.config.activate.on-profile: live
+security:
+  gateway:
+    internal-token:
+      enabled: true
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
 

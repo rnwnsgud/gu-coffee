@@ -1,7 +1,9 @@
-package com.coffee.gu.menu
+package com.coffee.gu.partner.menu
 
 import com.coffee.gu.CoreException
 import com.coffee.gu.ErrorType
+import com.coffee.gu.menu.Ingredient
+import com.coffee.gu.menu.IngredientRepository
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 
@@ -14,14 +16,6 @@ class IngredientManager(
         val ingredient = ingredientRepository.findByStoreIdAndIngredientId(storeId, ingredientId)
             ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
         ingredient.updateAvailability(isAvailable)
-        return ingredientRepository.save(ingredient)
-    }
-
-    @Transactional
-    fun updateStockQuantity(storeId: Long, ingredientId: Long, stockQuantity: Int): Ingredient {
-        val ingredient = ingredientRepository.findByStoreIdAndIngredientId(storeId, ingredientId)
-            ?: throw CoreException(ErrorType.NOT_FOUND_DATA)
-        ingredient.updateStockQuantity(stockQuantity)
         return ingredientRepository.save(ingredient)
     }
 }

@@ -6,7 +6,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
 
 @Configuration(proxyBeanMethods = false)
-open class WebMvcConfig(
+class WebMvcConfig(
     private val principalArgumentResolver: PrincipalArgumentResolver,
 ) : WebMvcConfigurer {
 

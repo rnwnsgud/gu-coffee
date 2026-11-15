@@ -21,8 +21,9 @@ class MenuController(
         @RequestParam categoryId: Long,
         @RequestParam offset: Int,
         @RequestParam limit: Int,
+        @RequestParam(required = false) storeId: Long?,
     ): ApiResponse<PageResponse<MenuResponse>> {
-        val menus = menuService.findMenus(categoryId, OffsetLimit(offset, limit))
+        val menus = menuService.findMenus(categoryId, OffsetLimit(offset, limit), storeId)
         return ApiResponse.success(PageResponse(MenuResponse.from(menus.content), menus.hasNext, null, null))
     }
 
@@ -32,8 +33,9 @@ class MenuController(
         @RequestParam("pageSize", defaultValue = "10") pageSize: Int,
         @RequestParam("cursor", required = false) cursor: LocalDateTime?,
         @RequestParam("lastId", required = false) lastId: Long?,
+        @RequestParam("storeId", required = false) storeId: Long?,
     ): ApiResponse<PageResponse<MenuResponse>> {
-        val menus = menuService.findMenus(categoryId, pageSize, cursor, lastId)
+        val menus = menuService.findMenus(categoryId, pageSize, cursor, lastId, storeId)
         return ApiResponse.success(PageResponse(MenuResponse.from(menus.content), menus.hasNext, menus.nextCursor, menus.nextLastId))
     }
 

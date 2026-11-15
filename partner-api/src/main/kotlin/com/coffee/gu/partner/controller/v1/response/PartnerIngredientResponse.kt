@@ -1,4 +1,4 @@
-package com.coffee.gu.api.controller.v1.response.menu
+package com.coffee.gu.partner.controller.v1.response
 
 import com.coffee.gu.menu.Ingredient
 
@@ -6,7 +6,6 @@ data class PartnerIngredientResponse(
     val storeId: Long,
     val ingredientId: Long,
     val name: String,
-    val stockQuantity: Int,
     val isAvailable: Boolean,
 ) {
     companion object {
@@ -15,7 +14,6 @@ data class PartnerIngredientResponse(
                 storeId = ingredient.storeId,
                 ingredientId = ingredient.ingredientId,
                 name = ingredient.name,
-                stockQuantity = ingredient.stockQuantity,
                 isAvailable = ingredient.isAvailable,
             )
         }

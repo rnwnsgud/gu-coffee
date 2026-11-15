@@ -39,6 +39,7 @@ dependencies {
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("com.epages:restdocs-api-spec-mockmvc:0.20.1")
     testImplementation(project(":storage:db-core"))
+    testImplementation(project(":partner-api"))
     testImplementation("org.springframework.kafka:spring-kafka-test")
 
     testImplementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
@@ -46,6 +47,12 @@ dependencies {
 }
 
 val snippetsDir = file("build/generated-snippets")
+
+val syncPartnerSnippets = tasks.register<Copy>("syncPartnerSnippets") {
+    dependsOn(":partner-api:test")
+    from(project(":partner-api").layout.buildDirectory.dir("generated-snippets"))
+    into(snippetsDir)
+}
 
 tasks.test {
     outputs.dir(snippetsDir)
@@ -65,6 +72,7 @@ tasks.asciidoctor {
     attributes(mapOf("snippets" to snippetsDir))
     inputs.dir(snippetsDir)
     dependsOn(tasks.test)
+    dependsOn(syncPartnerSnippets)
 }
 
 openapi3 {
@@ -78,6 +86,8 @@ openapi3 {
 
 project.afterEvaluate {
     tasks.matching { it.name == "openapi3" }.configureEach {
+        dependsOn(tasks.test)
+        dependsOn(syncPartnerSnippets)
         (this as? com.epages.restdocs.apispec.gradle.OpenApi3Task)?.servers = emptyList()
     }
 }

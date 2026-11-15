@@ -13,7 +13,9 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver
 import org.springframework.web.method.support.ModelAndViewContainer
 
 @Component
-class PrincipalArgumentResolver : HandlerMethodArgumentResolver {
+class PrincipalArgumentResolver(
+    private val gatewayInternalTokenValidator: GatewayInternalTokenValidator = GatewayInternalTokenValidator(),
+) : HandlerMethodArgumentResolver {
 
     companion object {
         private const val PRINCIPAL_ID_HEADER = "Gu-Coffee-com.coffee.gu.Principal-Id"
@@ -32,6 +34,8 @@ class PrincipalArgumentResolver : HandlerMethodArgumentResolver {
     ): Any {
         val request = webRequest.getNativeRequest(HttpServletRequest::class.java)
             ?: throw CoreException(ErrorType.INVALID_REQUEST, null)
+
+        gatewayInternalTokenValidator.validate(request)
 
         val annotation = parameter.getParameterAnnotation(Authenticated::class.java)
         val isRequired = annotation?.required ?: true

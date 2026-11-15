@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 class FlywaySequentialMigrationTest {
 
     @Test
-    @DisplayName("V1~V4 적용 후 V5 스크립트를 추가하여 migrate()를 재실행하면 flyway_schema_history에 순차적으로 기록된다")
+    @DisplayName("V1~V5 적용 후 V6 스크립트를 추가하여 migrate()를 재실행하면 flyway_schema_history에 순차적으로 기록된다")
     fun testSequentialMigration() {
         val config = HikariConfig().apply {
             jdbcUrl = "jdbc:h2:mem:seq_flyway_test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1"
@@ -22,18 +22,18 @@ class FlywaySequentialMigrationTest {
         val dataSource = HikariDataSource(config)
         val jdbcTemplate = JdbcTemplate(dataSource)
 
-        // 1. 기본 프로덕션 마이그레이션(classpath:db/migration -> V1, V2, V3, V4)으로 1차 실행
-        val flywayV1ToV4 = Flyway.configure()
+        // 1. 기본 프로덕션 마이그레이션(classpath:db/migration -> V1~V5)으로 1차 실행
+        val flywayV1ToV5 = Flyway.configure()
             .dataSource(dataSource)
             .locations("classpath:db/migration")
             .load()
 
-        val v1ToV4Result = flywayV1ToV4.migrate()
-        assertThat(v1ToV4Result.migrationsExecuted).isEqualTo(4)
+        val v1ToV5Result = flywayV1ToV5.migrate()
+        assertThat(v1ToV5Result.migrationsExecuted).isEqualTo(5)
 
-        // V1~V4 실행 직후 flyway_schema_history 검증
+        // V1~V5 실행 직후 flyway_schema_history 검증
         val initialMigrations = jdbcTemplate.queryForList("SELECT installed_rank, version, description, type, script, success FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL ORDER BY installed_rank")
-        assertThat(initialMigrations).hasSize(4)
+        assertThat(initialMigrations).hasSize(5)
         assertThat(initialMigrations[0]["version"]).isEqualTo("1")
         assertThat(initialMigrations[0]["description"]).isEqualTo("init schema")
         assertThat(initialMigrations[1]["version"]).isEqualTo("2")
@@ -42,33 +42,35 @@ class FlywaySequentialMigrationTest {
         assertThat(initialMigrations[2]["description"]).isEqualTo("add limited menu")
         assertThat(initialMigrations[3]["version"]).isEqualTo("4")
         assertThat(initialMigrations[3]["description"]).isEqualTo("add ingredient and recipe")
-        println("=== [1차 마이그레이션 직후 flyway_schema_history (V1~V4 적용)] ===")
+        assertThat(initialMigrations[4]["version"]).isEqualTo("5")
+        assertThat(initialMigrations[4]["description"]).isEqualTo("drop ingredient stock quantity")
+        println("=== [1차 마이그레이션 직후 flyway_schema_history (V1~V5 적용)] ===")
         initialMigrations.forEach { println(it) }
 
-        // 2. V5 스크립트가 추가된 위치(classpath:db/migration_seq_test)를 추가하여 2차 순차 마이그레이션 실행
-        val flywayV5 = Flyway.configure()
+        // 2. V6 스크립트가 추가된 위치(classpath:db/migration_seq_test)를 추가하여 2차 순차 마이그레이션 실행
+        val flywayV6 = Flyway.configure()
             .dataSource(dataSource)
             .locations("classpath:db/migration", "classpath:db/migration_seq_test")
             .load()
 
-        val v5Result = flywayV5.migrate()
-        assertThat(v5Result.migrationsExecuted).isEqualTo(1) // V1~V4는 이미 실행되었으므로 V5 1개만 실행됨!
+        val v6Result = flywayV6.migrate()
+        assertThat(v6Result.migrationsExecuted).isEqualTo(1) // V1~V5는 이미 실행되었으므로 V6 1개만 실행됨!
 
-        // V5 실행 직후 flyway_schema_history 검증
+        // V6 실행 직후 flyway_schema_history 검증
         val subsequentMigrations = jdbcTemplate.queryForList("SELECT installed_rank, version, description, type, script, success FROM \"flyway_schema_history\" WHERE \"version\" IS NOT NULL ORDER BY installed_rank")
-        assertThat(subsequentMigrations).hasSize(5)
-        assertThat(subsequentMigrations[4]["version"]).isEqualTo("5")
-        assertThat(subsequentMigrations[4]["description"]).isEqualTo("add store test memo")
-        println("=== [2차 마이그레이션 직후 flyway_schema_history (V1~V5 순차 누적)] ===")
+        assertThat(subsequentMigrations).hasSize(6)
+        assertThat(subsequentMigrations[5]["version"]).isEqualTo("6")
+        assertThat(subsequentMigrations[5]["description"]).isEqualTo("add store test memo")
+        println("=== [2차 마이그레이션 직후 flyway_schema_history (V1~V6 순차 누적)] ===")
         subsequentMigrations.forEach { println(it) }
 
-        // V5에 의해 실제로 컬럼이 추가되었는지 검증 (예: store 테이블에 test_memo 추가)
+        // V6에 의해 실제로 컬럼이 추가되었는지 검증 (예: store 테이블에 test_memo 추가)
         val columnCheck = jdbcTemplate.queryForList("SELECT test_memo FROM store")
         assertThat(columnCheck).isNotNull
 
         // Flyway API 상태 객체 검증
-        val current = flywayV5.info().current()
-        assertThat(current?.version?.version).isEqualTo("5")
+        val current = flywayV6.info().current()
+        assertThat(current?.version?.version).isEqualTo("6")
         assertThat(current?.description).isEqualTo("add store test memo")
         assertThat(current?.state?.isApplied).isTrue()
     }

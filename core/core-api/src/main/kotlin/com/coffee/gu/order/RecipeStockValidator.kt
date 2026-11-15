@@ -12,30 +12,21 @@ class RecipeStockValidator(
     private val ingredientRepository: IngredientRepository,
 ) {
     fun validateStock(storeId: Long, menuQuantities: Map<Long, Int>) {
-        if (menuQuantities.isEmpty()) return
+        val activeMenuIds = menuQuantities.filterValues { it > 0 }.keys
+        if (activeMenuIds.isEmpty()) return
 
-        val recipes = menuRecipeRepository.findAllByMenuIdIn(menuQuantities.keys)
+        val recipes = menuRecipeRepository.findAllByMenuIdIn(activeMenuIds)
         if (recipes.isEmpty()) return
 
-        val requiredQuantities = mutableMapOf<Long, Int>()
-        for (recipe in recipes) {
-            val orderQty = menuQuantities[recipe.menuId] ?: 0
-            if (orderQty > 0) {
-                val totalRequired = recipe.requiredQuantity * orderQty
-                requiredQuantities.merge(recipe.ingredientId, totalRequired, Int::plus)
-            }
-        }
-
-        if (requiredQuantities.isEmpty()) return
-
+        val requiredIngredientIds = recipes.map { it.ingredientId }.toSet()
         val ingredients = ingredientRepository.findAllByStoreIdAndIngredientIdIn(
             storeId = storeId,
-            ingredientIds = requiredQuantities.keys,
+            ingredientIds = requiredIngredientIds,
         ).associateBy { it.ingredientId }
 
-        for ((ingredientId, requiredQty) in requiredQuantities) {
+        for (ingredientId in requiredIngredientIds) {
             val ingredient = ingredients[ingredientId]
-            if (ingredient == null || !ingredient.canConsume(requiredQty)) {
+            if (ingredient == null || !ingredient.isAvailable) {
                 throw CoreException(ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
             }
         }

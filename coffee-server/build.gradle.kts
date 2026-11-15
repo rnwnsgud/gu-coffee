@@ -45,6 +45,7 @@ dependencies {
     runtimeOnly(project(":support:monitoring"))
     runtimeOnly(project(":support:web"))
     runtimeOnly(project(":admin-api"))
+    runtimeOnly(project(":partner-api"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
 

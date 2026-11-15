@@ -1,9 +1,10 @@
-package com.coffee.gu.api.controller.v1
+package com.coffee.gu.partner.controller.v1
 
-import com.coffee.gu.api.controller.v1.request.UpdateIngredientAvailabilityRequest
-import com.coffee.gu.api.controller.v1.request.UpdateIngredientStockRequest
-import com.coffee.gu.api.controller.v1.response.menu.PartnerIngredientResponse
-import com.coffee.gu.menu.PartnerIngredientService
+import com.coffee.gu.partner.auth.PartnerAuthenticated
+import com.coffee.gu.partner.auth.PartnerPrincipal
+import com.coffee.gu.partner.controller.v1.request.UpdateIngredientAvailabilityRequest
+import com.coffee.gu.partner.controller.v1.response.PartnerIngredientResponse
+import com.coffee.gu.partner.menu.PartnerIngredientService
 import com.coffee.gu.response.ApiResponse
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
@@ -19,36 +20,25 @@ class PartnerIngredientController(
 ) {
     @GetMapping
     fun getStoreIngredients(
+        @PartnerAuthenticated partnerPrincipal: PartnerPrincipal,
         @PathVariable storeId: Long,
     ): ApiResponse<List<PartnerIngredientResponse>> {
-        val ingredients = partnerIngredientService.getStoreIngredients(storeId)
+        val ingredients = partnerIngredientService.getStoreIngredients(partnerPrincipal, storeId)
         return ApiResponse.success(ingredients.map { PartnerIngredientResponse.from(it) })
     }
 
     @PatchMapping("/{ingredientId}/availability")
     fun updateAvailability(
+        @PartnerAuthenticated partnerPrincipal: PartnerPrincipal,
         @PathVariable storeId: Long,
         @PathVariable ingredientId: Long,
         @RequestBody request: UpdateIngredientAvailabilityRequest,
     ): ApiResponse<PartnerIngredientResponse> {
         val updated = partnerIngredientService.updateAvailability(
+            partnerPrincipal = partnerPrincipal,
             storeId = storeId,
             ingredientId = ingredientId,
             isAvailable = request.isAvailable,
-        )
-        return ApiResponse.success(PartnerIngredientResponse.from(updated))
-    }
-
-    @PatchMapping("/{ingredientId}/stock")
-    fun updateStockQuantity(
-        @PathVariable storeId: Long,
-        @PathVariable ingredientId: Long,
-        @RequestBody request: UpdateIngredientStockRequest,
-    ): ApiResponse<PartnerIngredientResponse> {
-        val updated = partnerIngredientService.updateStockQuantity(
-            storeId = storeId,
-            ingredientId = ingredientId,
-            stockQuantity = request.stockQuantity,
         )
         return ApiResponse.success(PartnerIngredientResponse.from(updated))
     }
