@@ -46,7 +46,7 @@ dependencies {
     runtimeOnly(project(":support:web"))
     runtimeOnly(project(":admin-api"))
     runtimeOnly(project(":partner-api"))
-    runtimeOnly(project(":external-webhook-api"))
+    runtimeOnly(project(":delivery-webhook-api"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
 
