@@ -56,19 +56,19 @@ class RecipeStockValidatorTest {
 
         // When & Then - 강남점 단품 라떼 주문 차단
         assertThatThrownBy {
-            validator.validateStock(gangnamStoreId, mapOf(latteMenuId to 1))
+            validator.validateAvailability(gangnamStoreId, setOf(latteMenuId))
         }.isInstanceOf(CoreException::class.java)
             .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
 
         // When & Then - 강남점 우유 포함 세트메뉴 주문도 차단
         assertThatThrownBy {
-            validator.validateStock(gangnamStoreId, mapOf(morningSetMenuId to 1))
+            validator.validateAvailability(gangnamStoreId, setOf(morningSetMenuId))
         }.isInstanceOf(CoreException::class.java)
             .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
 
         // When & Then - 홍대점 세트메뉴 주문은 정상 통과
         assertThatCode {
-            validator.validateStock(hongdaeStoreId, mapOf(morningSetMenuId to 1))
+            validator.validateAvailability(hongdaeStoreId, setOf(morningSetMenuId))
         }.doesNotThrowAnyException()
     }
 
@@ -101,12 +101,12 @@ class RecipeStockValidatorTest {
 
         // When & Then - 라떼는 베이글을 필요로 하지 않으므로 정상 통과
         assertThatCode {
-            validator.validateStock(storeId, mapOf(latteMenuId to 1))
+            validator.validateAvailability(storeId, setOf(latteMenuId))
         }.doesNotThrowAnyException()
 
         // When & Then - 모닝세트는 베이글이 품절이므로 차단
         assertThatThrownBy {
-            validator.validateStock(storeId, mapOf(morningSetMenuId to 1))
+            validator.validateAvailability(storeId, setOf(morningSetMenuId))
         }.isInstanceOf(CoreException::class.java)
             .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
     }
@@ -122,7 +122,7 @@ class RecipeStockValidatorTest {
 
         // When & Then
         assertThatCode {
-            validator.validateStock(storeId, mapOf(americanoMenuId to 2))
+            validator.validateAvailability(storeId, setOf(americanoMenuId))
         }.doesNotThrowAnyException()
     }
 }

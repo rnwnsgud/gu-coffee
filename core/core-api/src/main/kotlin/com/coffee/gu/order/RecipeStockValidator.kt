@@ -11,11 +11,10 @@ class RecipeStockValidator(
     private val menuRecipeRepository: MenuRecipeRepository,
     private val ingredientRepository: IngredientRepository,
 ) {
-    fun validateStock(storeId: Long, menuQuantities: Map<Long, Int>) {
-        val activeMenuIds = menuQuantities.filterValues { it > 0 }.keys
-        if (activeMenuIds.isEmpty()) return
+    fun validateAvailability(storeId: Long, menuIds: Set<Long>) {
+        if (menuIds.isEmpty()) return
 
-        val recipes = menuRecipeRepository.findAllByMenuIdIn(activeMenuIds)
+        val recipes = menuRecipeRepository.findAllByMenuIdIn(menuIds)
         if (recipes.isEmpty()) return
 
         val requiredIngredientIds = recipes.map { it.ingredientId }.toSet()
