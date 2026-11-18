@@ -19,6 +19,7 @@ import com.coffee.gu.cart.CartService
 import com.coffee.gu.enums.MenuType
 import com.coffee.gu.enums.OrderChannel
 import com.coffee.gu.enums.StoreStatus
+import com.coffee.gu.enums.DeliveryPlatform
 import com.coffee.gu.menu.Ingredient
 import com.coffee.gu.menu.IngredientRepository
 import com.coffee.gu.menu.MenuCategoryEntity
@@ -32,6 +33,10 @@ import com.coffee.gu.store.SalesInformation
 import com.coffee.gu.store.Store
 import com.coffee.gu.store.StoreLocation
 import com.coffee.gu.store.StoreRepository
+import com.coffee.gu.webhook.ExternalMenuMapping
+import com.coffee.gu.webhook.ExternalMenuMappingRepository
+import com.coffee.gu.webhook.controller.v1.ExternalWebhookController
+import org.springframework.mock.web.MockHttpServletRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -58,6 +63,9 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
     private lateinit var externalOrderController: ExternalOrderController
 
     @Autowired
+    private lateinit var externalWebhookController: ExternalWebhookController
+
+    @Autowired
     private lateinit var menuController: MenuController
 
     @Autowired
@@ -80,6 +88,9 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
 
     @Autowired
     private lateinit var menuRecipeRepository: MenuRecipeRepository
+
+    @Autowired
+    private lateinit var externalMenuMappingRepository: ExternalMenuMappingRepository
 
     private var gangnamStoreId: Long = 0L
     private var hongdaeStoreId: Long = 0L
@@ -136,6 +147,13 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
                 Ingredient(storeId = hongdaeStoreId, ingredientId = beanIngredientId, name = "원두", isAvailable = true),
                 Ingredient(storeId = hongdaeStoreId, ingredientId = milkIngredientId, name = "우유", isAvailable = true),
                 Ingredient(storeId = hongdaeStoreId, ingredientId = bagelIngredientId, name = "베이글", isAvailable = true),
+            ),
+        )
+
+        externalMenuMappingRepository.saveAll(
+            listOf(
+                ExternalMenuMapping(platform = DeliveryPlatform.BAEMIN, externalMenuCode = "BM-TEST-MORNING-SET", menuId = morningSetMenuId),
+                ExternalMenuMapping(platform = DeliveryPlatform.COUPANG_EATS, externalMenuCode = "CE-TEST-LATTE", menuId = latteMenuId),
             ),
         )
     }
@@ -345,6 +363,76 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         val globalMenusRes = menuController.findMenus(categoryId = categoryId, offset = 0, limit = 10, storeId = null)
         val globalMenus = globalMenusRes.data!!.content.associateBy { it.id }
         assertThat(globalMenus[latteMenuId]?.isSoldOut).isFalse()
+    }
+
+    @Test
+    @DisplayName("배달의민족·쿠팡이츠 B2B 웹훅 수신 시 외부 메뉴 코드(ACL) 변환 및 멱등성 보장이 동작하며, 매장 원자재 품절 시 웹훅 주문도 즉시 차단된다")
+    fun externalWebhookAclAndIdempotencyAndOutOfStockBlocking() {
+        val mockRequest = MockHttpServletRequest().apply {
+            remoteAddr = "127.0.0.1"
+        }
+
+        val baeminPayload = """
+            {
+              "orderNo": "BM-ORD-500",
+              "shopNo": $gangnamStoreId,
+              "memberKey": "BM-CUSTOMER-1",
+              "menus": [
+                { "menuCode": "BM-TEST-MORNING-SET", "count": 1 }
+              ]
+            }
+        """.trimIndent()
+
+        // 1. 배달의민족 웹훅 최초 수신 -> 외부 메뉴 코드(BM-TEST-MORNING-SET)가 내부 menuId로 매핑되어 정상 주문 생성
+        val firstRes = externalWebhookController.receiveBaeminOrder(
+            idempotencyKey = "BM-IDEMP-500",
+            signature = null,
+            rawPayload = baeminPayload,
+            request = mockRequest,
+        )
+        val createdOrderKey = firstRes.data!!.orderKey
+        val createdOrder = orderService.getOrder(createdOrderKey)
+        assertThat(createdOrder.channel).isEqualTo(OrderChannel.DELIVERY_PARTNER)
+        assertThat(createdOrder.storeId).isEqualTo(gangnamStoreId)
+
+        // 2. 동일 멱등성 키(BM-IDEMP-500)로 웹훅 재전송 -> 중복 주문 생성 없이 동일한 orderKey 반환
+        val duplicateRes = externalWebhookController.receiveBaeminOrder(
+            idempotencyKey = "BM-IDEMP-500",
+            signature = null,
+            rawPayload = baeminPayload,
+            request = mockRequest,
+        )
+        assertThat(duplicateRes.data!!.orderKey).isEqualTo(createdOrderKey)
+
+        // 3. 강남점 점주가 우유를 품절 처리한 뒤 쿠팡이츠 신규 웹훅(CE-TEST-LATTE) 인입 시 MENU_INGREDIENT_OUT_OF_STOCK 차단
+        val gangnamOwner = PartnerPrincipal(partnerId = "PARTNER-GANGNAM", storeId = gangnamStoreId)
+        partnerIngredientController.updateAvailability(
+            partnerPrincipal = gangnamOwner,
+            storeId = gangnamStoreId,
+            ingredientId = milkIngredientId,
+            request = UpdateIngredientAvailabilityRequest(isAvailable = false),
+        )
+
+        val coupangGangnamPayload = """
+            {
+              "externalOrderId": "CE-ORD-600",
+              "merchantStoreId": $gangnamStoreId,
+              "buyerId": "CE-BUYER-1",
+              "orderItems": [
+                { "productCode": "CE-TEST-LATTE", "qty": 1 }
+              ]
+            }
+        """.trimIndent()
+
+        assertThatThrownBy {
+            externalWebhookController.receiveCoupangEatsOrder(
+                idempotencyKey = "CE-IDEMP-600",
+                signature = null,
+                rawPayload = coupangGangnamPayload,
+                request = mockRequest,
+            )
+        }.isInstanceOf(CoreException::class.java)
+            .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
     }
 
     private fun createStore(name: String, branchCode: String): Store {

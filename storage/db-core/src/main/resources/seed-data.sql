@@ -151,3 +151,14 @@ INSERT IGNORE INTO ingredient (id, store_id, ingredient_id, name, is_available, 
 -- 16. 테스트 사용자(U1) 장바구니 아이템 (품절 전 미리 담아둔 모닝세트 시나리오 검증용)
 INSERT IGNORE INTO cart_item (id, principal_key, principal_type, menu_id, quantity, entity_status, created_at, updated_at) VALUES
 (1, 'U1', 'USER', 6, 1, 'ACTIVE', NOW(6), NOW(6));
+
+-- 17. 외부 배달 플랫폼 메뉴 코드 매핑 (External Menu Mapping)
+INSERT IGNORE INTO external_menu_mapping (id, platform, external_menu_code, menu_id, entity_status, created_at, updated_at) VALUES
+(1, 'BAEMIN', 'BM-AMERICANO', 1, 'ACTIVE', NOW(6), NOW(6)),
+(2, 'BAEMIN', 'BM-LATTE', 2, 'ACTIVE', NOW(6), NOW(6)),
+(3, 'BAEMIN', 'BM-VANILLA-LATTE', 3, 'ACTIVE', NOW(6), NOW(6)),
+(4, 'BAEMIN', 'BM-MORNING-SET', 6, 'ACTIVE', NOW(6), NOW(6)),
+(5, 'COUPANG_EATS', 'CE-AMERICANO', 1, 'ACTIVE', NOW(6), NOW(6)),
+(6, 'COUPANG_EATS', 'CE-LATTE', 2, 'ACTIVE', NOW(6), NOW(6)),
+(7, 'COUPANG_EATS', 'CE-VANILLA-LATTE', 3, 'ACTIVE', NOW(6), NOW(6)),
+(8, 'COUPANG_EATS', 'CE-MORNING-SET', 6, 'ACTIVE', NOW(6), NOW(6));

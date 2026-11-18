@@ -61,6 +61,7 @@ class LocalDataInitializerTest {
         val menuRecipeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM menu_recipe", Long::class.java)
         val ingredientCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ingredient", Long::class.java)
         val cartItemCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM cart_item WHERE principal_key = 'U1'", Long::class.java)
+        val externalMenuMappingCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
 
         assertThat(categoryCount).isEqualTo(4L)
         assertThat(menuCount).isEqualTo(6L)
@@ -73,6 +74,7 @@ class LocalDataInitializerTest {
         assertThat(menuRecipeCount).isEqualTo(9L)
         assertThat(ingredientCount).isEqualTo(8L)
         assertThat(cartItemCount).isEqualTo(1L)
+        assertThat(externalMenuMappingCount).isEqualTo(8L)
     }
 
     @Test
@@ -86,5 +88,18 @@ class LocalDataInitializerTest {
 
         val afterMenuCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM menu", Long::class.java) ?: 0L
         assertThat(afterMenuCount).isEqualTo(beforeMenuCount)
+    }
+
+    @Test
+    @DisplayName("기존 메뉴·원자재가 있어도 external_menu_mapping이 비어 있으면 시드 데이터를 보충 적재한다")
+    fun testBackfillWhenExternalMenuMappingMissing() {
+        jdbcTemplate.execute("DELETE FROM external_menu_mapping")
+        val beforeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
+        assertThat(beforeCount).isEqualTo(0L)
+
+        localDataInitializer.run(org.springframework.boot.DefaultApplicationArguments())
+
+        val afterCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
+        assertThat(afterCount).isEqualTo(8L)
     }
 }

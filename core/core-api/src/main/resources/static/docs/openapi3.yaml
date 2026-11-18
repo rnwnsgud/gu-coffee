@@ -21,6 +21,8 @@ tags:
     description: 선착순 쿠폰 API
   - name: Partner Ingredient
     description: 점포 파트너 원자재 관리 API
+  - name: External Webhook
+    description: 외부 배달 플랫폼 주문 웹훅 API
   - name: AI Agent
     description: AI 상담 및 주문 처리 API
 paths:
@@ -760,6 +762,114 @@ paths:
                     ,\"description\":\"카페라떼 1잔과 플레인 베이글 1개로 구성된 든든한 모닝 세트\",\"quantity\"\
                     :1,\"unitPrice\":7500,\"totalPrice\":7500}],\"usableCoupons\"\
                     :[]},\"error\":null}"
+  /v1/webhooks/orders/baemin:
+    post:
+      tags:
+      - External Webhook
+      summary: 배달의민족 주문 웹훅 수신 API
+      description: "배달의민족 플랫폼의 주문 웹훅을 수신하여 IP 화이트리스트, HMAC-SHA256 서명, 멱등성 키 검증 및 외\
+        부 메뉴 코드(ACL) 변환 후 주문을 생성합니다."
+      operationId: webhook-order-baemin
+      parameters:
+      - name: X-Webhook-Idempotency-Key
+        in: header
+        description: 웹훅 멱등성 키 (재전송 시 중복 주문 생성 방지)
+        required: true
+        schema:
+          type: string
+        example: BM-WEBHOOK-20261116-001
+      - name: X-Webhook-Signature
+        in: header
+        description: 요청 바디 원문에 대한 플랫폼 HMAC-SHA256 서명
+        required: true
+        schema:
+          type: string
+        example: sha256=8f2a9c4b1e3d5f7a9c0b2e4d6f8a1c3e5b7d9f0a2c4e6b8d0f1a3c5e7b9d1f3a
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/v1-webhooks-orders-baemin992072951"
+            examples:
+              webhook-order-baemin:
+                value: |-
+                  {
+                    "orderNo": "BM-ORDER-1001",
+                    "shopNo": 1,
+                    "memberKey": "BAEMIN-USER-01",
+                    "menus": [
+                      {
+                        "menuCode": "BM-MORNING-SET",
+                        "count": 1
+                      }
+                    ]
+                  }
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-webhooks-orders-baemin-681957724"
+              examples:
+                webhook-order-baemin:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"01JBMWEBHOOKORDERKEY00001\"\
+                    ,\"platform\":\"BAEMIN\",\"idempotencyKey\":\"BM-WEBHOOK-20261116-001\"\
+                    },\"error\":null}"
+  /v1/webhooks/orders/coupang-eats:
+    post:
+      tags:
+      - External Webhook
+      summary: 쿠팡이츠 주문 웹훅 수신 API
+      description: "쿠팡이츠 플랫폼의 주문 웹훅을 수신하여 IP 화이트리스트, HMAC-SHA256 서명, 멱등성 키 검증 및 외부\
+        \ 상품 코드(ACL) 변환 후 주문을 생성합니다."
+      operationId: webhook-order-coupang-eats
+      parameters:
+      - name: X-Webhook-Idempotency-Key
+        in: header
+        description: 웹훅 멱등성 키 (재전송 시 중복 주문 생성 방지)
+        required: true
+        schema:
+          type: string
+        example: CE-WEBHOOK-20261116-001
+      - name: X-Webhook-Signature
+        in: header
+        description: 요청 바디 원문에 대한 플랫폼 HMAC-SHA256 서명
+        required: true
+        schema:
+          type: string
+        example: sha256=4b1e3d5f7a9c0b2e4d6f8a1c3e5b7d9f0a2c4e6b8d0f1a3c5e7b9d1f3a8f2a9c
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/v1-webhooks-orders-coupang-eats1519256039"
+            examples:
+              webhook-order-coupang-eats:
+                value: |-
+                  {
+                    "externalOrderId": "CE-ORDER-2002",
+                    "merchantStoreId": 1,
+                    "buyerId": "COUPANG-USER-99",
+                    "orderItems": [
+                      {
+                        "productCode": "CE-LATTE",
+                        "qty": 2
+                      }
+                    ]
+                  }
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-webhooks-orders-coupang-eats665557891"
+              examples:
+                webhook-order-coupang-eats:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"01JCEWEBHOOKORDERKEY00002\"\
+                    ,\"platform\":\"COUPANG_EATS\",\"idempotencyKey\":\"CE-WEBHOOK-20261116-001\"\
+                    },\"error\":null}"
   /v1/partner/stores/{storeId}/ingredients:
     get:
       tags:
@@ -1239,6 +1349,38 @@ components:
           type: string
           description: 거절 시 사유 메시지
           nullable: true
+    v1-webhooks-orders-baemin992072951:
+      required:
+      - memberKey
+      - menus
+      - orderNo
+      - shopNo
+      type: object
+      properties:
+        orderNo:
+          type: string
+          description: 배달의민족 외부 주문 번호
+        memberKey:
+          type: string
+          description: 배달의민족 주문 고객 식별 키
+        menus:
+          type: array
+          description: 주문 메뉴 목록
+          items:
+            required:
+            - count
+            - menuCode
+            type: object
+            properties:
+              menuCode:
+                type: string
+                description: "배달의민족 외부 메뉴 코드 (예: BM-AMERICANO, BM-LATTE, BM-MORNING-SET)"
+              count:
+                type: number
+                description: 주문 수량
+        shopNo:
+          type: number
+          description: "수신 대상 매장 식별자 (예: 1=강남본점)"
     v1-ai-approve-1951864208:
       required:
       - error
@@ -1269,29 +1411,6 @@ components:
             status:
               type: string
               description: 에이전트 루프 상태 (COMPLETED)
-        status:
-          type: string
-          description: 응답 상태
-    v1-cart16818137:
-      required:
-      - error
-      - status
-      type: object
-      properties:
-        data:
-          required:
-          - items
-          type: object
-          properties:
-            items:
-              type: array
-              description: 장바구니 아이템 목록
-              items:
-                oneOf:
-                - type: object
-                - type: boolean
-                - type: string
-                - type: number
         status:
           type: string
           description: 응답 상태
@@ -1345,6 +1464,29 @@ components:
               type: number
               description: 다음 페이지 마지막 ID
               nullable: true
+        status:
+          type: string
+          description: 응답 상태
+    v1-cart16818137:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - items
+          type: object
+          properties:
+            items:
+              type: array
+              description: 장바구니 아이템 목록
+              items:
+                oneOf:
+                - type: object
+                - type: boolean
+                - type: string
+                - type: number
         status:
           type: string
           description: 응답 상태
@@ -1448,6 +1590,31 @@ components:
         orderKey:
           type: string
           description: 주문 키
+    v1-webhooks-orders-coupang-eats665557891:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - idempotencyKey
+          - orderKey
+          - platform
+          type: object
+          properties:
+            orderKey:
+              type: string
+              description: 생성(또는 멱등 조회)된 내부 주문 키
+            idempotencyKey:
+              type: string
+              description: 처리된 웹훅 멱등성 키
+            platform:
+              type: string
+              description: 연동 배달 플랫폼 (COUPANG_EATS)
+        status:
+          type: string
+          description: 응답 상태
     v1-cart-orders-990035116:
       required:
       - cartItemIds
@@ -1478,6 +1645,38 @@ components:
         prompt:
           type: string
           description: "고객 자연어 질문 (예: 'ORD-101 주문 취소해줘')"
+    v1-webhooks-orders-coupang-eats1519256039:
+      required:
+      - buyerId
+      - externalOrderId
+      - merchantStoreId
+      - orderItems
+      type: object
+      properties:
+        merchantStoreId:
+          type: number
+          description: "수신 대상 매장 식별자 (예: 1=강남본점)"
+        externalOrderId:
+          type: string
+          description: 쿠팡이츠 외부 주문 번호
+        buyerId:
+          type: string
+          description: 쿠팡이츠 구매자 식별 키
+        orderItems:
+          type: array
+          description: 주문 상품 목록
+          items:
+            required:
+            - productCode
+            - qty
+            type: object
+            properties:
+              productCode:
+                type: string
+                description: "쿠팡이츠 외부 상품 코드 (예: CE-AMERICANO, CE-LATTE, CE-MORNING-SET)"
+              qty:
+                type: number
+                description: 주문 수량
     v1-orders-1028609702:
       required:
       - error
@@ -1766,6 +1965,31 @@ components:
             - type: boolean
             - type: string
             - type: number
+        status:
+          type: string
+          description: 응답 상태
+    v1-webhooks-orders-baemin-681957724:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - idempotencyKey
+          - orderKey
+          - platform
+          type: object
+          properties:
+            orderKey:
+              type: string
+              description: 생성(또는 멱등 조회)된 내부 주문 키
+            idempotencyKey:
+              type: string
+              description: 처리된 웹훅 멱등성 키
+            platform:
+              type: string
+              description: 연동 배달 플랫폼 (BAEMIN)
         status:
           type: string
           description: 응답 상태

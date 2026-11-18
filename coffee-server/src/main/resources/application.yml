@@ -27,6 +27,15 @@ security:
     internal-token:
       enabled: false
       secret: ${GATEWAY_INTERNAL_TOKEN_SECRET:}
+  webhook:
+    ip-whitelist:
+      enabled: false
+      baemin: ${BAEMIN_WEBHOOK_ALLOWED_IPS:127.0.0.1,::1}
+      coupang-eats: ${COUPANG_EATS_WEBHOOK_ALLOWED_IPS:127.0.0.1,::1}
+    signature:
+      enabled: false
+      baemin-secret: ${BAEMIN_WEBHOOK_SECRET:local-baemin-webhook-secret}
+      coupang-eats-secret: ${COUPANG_EATS_WEBHOOK_SECRET:local-coupang-eats-webhook-secret}
 
 ---
 spring.config.activate.on-profile: local
@@ -81,6 +90,11 @@ security:
     internal-token:
       enabled: true
       secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
+  webhook:
+    ip-whitelist:
+      enabled: true
+    signature:
+      enabled: true
 
 
 ---
@@ -90,6 +104,11 @@ security:
     internal-token:
       enabled: true
       secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
+  webhook:
+    ip-whitelist:
+      enabled: true
+    signature:
+      enabled: true
 
 
 ---
@@ -99,4 +118,9 @@ security:
     internal-token:
       enabled: true
       secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
+  webhook:
+    ip-whitelist:
+      enabled: true
+    signature:
+      enabled: true
 

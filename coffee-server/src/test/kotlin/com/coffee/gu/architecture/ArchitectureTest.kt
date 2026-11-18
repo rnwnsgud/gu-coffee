@@ -48,6 +48,13 @@ class ArchitectureTest {
         uri.contains("partner-api")
     }
 
+    private val resideInExternalWebhookApi = DescribedPredicate.describe<JavaClass>("reside in external-webhook-api module") { javaClass ->
+        val uri = javaClass.source.orElse(null)?.uri?.toString() ?: ""
+        uri.contains("external-webhook-api")
+    }
+
+    private val resideInEntryPointModules = resideInCoreApi.or(resideInPartnerApi).or(resideInExternalWebhookApi)
+
     private val isLogicLayer = DescribedPredicate.describe<JavaClass>("be in logic layer") { javaClass ->
         val name = javaClass.simpleName
         name.endsWith("Manager") || name.endsWith("Finder") || name.endsWith("Reader") ||
@@ -78,21 +85,21 @@ class ArchitectureTest {
     }
 
     @Test
-    @DisplayName("[규칙 2] core-api 및 partner-api 모듈은 storage:db-core 모듈의 구현체에 직접 의존하지 않아야 한다 (DIP 원칙)")
+    @DisplayName("[규칙 2] 진입점 API 모듈(core-api, partner-api, external-webhook-api)은 storage:db-core 모듈의 구현체에 직접 의존하지 않아야 한다 (DIP 원칙)")
     fun coreApiShouldNotDependOnDbCore() {
         noClasses()
-            .that(resideInCoreApi.or(resideInPartnerApi))
+            .that(resideInEntryPointModules)
             .should().dependOnClassesThat(resideInDbCore)
-            .because("core-api와 partner-api는 DIP(의존 역전 원칙)에 따라 오직 core-domain의 Repository 인터페이스만 참조해야 하며, db-core의 JPA 구현체나 Entity를 직접 의존할 수 없습니다.")
+            .because("진입점 API 모듈은 DIP(의존 역전 원칙)에 따라 오직 core-domain의 Repository 인터페이스만 참조해야 하며, db-core의 JPA 구현체나 Entity를 직접 의존할 수 없습니다.")
             .check(importedClasses)
     }
 
     @Test
-    @DisplayName("[규칙 3] core-domain 모듈은 상위 계층인 core-api, partner-api, storage:db-core에 의존하지 않아야 한다 (단방향 의존성)")
+    @DisplayName("[규칙 3] core-domain 모듈은 상위 계층인 API 모듈 및 storage:db-core에 의존하지 않아야 한다 (단방향 의존성)")
     fun coreDomainShouldNotDependOnUpperModules() {
         noClasses()
             .that(resideInCoreDomain)
-            .should().dependOnClassesThat(resideInCoreApi.or(resideInPartnerApi).or(resideInDbCore))
+            .should().dependOnClassesThat(resideInEntryPointModules.or(resideInDbCore))
             .because("도메인 레이어는 시스템의 핵심 비즈니스 로직을 담는 최하위 순수 계층이므로 상위 계층인 API나 인프라 레이어를 역참조할 수 없습니다.")
             .check(importedClasses)
     }
@@ -108,10 +115,10 @@ class ArchitectureTest {
     }
 
     @Test
-    @DisplayName("[규칙 5] core-api 및 partner-api의 Service 계층은 db-core의 Entity나 JpaRepository를 참조하거나 노출하지 않아야 한다")
+    @DisplayName("[규칙 5] 진입점 API 모듈의 Service 계층은 db-core의 Entity나 JpaRepository를 참조하거나 노출하지 않아야 한다")
     fun servicesShouldNotExposeOrDependOnEntities() {
         noClasses()
-            .that(resideInCoreApi.or(resideInPartnerApi)).and().haveSimpleNameEndingWith("Service")
+            .that(resideInEntryPointModules).and().haveSimpleNameEndingWith("Service")
             .should().dependOnClassesThat().haveSimpleNameEndingWith("Entity")
             .orShould().dependOnClassesThat().haveSimpleNameEndingWith("JpaRepository")
             .because("Service 계층은 Domain Model과 Domain Repository 인터페이스만을 다루어야 합니다.")
@@ -131,7 +138,7 @@ class ArchitectureTest {
     @DisplayName("[규칙 7] Business Layer(Service)는 다른 Service를 직접 참조하지 않아야 한다 (동일 레이어 참조 금지)")
     fun servicesShouldNotDependOnOtherServices() {
         noClasses()
-            .that(resideInCoreApi.or(resideInPartnerApi)).and().haveSimpleNameEndingWith("Service")
+            .that(resideInEntryPointModules).and().haveSimpleNameEndingWith("Service")
             .should(object : ArchCondition<JavaClass>("depend on another Service") {
                 override fun check(item: JavaClass, events: ConditionEvents) {
                     item.directDependenciesFromSelf.forEach { dep ->
@@ -151,7 +158,7 @@ class ArchitectureTest {
     @DisplayName("[규칙 8] Logic Layer(*Manager, *Finder, *Reader 등)는 상위 Business Layer(Service)를 역참조하지 않아야 한다 (역류 금지)")
     fun logicLayerShouldNotDependOnServices() {
         noClasses()
-            .that(resideInCoreApi.or(resideInPartnerApi).and(isLogicLayer))
+            .that(resideInEntryPointModules.and(isLogicLayer))
             .should().dependOnClassesThat().haveSimpleNameEndingWith("Service")
             .because("하위 레이어인 Logic Layer는 상위 레이어인 Business Layer(Service)를 역참조할 수 없습니다.")
             .check(importedClasses)
@@ -161,7 +168,7 @@ class ArchitectureTest {
     @DisplayName("[규칙 9] Presentation Layer(Controller)는 Business Layer(Service)를 건너뛰고 Logic Layer나 Repository를 직접 참조하지 않아야 한다 (건너뛰기 금지)")
     fun controllersShouldNotSkipBusinessLayer() {
         noClasses()
-            .that(resideInCoreApi.or(resideInPartnerApi)).and().haveSimpleNameEndingWith("Controller")
+            .that(resideInEntryPointModules).and().haveSimpleNameEndingWith("Controller")
             .should().dependOnClassesThat(isLogicLayer)
             .orShould().dependOnClassesThat().haveSimpleNameEndingWith("Repository")
             .because("Presentation Layer(Controller)는 Business Layer(Service)를 건너뛰고 하위 Logic Layer나 Data Access Layer를 직접 참조할 수 없습니다.")
@@ -169,18 +176,24 @@ class ArchitectureTest {
     }
 
     @Test
-    @DisplayName("[규칙 10] 고객용 API 모듈(core-api)과 점주용 파트너 API 모듈(partner-api)은 서로 직접 참조하지 않고 독립성을 유지해야 한다 (진입점 모듈 격리)")
+    @DisplayName("[규칙 10] 진입점 API 모듈(core-api, partner-api, external-webhook-api)은 서로 직접 참조하지 않고 독립성을 유지해야 한다 (진입점 모듈 격리)")
     fun coreApiAndPartnerApiShouldBeIsolatedFromEachOther() {
         noClasses()
             .that(resideInCoreApi)
-            .should().dependOnClassesThat(resideInPartnerApi)
-            .because("고객용 API(core-api)는 점주 전용 파트너 모듈(partner-api)에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
+            .should().dependOnClassesThat(resideInPartnerApi.or(resideInExternalWebhookApi))
+            .because("고객용 API(core-api)는 타 진입점 모듈(partner-api, external-webhook-api)에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
             .check(importedClasses)
 
         noClasses()
             .that(resideInPartnerApi)
-            .should().dependOnClassesThat(resideInCoreApi)
-            .because("점주 전용 파트너 모듈(partner-api)은 고객용 API(core-api)에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
+            .should().dependOnClassesThat(resideInCoreApi.or(resideInExternalWebhookApi))
+            .because("점주 전용 파트너 모듈(partner-api)은 타 진입점 모듈(core-api, external-webhook-api)에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
+            .check(importedClasses)
+
+        noClasses()
+            .that(resideInExternalWebhookApi)
+            .should().dependOnClassesThat(resideInCoreApi.or(resideInPartnerApi))
+            .because("외부 웹훅 전용 어댑터 모듈(external-webhook-api)은 타 진입점 모듈(core-api, partner-api)에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
             .check(importedClasses)
     }
 }

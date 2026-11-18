@@ -37,6 +37,7 @@ gu-coffee
 ├── 🚀 coffee-server          # 메인 애플리케이션 실행 모듈 (Spring Boot Entry Point)
 ├── 🛠️ admin-api              # 본사 관리자 REST API (메뉴/옵션 등록 및 매핑)
 ├── 🏪 partner-api            # 점포 파트너 POS REST API (점주 인증·소유권 인가 및 매장별 원자재 품절 관리)
+├── 🛵 external-webhook-api   # 외부 배달 플랫폼 B2B 주문 웹훅 어댑터 (IP·HMAC 검증, 외부 메뉴 매핑, 멱등성 보장)
 │
 ├── 🧠 core                   # 비즈니스 핵심 모듈 그룹
 │   ├── core-api              # 사용자 REST API & 오케스트레이션 서비스 (core-domain에만 의존)
@@ -288,6 +289,26 @@ sequenceDiagram
 
 </details>
 
+<details>
+<summary><b>13. 외부 배달 플랫폼 웹훅 어댑터 분리 및 B2B 수신 검증 설계</b></summary>
+
+- **문제 정의**:
+  - 외부 배달 플랫폼 웹훅은 일반 고객 인증 체계가 아닌 플랫폼별 IP 대역 제한과 페이로드 원문 기반 서명 검증이 필요하며, 플랫폼마다 상이한 JSON 스키마와 자체 상품 코드를 전송하므로 핵심 주문 도메인이 외부 스펙에 결합될 위험이 존재.
+  - 또한 네트워크 지연이나 타임아웃 발생 시 배달 플랫폼이 동일한 주문 웹훅을 반복 재전송하므로 중복 주문 생성을 방지할 장치가 필요.
+- **해결 방안**:
+  - **웹훅 전용 모듈 분리 및 도메인 포트 연결**:
+    - 고객용 API 및 점주용 파트너 API와 물리적으로 분리된 `external-webhook-api` 모듈을 구성하고, 도메인 계층의 주문 생성 포트 인터페이스를 통해 핵심 주문 파이프라인과 약결합으로 연동.
+  - **IP 화이트리스트 및 원문 기반 HMAC 서명 검증**:
+    - 플랫폼별 허용 단일 IP 및 CIDR 대역을 검증하여 비인가 발신지의 접근을 차단.
+    - JSON 역직렬화 이전의 요청 바디 원문을 기준으로 플랫폼별 시크릿 키 기반 `HmacSHA256` 서명을 생성하고 상수 시간 비교로 위변조 여부를 검증.
+  - **플랫폼별 페이로드 변환 및 외부 메뉴 코드 매핑**:
+    - 플랫폼마다 상이한 JSON 스키마를 가정한 모의 페이로드 기반 어댑터로 설계.
+    - 각 어댑터에서 플랫폼별 JSON 구조를 파싱하고 외부 메뉴 매핑 테이블을 조회해 상품 코드를 내부 메뉴 식별자로 변환한 뒤 표준 주문 명령으로 조합.
+  - **웹훅 멱등성 보장**:
+    - 플랫폼과 웹훅 멱등성 키의 복합 유니크 제약조건을 가진 멱등성 테이블을 통해, 동일 웹훅이 재전송되거나 동시 유입되더라도 중복 주문을 생성하지 않고 기존 주문 키를 반환.
+
+</details>
+
 ---
 
 <a name="4-기술-스택"></a>
@@ -379,6 +400,12 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **Ingredient** | `GET` | `/v1/partner/stores/{storeId}/ingredients` | 매장별 원자재 품절 상태 목록 조회 |
 | | `PATCH` | `/v1/partner/stores/{storeId}/ingredients/{ingredientId}/availability` | 매장 특정 원자재 품절 및 판매 가능 상태 변경 |
+
+#### 외부 배달 플랫폼 웹훅 API (`/v1/webhooks/orders`)
+| 플랫폼 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Baemin** | `POST` | `/v1/webhooks/orders/baemin` | 모의 배달의민족 주문 웹훅 수신 및 변환 |
+| **Coupang Eats** | `POST` | `/v1/webhooks/orders/coupang-eats` | 모의 쿠팡이츠 주문 웹훅 수신 및 변환 |
 
 #### 문서 스펙
 | 문서 종류 | HTTP Method | Endpoint | 설명 |

@@ -254,5 +254,28 @@ include::{snippets}/partner-ingredient-update-availability/request-fields.adoc[]
 include::{snippets}/partner-ingredient-update-availability/http-response.adoc[]
 include::{snippets}/partner-ingredient-update-availability/response-fields.adoc[]
 
+== External Webhook API
+
+=== 배달의민족 주문 웹훅 수신
+==== Request
+include::{snippets}/webhook-order-baemin/http-request.adoc[]
+include::{snippets}/webhook-order-baemin/request-headers.adoc[]
+include::{snippets}/webhook-order-baemin/request-fields.adoc[]
+
+==== Response
+include::{snippets}/webhook-order-baemin/http-response.adoc[]
+include::{snippets}/webhook-order-baemin/response-fields.adoc[]
+
+=== 쿠팡이츠 주문 웹훅 수신
+==== Request
+include::{snippets}/webhook-order-coupang-eats/http-request.adoc[]
+include::{snippets}/webhook-order-coupang-eats/request-headers.adoc[]
+include::{snippets}/webhook-order-coupang-eats/request-fields.adoc[]
+
+==== Response
+include::{snippets}/webhook-order-coupang-eats/http-response.adoc[]
+include::{snippets}/webhook-order-coupang-eats/response-fields.adoc[]
+
+
 
 
