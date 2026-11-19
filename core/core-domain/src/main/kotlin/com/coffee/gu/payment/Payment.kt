@@ -34,6 +34,9 @@ class Payment(
     val isFailed: Boolean
         get() = state == PaymentState.FAILED
 
+    val isCanceled: Boolean
+        get() = state == PaymentState.CANCELED
+
     val hasAppliedCoupon: Boolean
         get() = issuedCouponId != null && issuedCouponId > 0
 
@@ -61,6 +64,10 @@ class Payment(
         if (!externalPaymentKey.isNullOrBlank()) {
             this.externalPaymentKey = externalPaymentKey
         }
+    }
+
+    fun cancel() {
+        this.state = PaymentState.CANCELED
     }
 
     fun increaseRetryCount() {

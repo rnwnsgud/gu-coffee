@@ -33,9 +33,9 @@ import com.coffee.gu.store.SalesInformation
 import com.coffee.gu.store.Store
 import com.coffee.gu.store.StoreLocation
 import com.coffee.gu.store.StoreRepository
-import com.coffee.gu.webhook.ExternalMenuMapping
-import com.coffee.gu.webhook.ExternalMenuMappingRepository
-import com.coffee.gu.webhook.controller.v1.ExternalWebhookController
+import com.coffee.gu.delivery.ExternalMenuMapping
+import com.coffee.gu.delivery.ExternalMenuMappingRepository
+import com.coffee.gu.delivery.webhook.controller.v1.DeliveryWebhookController
 import org.springframework.mock.web.MockHttpServletRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
@@ -63,7 +63,7 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
     private lateinit var externalOrderController: ExternalOrderController
 
     @Autowired
-    private lateinit var externalWebhookController: ExternalWebhookController
+    private lateinit var deliveryWebhookController: DeliveryWebhookController
 
     @Autowired
     private lateinit var menuController: MenuController
@@ -384,7 +384,7 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         """.trimIndent()
 
         // 1. 배달의민족 웹훅 최초 수신 -> 외부 메뉴 코드(BM-TEST-MORNING-SET)가 내부 menuId로 매핑되어 정상 주문 생성
-        val firstRes = externalWebhookController.receiveBaeminOrder(
+        val firstRes = deliveryWebhookController.receiveBaeminOrder(
             idempotencyKey = "BM-IDEMP-500",
             signature = null,
             rawPayload = baeminPayload,
@@ -396,7 +396,7 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         assertThat(createdOrder.storeId).isEqualTo(gangnamStoreId)
 
         // 2. 동일 멱등성 키(BM-IDEMP-500)로 웹훅 재전송 -> 중복 주문 생성 없이 동일한 orderKey 반환
-        val duplicateRes = externalWebhookController.receiveBaeminOrder(
+        val duplicateRes = deliveryWebhookController.receiveBaeminOrder(
             idempotencyKey = "BM-IDEMP-500",
             signature = null,
             rawPayload = baeminPayload,
@@ -425,7 +425,7 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         """.trimIndent()
 
         assertThatThrownBy {
-            externalWebhookController.receiveCoupangEatsOrder(
+            deliveryWebhookController.receiveCoupangEatsOrder(
                 idempotencyKey = "CE-IDEMP-600",
                 signature = null,
                 rawPayload = coupangGangnamPayload,

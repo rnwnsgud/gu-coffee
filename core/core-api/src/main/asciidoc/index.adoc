@@ -276,6 +276,18 @@ include::{snippets}/webhook-order-coupang-eats/request-fields.adoc[]
 include::{snippets}/webhook-order-coupang-eats/http-response.adoc[]
 include::{snippets}/webhook-order-coupang-eats/response-fields.adoc[]
 
+== Payment Webhook API
+
+=== 토스페이먼츠 결제 상태 변경 웹훅 수신
+==== Request
+include::{snippets}/webhook-payment-toss/http-request.adoc[]
+include::{snippets}/webhook-payment-toss/request-headers.adoc[]
+include::{snippets}/webhook-payment-toss/request-fields.adoc[]
+
+==== Response
+include::{snippets}/webhook-payment-toss/http-response.adoc[]
+include::{snippets}/webhook-payment-toss/response-fields.adoc[]
+
 
 
 

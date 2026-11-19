@@ -765,7 +765,7 @@ paths:
   /v1/webhooks/orders/baemin:
     post:
       tags:
-      - External Webhook
+      - Delivery Webhook
       summary: 배달의민족 주문 웹훅 수신 API
       description: "배달의민족 플랫폼의 주문 웹훅을 수신하여 IP 화이트리스트, HMAC-SHA256 서명, 멱등성 키 검증 및 외\
         부 메뉴 코드(ACL) 변환 후 주문을 생성합니다."
@@ -819,7 +819,7 @@ paths:
   /v1/webhooks/orders/coupang-eats:
     post:
       tags:
-      - External Webhook
+      - Delivery Webhook
       summary: 쿠팡이츠 주문 웹훅 수신 API
       description: "쿠팡이츠 플랫폼의 주문 웹훅을 수신하여 IP 화이트리스트, HMAC-SHA256 서명, 멱등성 키 검증 및 외부\
         \ 상품 코드(ACL) 변환 후 주문을 생성합니다."
@@ -870,6 +870,66 @@ paths:
                   value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"01JCEWEBHOOKORDERKEY00002\"\
                     ,\"platform\":\"COUPANG_EATS\",\"idempotencyKey\":\"CE-WEBHOOK-20261116-001\"\
                     },\"error\":null}"
+  /v1/webhooks/payments/toss:
+    post:
+      tags:
+      - Payment Webhook
+      summary: 토스페이먼츠 결제 상태 변경 웹훅 수신 API
+      description: "토스페이먼츠 웹훅(가상계좌 입금 완료, 상점관리자 직접 취소 등)을 수신해 결제·주문 상태 및 한정 수량 재고를\
+        \ 동기화합니다."
+      operationId: webhook-payment-toss
+      parameters:
+      - name: tosspayments-webhook-signature
+        in: header
+        description: 토스페이먼츠 웹훅 HMAC-SHA256 서명 (로컬 비활성화 가능)
+        required: false
+        schema:
+          type: string
+        example: v1:sampleBase64Signature==
+      - name: tosspayments-webhook-transmission-time
+        in: header
+        description: 웹훅 전송 시각 헤더 (서명 검증 시 함께 사용)
+        required: false
+        schema:
+          type: string
+        example: 2026-11-18T18:10:00.000000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/v1-webhooks-payments-toss-230173099"
+            examples:
+              webhook-payment-toss:
+                value: |-
+                  {
+                    "eventType": "PAYMENT_STATUS_CHANGED",
+                    "createdAt": "2026-11-18T18:10:00+09:00",
+                    "data": {
+                      "paymentKey": "tviva20261118181000",
+                      "orderId": "ORD-20261118-001",
+                      "status": "CANCELED",
+                      "method": "카드",
+                      "cancels": [
+                        {
+                          "transactionKey": "tx-cancel-999",
+                          "cancelReason": "가맹점 관리자 직접 취소",
+                          "cancelAmount": 7500
+                        }
+                      ]
+                    }
+                  }
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-webhooks-payments-toss172145739"
+              examples:
+                webhook-payment-toss:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"ORD-20261118-001\"\
+                    ,\"paymentState\":\"CANCELED\",\"orderState\":\"CANCELED\",\"\
+                    action\":\"CANCELED\"},\"error\":null}"
   /v1/partner/stores/{storeId}/ingredients:
     get:
       tags:
@@ -1253,6 +1313,35 @@ components:
         menuId:
           type: number
           description: 메뉴 식별자
+    v1-webhooks-payments-toss172145739:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - action
+          - orderKey
+          - orderState
+          - paymentState
+          type: object
+          properties:
+            orderKey:
+              type: string
+              description: 동기화된 내부 주문 키
+            action:
+              type: string
+              description: "처리 결과 액션 (PAID, CANCELED, FAILED, IGNORED_ALREADY_PROCESSED)"
+            paymentState:
+              type: string
+              description: 동기화 후 결제 상태
+            orderState:
+              type: string
+              description: 동기화 후 주문 상태
+        status:
+          type: string
+          description: 요청 결과 상태
     v1-orders-orderKey-16483499:
       required:
       - error
@@ -1316,6 +1405,56 @@ components:
         status:
           type: string
           description: 응답 상태
+    v1-webhooks-payments-toss-230173099:
+      required:
+      - eventType
+      type: object
+      properties:
+        createdAt:
+          type: string
+          description: 이벤트 생성 시각
+          nullable: true
+        data:
+          required:
+          - orderId
+          - paymentKey
+          - status
+          type: object
+          properties:
+            cancels:
+              type: array
+              description: 취소 이력 목록
+              items:
+                type: object
+                properties:
+                  cancelAmount:
+                    type: number
+                    description: 취소 금액
+                    nullable: true
+                  transactionKey:
+                    type: string
+                    description: 취소 트랜잭션 키
+                    nullable: true
+                  cancelReason:
+                    type: string
+                    description: 취소 사유
+                    nullable: true
+            method:
+              type: string
+              description: "결제 수단 (카드, 가상계좌 등)"
+              nullable: true
+            orderId:
+              type: string
+              description: 가맹점 주문 키 (orderKey)
+            paymentKey:
+              type: string
+              description: 토스페이먼츠 결제 키
+            status:
+              type: string
+              description: "결제 상태 (DONE, CANCELED, ABORTED 등)"
+        eventType:
+          type: string
+          description: 웹훅 이벤트 타입 (PAYMENT_STATUS_CHANGED)
     v1-payments-178569976:
       required:
       - error
@@ -1633,18 +1772,6 @@ components:
         storeId:
           type: number
           description: "주문 매장 식별자 (예: 1=강남본점, 2=판교역점)"
-    v1-ai-chat-834565976:
-      required:
-      - prompt
-      type: object
-      properties:
-        sessionId:
-          type: string
-          description: 세션 식별자 (생략 시 자동 생성)
-          nullable: true
-        prompt:
-          type: string
-          description: "고객 자연어 질문 (예: 'ORD-101 주문 취소해줘')"
     v1-webhooks-orders-coupang-eats1519256039:
       required:
       - buyerId
@@ -1677,6 +1804,18 @@ components:
               qty:
                 type: number
                 description: 주문 수량
+    v1-ai-chat-834565976:
+      required:
+      - prompt
+      type: object
+      properties:
+        sessionId:
+          type: string
+          description: 세션 식별자 (생략 시 자동 생성)
+          nullable: true
+        prompt:
+          type: string
+          description: "고객 자연어 질문 (예: 'ORD-101 주문 취소해줘')"
     v1-orders-1028609702:
       required:
       - error

@@ -38,6 +38,7 @@ gu-coffee
 ├── 🛠️ admin-api              # 본사 관리자 REST API (메뉴/옵션 등록 및 매핑)
 ├── 🏪 partner-api            # 점포 파트너 POS REST API (점주 인증·소유권 인가 및 매장별 원자재 품절 관리)
 ├── 🛵 delivery-webhook-api   # 외부 배달 플랫폼 B2B 주문 웹훅 어댑터 (IP·HMAC 검증, 외부 메뉴 매핑, 멱등성 보장)
+├── 💳 payment-webhook-api    # PG 결제 웹훅 어댑터 (토스페이먼츠 가상계좌 입금 완료 및 상점관리자 직접 취소 상태·재고 동기화)
 │
 ├── 🧠 core                   # 비즈니스 핵심 모듈 그룹
 │   ├── core-api              # 사용자 REST API & 오케스트레이션 서비스 (core-domain에만 의존)
@@ -309,6 +310,20 @@ sequenceDiagram
 
 </details>
 
+<details>
+<summary><b>14. PG 결제 웹훅 어댑터 분리 및 비동기 상태·재고 동기화 설계</b></summary>
+
+- **문제 정의**:
+  - 가상계좌 입금 완료나 PG 상점관리자 대시보드에서의 직접 결제 취소는 고객 브라우저를 거치지 않고 PG 서버에서 인바운드 웹훅으로 통보되므로, 이를 수신해 내부 주문·결제 상태 및 한정 수량 재고를 일관되게 동기화해야 함.
+- **해결 방안**:
+  - **결제 웹훅 전용 모듈 분리**:
+    - 배달 주문 유입 어댑터와 역할을 구분하기 위해 `payment-webhook-api` 모듈을 별도 분리하고, 도메인 계층의 결제 상태 동기화 포트 인터페이스를 통해 핵심 결제·취소 파이프라인과 연결.
+  - **상태별 원자적 동기화 및 멱등 처리**:
+    - 비관적 락으로 대상 결제를 조회한 뒤, 입금 완료 통보 시에는 기존 결제 완료 파이프라인을 통해 주문 완료 및 한정 수량 DB 판매량을 확정.
+    - 상점관리자 직접 취소 통보 시에는 PG 취소 API 재호출 없이 결제·주문 취소, 한정 수량 Redis 및 DB 재고 복구, 쿠폰·스탬프 원복을 수행하며, 이미 처리된 웹훅 재전송은 상태 가드로 무시.
+
+</details>
+
 ---
 
 <a name="4-기술-스택"></a>
@@ -406,6 +421,11 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **Baemin** | `POST` | `/v1/webhooks/orders/baemin` | 모의 배달의민족 주문 웹훅 수신 및 변환 |
 | **Coupang Eats** | `POST` | `/v1/webhooks/orders/coupang-eats` | 모의 쿠팡이츠 주문 웹훅 수신 및 변환 |
+
+#### PG 결제 웹훅 API (`/v1/webhooks/payments`)
+| PG사 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Toss Payments** | `POST` | `/v1/webhooks/payments/toss` | 토스페이먼츠 결제 상태 변경 웹훅 수신 및 주문·결제·한정재고 동기화 |
 
 #### 문서 스펙
 | 문서 종류 | HTTP Method | Endpoint | 설명 |

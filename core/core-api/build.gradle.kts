@@ -41,6 +41,7 @@ dependencies {
     testImplementation(project(":storage:db-core"))
     testImplementation(project(":partner-api"))
     testImplementation(project(":delivery-webhook-api"))
+    testImplementation(project(":payment-webhook-api"))
     testImplementation("org.springframework.kafka:spring-kafka-test")
 
     testImplementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
@@ -58,6 +59,12 @@ val syncPartnerSnippets = tasks.register<Copy>("syncPartnerSnippets") {
 val syncDeliveryWebhookSnippets = tasks.register<Copy>("syncDeliveryWebhookSnippets") {
     dependsOn(":delivery-webhook-api:test")
     from(project(":delivery-webhook-api").layout.buildDirectory.dir("generated-snippets"))
+    into(snippetsDir)
+}
+
+val syncPaymentWebhookSnippets = tasks.register<Copy>("syncPaymentWebhookSnippets") {
+    dependsOn(":payment-webhook-api:test")
+    from(project(":payment-webhook-api").layout.buildDirectory.dir("generated-snippets"))
     into(snippetsDir)
 }
 
@@ -81,6 +88,7 @@ tasks.asciidoctor {
     dependsOn(tasks.test)
     dependsOn(syncPartnerSnippets)
     dependsOn(syncDeliveryWebhookSnippets)
+    dependsOn(syncPaymentWebhookSnippets)
 }
 
 openapi3 {
@@ -97,6 +105,7 @@ project.afterEvaluate {
         dependsOn(tasks.test)
         dependsOn(syncPartnerSnippets)
         dependsOn(syncDeliveryWebhookSnippets)
+        dependsOn(syncPaymentWebhookSnippets)
         (this as? com.epages.restdocs.apispec.gradle.OpenApi3Task)?.servers = emptyList()
     }
 }
