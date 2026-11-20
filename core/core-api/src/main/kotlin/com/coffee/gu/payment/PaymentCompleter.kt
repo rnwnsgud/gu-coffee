@@ -12,7 +12,7 @@ import com.coffee.gu.order.Order
 import com.coffee.gu.order.OrderManager
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Component
 class PaymentCompleter(
@@ -28,7 +28,7 @@ class PaymentCompleter(
     fun complete(order: Order, paymentId: Long, confirmedPayment: PGConfirmResult): PaymentApprovalResult {
         val payment = paymentReader.getByIdWithLock(paymentId)
         val extKey = payment.externalPaymentKey ?: ""
-        val paidAt = payment.paidAt ?: OffsetDateTime.now()
+        val paidAt = payment.paidAt ?: LocalDateTime.now()
 
         if (payment.isPaid) return PaymentApprovalResult.alreadyApproved(order.key, extKey, paidAt)
         if (payment.isFailed) return PaymentApprovalResult.failed(order.key, extKey, paidAt)
@@ -61,17 +61,17 @@ class PaymentCompleter(
             order,
             payment,
             reason,
-            OffsetDateTime.now()
+            LocalDateTime.now()
         )
         val event = CancelEvent(order.key)
         outboxEventPublisher.publishOutboxEvent(event)
-        return PaymentApprovalResult.failed(order.key, externalPaymentKey, OffsetDateTime.now())
+        return PaymentApprovalResult.failed(order.key, externalPaymentKey, LocalDateTime.now())
     }
 
     @Transactional
     fun failProcess(order: Order, payment: Payment, code: String, message: String) {
         payment.fail()
         paymentManager.save(payment)
-        transactionHistoryManager.record(TransactionType.PAYMENT_FAIL, order, payment, "$code $message", OffsetDateTime.now())
+        transactionHistoryManager.record(TransactionType.PAYMENT_FAIL, order, payment, "$code $message", LocalDateTime.now())
     }
 }

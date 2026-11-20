@@ -148,7 +148,7 @@ class PaymentApprovalFailureResolverTest {
         val donePgPayment = PGPayment("PAY-KEY-1", "ORD-TEST-1", BigDecimal.valueOf(10000), PaymentGatewayStatus.DONE)
         given(paymentGatewayProcessor.getPGPayment(order.key)).willReturn(donePgPayment)
 
-        val successResult = PaymentApprovalResult.approved(order.key, "PAY-KEY-1", java.time.OffsetDateTime.now())
+        val successResult = PaymentApprovalResult.approved(order.key, "PAY-KEY-1", java.time.LocalDateTime.now())
         given(paymentCompleter.complete(eq(order), eq(payment.id), any())).willReturn(successResult)
 
         val result = resolver.resolveApprovalFailure(order, payment, pgPayment, mapOf(100L to 1))

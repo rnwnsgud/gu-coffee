@@ -9,12 +9,16 @@ import com.coffee.gu.toss.TossPaymentsMethodMapper
 import org.springframework.stereotype.Component
 import tools.jackson.databind.json.JsonMapper
 import java.time.OffsetDateTime
+import java.time.ZoneId
 
 @Component
 class TossWebhookPayloadProcessor(
     private val jsonMapper: JsonMapper,
     private val tossPaymentsMethodMapper: TossPaymentsMethodMapper,
 ) {
+    companion object {
+        private val KST = ZoneId.of("Asia/Seoul")
+    }
     fun process(rawPayload: String): PaymentWebhookCommand {
         val payload = try {
             jsonMapper.readValue(rawPayload, TossPaymentWebhookPayload::class.java)
@@ -61,7 +65,7 @@ class TossWebhookPayloadProcessor(
 
         val latestCancel = data.cancels?.lastOrNull()
         val parsedApprovedAt = data.approvedAt?.let {
-            runCatching { OffsetDateTime.parse(it) }.getOrNull()
+            runCatching { OffsetDateTime.parse(it).atZoneSameInstant(KST).toLocalDateTime() }.getOrNull()
         }
 
         return PaymentWebhookCommand(

@@ -19,6 +19,12 @@ data class CreateExternalOrderRequest(
     val lines: List<CreateExternalOrderLineRequest>,
 ) {
     fun toNewOrder(): NewOrder {
+        if (channel != OrderChannel.KIOSK) {
+            throw CoreException(
+                ErrorType.INVALID_REQUEST,
+                "외부 주문 API는 KIOSK 채널만 지원합니다. 배달 플랫폼 주문은 웹훅 API를 사용해 주세요.",
+            )
+        }
         if (lines.isEmpty() || lines.any { it.quantity <= 0 }) {
             throw CoreException(ErrorType.INVALID_REQUEST, null)
         }

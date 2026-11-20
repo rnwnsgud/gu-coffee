@@ -3,7 +3,7 @@ package com.coffee.gu.payment
 import com.coffee.gu.enums.OrderState
 import com.coffee.gu.enums.PaymentMethod
 import com.coffee.gu.enums.PaymentState
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 enum class PaymentWebhookSyncAction {
     PAID,
@@ -18,7 +18,7 @@ data class PaymentWebhookCommand(
     val status: String,
     val method: PaymentMethod? = null,
     val approveCode: String? = null,
-    val approvedAt: OffsetDateTime? = null,
+    val approvedAt: LocalDateTime? = null,
     val cancelTransactionKey: String? = null,
     val cancelReason: String? = null,
 )

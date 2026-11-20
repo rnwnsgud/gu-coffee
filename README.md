@@ -381,7 +381,7 @@ sequenceDiagram
 | | `DELETE` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 삭제 |
 | **Order** | `POST` | `/v1/orders` | 앱 즉시 주문서 생성 (`APP`) |
 | | `POST` | `/v1/cart-orders` | 장바구니 기반 주문서 생성 (`CART`) |
-| | `POST` | `/v1/external-orders` | 외부 배달 플랫폼 및 키오스크 주문 인입 (`DELIVERY_PARTNER`, `KIOSK`) |
+| | `POST` | `/v1/external-orders` | 매장 키오스크 주문 인입 (`KIOSK` 전용 — 배달 플랫폼은 웹훅 API 사용) |
 | | `GET` | `/v1/orders` | 주문 목록 조회 |
 | | `GET` | `/v1/orders/{orderKey}` | 단건 주문 상세 조회 |
 | **Payment** | `POST` | `/v1/payment/prepare` | 결제 사전 준비 및 금액 검증 |

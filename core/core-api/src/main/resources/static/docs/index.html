@@ -2329,10 +2329,10 @@ Content-Length: 69
 <div class="content">
 <pre class="highlightjs highlight nowrap"><code class="language-http hljs" data-lang="http">POST /v1/external-orders HTTP/1.1
 Content-Type: application/json
-Content-Length: 117
+Content-Length: 100
 Host: localhost:8080
 
-{"storeId":1,"channel":"DELIVERY_PARTNER","externalCustomerKey":"BAEMIN-USER-01","lines":[{"menuId":6,"quantity":1}]}</code></pre>
+{"storeId":1,"channel":"KIOSK","externalCustomerKey":"KIOSK-01","lines":[{"menuId":6,"quantity":1}]}</code></pre>
 </div>
 </div>
 <table class="tableblock frame-all grid-all stretch">
@@ -2357,12 +2357,12 @@ Host: localhost:8080
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>channel</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">주문 유입 채널 (DELIVERY_PARTNER, KIOSK)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">주문 유입 채널 (KIOSK 전용 — 배달 플랫폼은 웹훅 API 사용)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>externalCustomerKey</code></p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>String</code></p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">외부 플랫폼 고객/단말 식별 키</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">매장 키오스크 단말/고객 식별 키</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock"><code>lines[].menuId</code></p></td>

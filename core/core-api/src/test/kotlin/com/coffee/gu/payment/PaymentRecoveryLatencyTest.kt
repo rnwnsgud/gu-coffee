@@ -32,7 +32,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.math.BigDecimal
 import java.sql.Timestamp
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
 import java.util.UUID
 
 @SpringBootTest
@@ -110,7 +109,7 @@ class PaymentRecoveryLatencyTest {
             }
 
         given(paymentGateway.confirm(any()))
-            .willReturn(PGConfirmResult.success("ORDER-KEY", "PAY-KEY-100", PaymentMethod.CARD, "APPROVE-100", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success("ORDER-KEY", "PAY-KEY-100", PaymentMethod.CARD, "APPROVE-100", LocalDateTime.now()))
 
         // when
         val totalStartTime = System.nanoTime()

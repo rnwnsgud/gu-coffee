@@ -30,7 +30,6 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
 
 @ExtendWith(MockitoExtension::class)
 class PaymentCompleterTest {
@@ -149,7 +148,7 @@ class PaymentCompleterTest {
             "PG-PAY-KEY-999",
             PaymentMethod.CARD,
             "APPR-001",
-            OffsetDateTime.now()
+            LocalDateTime.now()
         )
 
         given(paymentReader.getByIdWithLock(paymentId)).willReturn(payment)

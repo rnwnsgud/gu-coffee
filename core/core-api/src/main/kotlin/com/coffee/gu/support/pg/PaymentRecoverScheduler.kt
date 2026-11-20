@@ -10,7 +10,7 @@ import com.coffee.gu.payment.PaymentGatewayProcessor
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.time.Duration
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Component
 class PaymentRecoverScheduler(
@@ -48,7 +48,7 @@ class PaymentRecoverScheduler(
                         pgPayment.paymentKey,
                         pendingPayment.method ?: PaymentMethod.CARD,
                         pendingPayment.approveCode,
-                        pendingPayment.paidAt ?: OffsetDateTime.now()
+                        pendingPayment.paidAt ?: LocalDateTime.now()
                     )
                     paymentCompleter.complete(order, pendingPayment.id, pgConfirmResult)
                 } else {

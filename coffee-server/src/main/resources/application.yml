@@ -22,6 +22,8 @@ gemini:
     base-url: https://generativelanguage.googleapis.com/v1beta
     model: gemini-3.5-flash-lite
     key: ${GEMINI_API_KEY:dummy-key}
+    connect-timeout-seconds: 5
+    read-timeout-seconds: 60
 
 security:
   gateway:

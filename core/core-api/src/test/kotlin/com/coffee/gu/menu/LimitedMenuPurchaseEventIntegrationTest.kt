@@ -42,7 +42,7 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -201,7 +201,7 @@ class LimitedMenuPurchaseEventIntegrationTest {
         given(paymentGateway.getByOrderKey(orderKeyB))
             .willReturn(PGPayment("PG-KEY-B", orderKeyB, menuPrice, PaymentGatewayStatus.IN_PROGRESS))
         given(paymentGateway.confirm(any()))
-            .willReturn(PGConfirmResult.success(orderKeyB, "PG-KEY-B", PaymentMethod.CARD, "APPR-B", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success(orderKeyB, "PG-KEY-B", PaymentMethod.CARD, "APPR-B", LocalDateTime.now()))
 
         val approvalResultB = paymentService.approvePayment(orderB)
         assertThat(approvalResultB.paymentState).isEqualTo(PaymentState.SUCCESS)
@@ -282,7 +282,7 @@ class LimitedMenuPurchaseEventIntegrationTest {
         given(paymentGateway.getByOrderKey(orderKeyA))
             .willReturn(PGPayment("PG-KEY-A", orderKeyA, menuPrice, PaymentGatewayStatus.IN_PROGRESS))
         given(paymentGateway.confirm(any()))
-            .willReturn(PGConfirmResult.success(orderKeyA, "PG-KEY-A", PaymentMethod.CARD, "APPR-A", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success(orderKeyA, "PG-KEY-A", PaymentMethod.CARD, "APPR-A", LocalDateTime.now()))
 
         paymentService.approvePayment(orderA)
         assertThat(limitedMenuFinder.getByMenuId(limitedMenuId).soldQuantity).isEqualTo(1)

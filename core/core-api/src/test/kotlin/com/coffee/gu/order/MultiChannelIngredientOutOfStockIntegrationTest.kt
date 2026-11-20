@@ -214,15 +214,23 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         }.isInstanceOf(CoreException::class.java)
             .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
 
-        // [차단 검증 4] 외부 배달 플랫폼 연동 주문 (OrderChannel.DELIVERY_PARTNER) - 외부 앱에 품절 동기화가 늦어 모닝세트 주문이 인입되어도 차단
+        // [차단 검증 4] 외부 배달 플랫폼 웹훅 주문 (OrderChannel.DELIVERY_PARTNER) - 외부 앱에 품절 동기화가 늦어 모닝세트 주문이 인입되어도 차단
+        val gangnamBaeminPayload = """
+            {
+              "orderNo": "BM-ORD-BLOCK-1",
+              "shopNo": $gangnamStoreId,
+              "memberKey": "BAEMIN-USER-99",
+              "menus": [
+                { "menuCode": "BM-TEST-MORNING-SET", "count": 1 }
+              ]
+            }
+        """.trimIndent()
         assertThatThrownBy {
-            externalOrderController.createExternalOrder(
-                CreateExternalOrderRequest(
-                    storeId = gangnamStoreId,
-                    channel = OrderChannel.DELIVERY_PARTNER,
-                    externalCustomerKey = "BAEMIN-USER-99",
-                    lines = listOf(CreateExternalOrderLineRequest(menuId = morningSetMenuId, quantity = 1L)),
-                ),
+            deliveryWebhookController.receiveBaeminOrder(
+                idempotencyKey = "BM-IDEMP-BLOCK-1",
+                signature = null,
+                rawPayload = gangnamBaeminPayload,
+                request = MockHttpServletRequest().apply { remoteAddr = "127.0.0.1" },
             )
         }.isInstanceOf(CoreException::class.java)
             .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
@@ -252,18 +260,18 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         assertThat(gangnamAmericanoOrder.channel).isEqualTo(OrderChannel.APP)
         assertThat(gangnamAmericanoOrder.storeId).isEqualTo(gangnamStoreId)
 
-        // [정상 통과 검증 2] 타 매장(홍대점)은 우유가 가용 상태이므로 외부 배달앱 및 장바구니를 통한 모닝세트 주문 모두 정상 통과
-        val hongdaeDeliveryOrderRes = externalOrderController.createExternalOrder(
+        // [정상 통과 검증 2] 타 매장(홍대점)은 우유가 가용 상태이므로 키오스크 및 장바구니를 통한 모닝세트 주문 모두 정상 통과
+        val hongdaeKioskOrderRes = externalOrderController.createExternalOrder(
             CreateExternalOrderRequest(
                 storeId = hongdaeStoreId,
-                channel = OrderChannel.DELIVERY_PARTNER,
-                externalCustomerKey = "COUPANG-EATS-77",
+                channel = OrderChannel.KIOSK,
+                externalCustomerKey = "KIOSK-HD-01",
                 lines = listOf(CreateExternalOrderLineRequest(menuId = morningSetMenuId, quantity = 1L)),
             ),
         )
-        val hongdaeDeliveryOrder = orderService.getOrder(hongdaeDeliveryOrderRes.data!!.orderKey)
-        assertThat(hongdaeDeliveryOrder.channel).isEqualTo(OrderChannel.DELIVERY_PARTNER)
-        assertThat(hongdaeDeliveryOrder.storeId).isEqualTo(hongdaeStoreId)
+        val hongdaeKioskOrder = orderService.getOrder(hongdaeKioskOrderRes.data!!.orderKey)
+        assertThat(hongdaeKioskOrder.channel).isEqualTo(OrderChannel.KIOSK)
+        assertThat(hongdaeKioskOrder.storeId).isEqualTo(hongdaeStoreId)
 
         val hongdaeCartOrderRes = orderController.createOrderFromCart(
             principal = customer,
@@ -286,13 +294,13 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
             request = UpdateIngredientAvailabilityRequest(isAvailable = false),
         )
 
-        // 2. 외부 배달앱을 통해 카페라떼 1잔 + 모닝세트 1개 복합 주문 인입 -> 우유 품절로 차단
+        // 2. 매장 키오스크를 통해 카페라떼 1잔 + 모닝세트 1개 복합 주문 인입 -> 우유 품절로 차단
         assertThatThrownBy {
             externalOrderController.createExternalOrder(
                 CreateExternalOrderRequest(
                     storeId = gangnamStoreId,
-                    channel = OrderChannel.DELIVERY_PARTNER,
-                    externalCustomerKey = "DELIVERY-USER-1",
+                    channel = OrderChannel.KIOSK,
+                    externalCustomerKey = "KIOSK-USER-1",
                     lines = listOf(
                         CreateExternalOrderLineRequest(menuId = latteMenuId, quantity = 1L),
                         CreateExternalOrderLineRequest(menuId = morningSetMenuId, quantity = 1L),
@@ -314,8 +322,8 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         val recoveredOrderRes = externalOrderController.createExternalOrder(
             CreateExternalOrderRequest(
                 storeId = gangnamStoreId,
-                channel = OrderChannel.DELIVERY_PARTNER,
-                externalCustomerKey = "DELIVERY-USER-1",
+                channel = OrderChannel.KIOSK,
+                externalCustomerKey = "KIOSK-USER-1",
                 lines = listOf(
                     CreateExternalOrderLineRequest(menuId = latteMenuId, quantity = 1L),
                     CreateExternalOrderLineRequest(menuId = morningSetMenuId, quantity = 1L),

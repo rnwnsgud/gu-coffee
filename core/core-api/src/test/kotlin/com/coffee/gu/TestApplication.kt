@@ -35,7 +35,13 @@ import java.util.concurrent.Executor
 @EnableJpaRepositories(basePackages = ["com.coffee.gu"])
 class TestApplication {
     @Bean
+    @Primary
     fun restClient(): RestClient {
+        return RestClient.create()
+    }
+
+    @Bean("llmRestClient")
+    fun llmRestClient(): RestClient {
         return RestClient.create()
     }
 

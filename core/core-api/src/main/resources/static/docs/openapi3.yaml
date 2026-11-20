@@ -104,18 +104,18 @@ paths:
     post:
       tags:
       - Order
-      summary: 외부 배달 플랫폼 및 매장 키오스크 주문 인입 API
-      description: 외부 배달 플랫폼 및 매장 키오스크 주문 인입 API
+      summary: 매장 키오스크 주문 인입 API
+      description: 매장 키오스크 주문 인입 API
       operationId: external-order-create
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/v1-external-orders-428249383"
+              $ref: "#/components/schemas/v1-external-orders-2140262167"
             examples:
               external-order-create:
-                value: "{\"storeId\":1,\"channel\":\"DELIVERY_PARTNER\",\"externalCustomerKey\"\
-                  :\"BAEMIN-USER-01\",\"lines\":[{\"menuId\":6,\"quantity\":1}]}"
+                value: "{\"storeId\":1,\"channel\":\"KIOSK\",\"externalCustomerKey\"\
+                  :\"KIOSK-01\",\"lines\":[{\"menuId\":6,\"quantity\":1}]}"
       responses:
         "200":
           description: "200"
@@ -1301,6 +1301,36 @@ components:
         status:
           type: string
           description: 응답 상태
+    v1-external-orders-2140262167:
+      required:
+      - channel
+      - externalCustomerKey
+      - storeId
+      type: object
+      properties:
+        externalCustomerKey:
+          type: string
+          description: 매장 키오스크 단말/고객 식별 키
+        channel:
+          type: string
+          description: 주문 유입 채널 (KIOSK 전용 — 배달 플랫폼은 웹훅 API 사용)
+        lines:
+          type: array
+          items:
+            required:
+            - menuId
+            - quantity
+            type: object
+            properties:
+              quantity:
+                type: number
+                description: 주문 수량
+              menuId:
+                type: number
+                description: "주문 메뉴 식별자 (예: 2=카페라떼, 6=모닝세트)"
+        storeId:
+          type: number
+          description: "주문 대상 매장 식별자 (예: 1=강남본점, 2=판교역점)"
     v1-cart-items-1531752005:
       required:
       - menuId
@@ -1674,36 +1704,6 @@ components:
         status:
           type: string
           description: 응답 상태
-    v1-external-orders-428249383:
-      required:
-      - channel
-      - externalCustomerKey
-      - storeId
-      type: object
-      properties:
-        externalCustomerKey:
-          type: string
-          description: 외부 플랫폼 고객/단말 식별 키
-        channel:
-          type: string
-          description: "주문 유입 채널 (DELIVERY_PARTNER, KIOSK)"
-        lines:
-          type: array
-          items:
-            required:
-            - menuId
-            - quantity
-            type: object
-            properties:
-              quantity:
-                type: number
-                description: 주문 수량
-              menuId:
-                type: number
-                description: "주문 메뉴 식별자 (예: 2=카페라떼, 6=모닝세트)"
-        storeId:
-          type: number
-          description: "주문 대상 매장 식별자 (예: 1=강남본점, 2=판교역점)"
     v1-cart-orders297784862:
       required:
       - error

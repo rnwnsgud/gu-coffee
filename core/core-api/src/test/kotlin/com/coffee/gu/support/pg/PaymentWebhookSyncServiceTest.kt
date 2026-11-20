@@ -39,7 +39,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 class PaymentWebhookSyncServiceTest {
 
@@ -109,7 +109,7 @@ class PaymentWebhookSyncServiceTest {
             ),
         ).willAnswer {
             order.paid()
-            PaymentApprovalResult.approved(order.key, "tviva-001", OffsetDateTime.now())
+            PaymentApprovalResult.approved(order.key, "tviva-001", LocalDateTime.now())
         }
 
         val command = PaymentWebhookCommand(
@@ -127,7 +127,7 @@ class PaymentWebhookSyncServiceTest {
         then(paymentCompleter).should().complete(eq(order), eq(pendingPayment.id), any<PGConfirmResult>())
 
         // 이미 SUCCESS 상태로 변경된 후 중복 DONE 웹훅 수신
-        pendingPayment.success("tviva-001", PaymentMethod.VIRTUAL_ACCOUNT, null, OffsetDateTime.now())
+        pendingPayment.success("tviva-001", PaymentMethod.VIRTUAL_ACCOUNT, null, LocalDateTime.now())
         val duplicateResult = paymentWebhookSyncService.syncStatus(command)
 
         assertThat(duplicateResult.action).isEqualTo(PaymentWebhookSyncAction.IGNORED_ALREADY_PROCESSED)
@@ -142,7 +142,7 @@ class PaymentWebhookSyncServiceTest {
         given(orderReader.getByOrderKey(order.key)).willReturn(order)
         given(orderManager.cancel(order)).willAnswer { order.canceled() }
 
-        val canceledAt = OffsetDateTime.now()
+        val canceledAt = LocalDateTime.now()
         given(cancelManager.cancel(paidPayment, "tx-cancel-777")).willReturn(
             Cancel(
                 id = 1L,

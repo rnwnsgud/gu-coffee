@@ -11,7 +11,7 @@ import com.coffee.gu.payment.Payment
 import com.coffee.gu.payment.PaymentManager
 import com.coffee.gu.payment.PaymentWebhookCommand
 import org.springframework.stereotype.Component
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Component
 class PaymentWebhookSynchronizer(
@@ -55,6 +55,6 @@ class PaymentWebhookSynchronizer(
             restoreDbSoldQuantity = false,
         )
         val reason = command.cancelReason?.takeIf { it.isNotBlank() } ?: "PG Webhook ${command.status}"
-        transactionHistoryManager.record(TransactionType.PAYMENT_FAIL, order, payment, reason, OffsetDateTime.now())
+        transactionHistoryManager.record(TransactionType.PAYMENT_FAIL, order, payment, reason, LocalDateTime.now())
     }
 }

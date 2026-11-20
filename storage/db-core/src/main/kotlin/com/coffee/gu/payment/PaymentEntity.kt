@@ -14,7 +14,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.Index
 import jakarta.persistence.Table
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Table(
     name = "payment",
@@ -41,7 +41,7 @@ class PaymentEntity(
     var externalPaymentKey: String? = null,
     @Enumerated(EnumType.STRING)
     var method: PaymentMethod? = null,
-    var paidAt: OffsetDateTime? = null,
+    var paidAt: LocalDateTime? = null,
     var approveCode: String? = null,
     var retryCount: Int = 0,
 ) : BaseEntity() {

@@ -9,7 +9,7 @@ import com.coffee.gu.PaymentGatewayStatus
 import com.coffee.gu.menu.LimitedMenuStockManager
 import com.coffee.gu.order.Order
 import org.springframework.stereotype.Component
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Component
 class PaymentApprovalFailureResolver(
@@ -159,7 +159,7 @@ class PaymentApprovalFailureResolver(
             restoreDbSoldQuantity = false,
         )
         paymentCompleter.failProcess(order, payment, "PG_APPROVE_TIMEOUT", "승인 타임아웃 후 미승인 확인")
-        return PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", OffsetDateTime.now())
+        return PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: "", LocalDateTime.now())
     }
 
     private fun cancelOrCompensate(
@@ -189,7 +189,7 @@ class PaymentApprovalFailureResolver(
             )
         } else {
             paymentCompleter.failProcess(order, payment, failCode, failMessage)
-            PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: paymentKey, OffsetDateTime.now())
+            PaymentApprovalResult.failed(order.key, payment.externalPaymentKey ?: paymentKey, LocalDateTime.now())
         }
     }
 }

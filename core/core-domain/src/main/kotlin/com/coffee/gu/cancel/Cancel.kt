@@ -2,7 +2,7 @@ package com.coffee.gu.cancel
 
 import com.coffee.gu.Principal
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 class Cancel(
     val id: Long = 0,
@@ -15,5 +15,5 @@ class Cancel(
     val paidAmount: BigDecimal,
     val canceledAmount: BigDecimal,
     val externalCancelKey: String? = null,
-    val canceledAt: OffsetDateTime? = null,
+    val canceledAt: LocalDateTime? = null,
 )

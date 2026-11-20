@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import tools.jackson.databind.ObjectMapper
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PaymentControllerTest : RestDocsTest() {
@@ -106,7 +106,7 @@ class PaymentControllerTest : RestDocsTest() {
         // given
         val order = Order("order-key", "Coffee", Principal.user("1"), 1L, BigDecimal.valueOf(2000), OrderState.PAID, emptyList())
         given(orderService.getOrder(eq(order.key))).willReturn(order)
-        given(paymentService.approvePayment(any())).willReturn(PaymentApprovalResult.approved("order-key", "payment-key", OffsetDateTime.now()))
+        given(paymentService.approvePayment(any())).willReturn(PaymentApprovalResult.approved("order-key", "payment-key", LocalDateTime.now()))
 
         // when & then
         mockMvc.perform(
