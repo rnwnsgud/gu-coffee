@@ -39,15 +39,14 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.client.RestClient
-import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.JsonNodeType
-import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.math.BigDecimal
 
 class AiChatControllerTest : RestDocsTest() {
 
     private val agentLoopRunner: AgentLoopRunner = mock()
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
+    private val objectMapper: JsonMapper = JsonMapper.builder().findAndAddModules().build()
 
     override val controller: Any
         get() = AiChatController(agentLoopRunner)
@@ -201,8 +200,8 @@ class AiChatControllerTest : RestDocsTest() {
         val realRunner = AgentLoopRunner(
             llmClient = realGeminiClient,
             tools = listOf(
-                GetOrderStatusAgentTool(orderReader),
-                CancelOrderAgentTool(orderReader, cancelService)
+                GetOrderStatusAgentTool(orderReader, objectMapper),
+                CancelOrderAgentTool(orderReader, cancelService, objectMapper)
             )
         )
         val liveMockMvc = MockMvcBuilders.standaloneSetup(AiChatController(realRunner)).build()

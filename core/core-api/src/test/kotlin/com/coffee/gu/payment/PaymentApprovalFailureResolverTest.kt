@@ -25,6 +25,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -244,7 +245,7 @@ class PaymentApprovalFailureResolverTest {
             PaymentGatewayCancel("PAY-KEY-1", "DB 데드락 에러")
         )
         then(paymentCompleter).should().failProcess(order, payment, "COMPLETION_FAILED", "DB 데드락 에러")
-        then(paymentCompleter).should(org.mockito.Mockito.never()).compensateApprovalFailure(any(), any(), any(), any())
+        then(paymentCompleter).should(never()).compensateApprovalFailure(any(), any(), any(), any())
     }
 
     @Test

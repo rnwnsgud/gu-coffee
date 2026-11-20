@@ -3,7 +3,7 @@ package com.coffee.gu.ai.harness
 import com.coffee.gu.ai.client.LlmMessage
 import com.coffee.gu.ai.client.ToolCall
 import org.springframework.data.redis.core.StringRedisTemplate
-import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.readValue
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
@@ -54,14 +54,14 @@ class InMemoryAgentCheckpointStore : AgentCheckpointStore {
  */
 class RedisAgentCheckpointStore(
     private val redisTemplate: StringRedisTemplate,
-    private val objectMapper: ObjectMapper,
+    private val jsonMapper: JsonMapper,
     private val ttl: Duration = Duration.ofMinutes(30),
     private val keyPrefix: String = "ai:checkpoint:"
 ) : AgentCheckpointStore {
 
     override fun save(checkpoint: AgentCheckpoint) {
         val key = keyPrefix + checkpoint.sessionId
-        val json = objectMapper.writeValueAsString(checkpoint)
+        val json = jsonMapper.writeValueAsString(checkpoint)
         redisTemplate.opsForValue().set(key, json, ttl)
     }
 
@@ -69,7 +69,7 @@ class RedisAgentCheckpointStore(
         val key = keyPrefix + sessionId
         val json = redisTemplate.opsForValue().get(key) ?: return null
         return try {
-            objectMapper.readValue<AgentCheckpoint>(json)
+            jsonMapper.readValue<AgentCheckpoint>(json)
         } catch (e: Exception) {
             null
         }

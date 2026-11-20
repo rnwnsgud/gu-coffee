@@ -11,13 +11,17 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
-import org.mockito.Mockito.mock
+import org.mockito.kotlin.mock
+import tools.jackson.databind.json.JsonMapper
 
 class DeliveryWebhookPayloadProcessorTest {
 
     private val externalMenuMappingRepository: ExternalMenuMappingRepository = mock()
     private val externalMenuMappingFinder = ExternalMenuMappingFinder(externalMenuMappingRepository)
-    private val processor = DeliveryWebhookPayloadProcessor(externalMenuMappingFinder)
+    private val processor = DeliveryWebhookPayloadProcessor(
+        externalMenuMappingFinder = externalMenuMappingFinder,
+        jsonMapper = JsonMapper.builder().findAndAddModules().build(),
+    )
 
     @Test
     @DisplayName("배달의민족 웹훅 JSON과 쿠팡이츠 웹훅 JSON을 각각 외부 메뉴 매핑을 거쳐 내부 표준 NewOrder로 변환한다")

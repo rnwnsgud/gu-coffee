@@ -12,19 +12,18 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.data.redis.core.StringRedisTemplate
 import org.springframework.data.redis.core.ValueOperations
-import tools.jackson.databind.ObjectMapper
-import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import java.time.Duration
 
 class RedisAgentCheckpointStoreTest {
 
     private val redisTemplate: StringRedisTemplate = mock()
     private val valueOperations: ValueOperations<String, String> = mock()
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
+    private val jsonMapper: JsonMapper = JsonMapper.builder().findAndAddModules().build()
 
     private val store = RedisAgentCheckpointStore(
         redisTemplate = redisTemplate,
-        objectMapper = objectMapper,
+        jsonMapper = jsonMapper,
         ttl = Duration.ofMinutes(30)
     )
 
@@ -65,7 +64,7 @@ class RedisAgentCheckpointStoreTest {
             messages = listOf(LlmMessage.user("주문 취소해줘")),
             pendingToolCall = ToolCall(id = "c1", name = "cancelOrder", arguments = mapOf("orderId" to 101))
         )
-        val json = objectMapper.writeValueAsString(originalCheckpoint)
+        val json = jsonMapper.writeValueAsString(originalCheckpoint)
 
         whenever(valueOperations.get("ai:checkpoint:sess_101")).thenReturn(json)
 

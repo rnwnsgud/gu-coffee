@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":core:core-domain"))
     implementation(project(":core:core-enum"))
     implementation(project(":support:error"))
+    implementation(project(":support:pg"))
     implementation(project(":support:web"))
 
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")

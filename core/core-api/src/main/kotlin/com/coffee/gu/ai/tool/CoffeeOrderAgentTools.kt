@@ -5,7 +5,7 @@ import com.coffee.gu.cancel.CancelService
 import com.coffee.gu.enums.OrderState
 import com.coffee.gu.order.OrderReader
 import org.springframework.stereotype.Component
-import tools.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.databind.json.JsonMapper
 
 /**
  * 기존 커피 주문 도메인의 OrderReader를 AI 에이전트 도구로 감싸는 어댑터입니다.
@@ -13,9 +13,9 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
  */
 @Component
 class GetOrderStatusAgentTool(
-    private val orderReader: OrderReader
+    private val orderReader: OrderReader,
+    private val jsonMapper: JsonMapper,
 ) : AgentTool {
-    private val objectMapper = jacksonObjectMapper()
 
     override fun specification(): ToolSpecification {
         return ToolSpecification(
@@ -42,7 +42,7 @@ class GetOrderStatusAgentTool(
             "totalPrice" to order.totalPrice,
             "state" to order.state.name
         )
-        return objectMapper.writeValueAsString(result)
+        return jsonMapper.writeValueAsString(result)
     }
 }
 
@@ -55,9 +55,9 @@ class GetOrderStatusAgentTool(
 @Component
 class CancelOrderAgentTool(
     private val orderReader: OrderReader,
-    private val cancelService: CancelService
+    private val cancelService: CancelService,
+    private val jsonMapper: JsonMapper,
 ) : AgentTool {
-    private val objectMapper = jacksonObjectMapper()
 
     override fun specification(): ToolSpecification {
         return ToolSpecification(
@@ -91,6 +91,6 @@ class CancelOrderAgentTool(
             "status" to "CANCELED",
             "message" to "주문 취소 및 환불 처리가 완료되었습니다."
         )
-        return objectMapper.writeValueAsString(result)
+        return jsonMapper.writeValueAsString(result)
     }
 }

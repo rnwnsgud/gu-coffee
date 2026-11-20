@@ -13,8 +13,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.then
-import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
 
 class DeliveryWebhookIdempotencyManagerTest {
 

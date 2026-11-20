@@ -3,14 +3,19 @@ package com.coffee.gu.payment.webhook.order
 import com.coffee.gu.CoreException
 import com.coffee.gu.ErrorType
 import com.coffee.gu.enums.PaymentMethod
+import com.coffee.gu.toss.TossPaymentsMethodMapper
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
+import tools.jackson.databind.json.JsonMapper
 
 class TossWebhookPayloadProcessorTest {
 
-    private val processor = TossWebhookPayloadProcessor()
+    private val processor = TossWebhookPayloadProcessor(
+        jsonMapper = JsonMapper.builder().findAndAddModules().build(),
+        tossPaymentsMethodMapper = TossPaymentsMethodMapper(),
+    )
 
     @Test
     @DisplayName("DEPOSIT_CALLBACK 가상계좌 입금 완료(루트 레벨 JSON) 웹훅을 PaymentWebhookCommand로 변환한다")
@@ -88,6 +93,29 @@ class TossWebhookPayloadProcessorTest {
         assertThat(command.status).isEqualTo("CANCELED")
         assertThat(command.cancelTransactionKey).isEqualTo("tx-cancel-async-1")
         assertThat(command.cancelReason).isEqualTo("비동기 취소 완료")
+    }
+
+    @Test
+    @DisplayName("간편결제 웹훅은 easyPay.provider를 기반으로 정확한 PaymentMethod로 매핑한다")
+    fun mapEasyPayProviderFromWebhookPayload() {
+        val rawJson = """
+            {
+              "eventType": "PAYMENT_STATUS_CHANGED",
+              "data": {
+                "paymentKey": "tviva20261118181001",
+                "orderId": "ORD-20261118-004",
+                "status": "DONE",
+                "method": "간편결제",
+                "easyPay": {
+                  "provider": "카카오페이"
+                }
+              }
+            }
+        """.trimIndent()
+
+        val command = processor.process(rawJson)
+
+        assertThat(command.method).isEqualTo(PaymentMethod.KAKAO_PAY)
     }
 
     @Test

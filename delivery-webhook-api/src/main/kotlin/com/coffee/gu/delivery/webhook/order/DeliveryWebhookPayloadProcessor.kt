@@ -15,12 +15,12 @@ import tools.jackson.databind.json.JsonMapper
 @Component
 class DeliveryWebhookPayloadProcessor(
     private val externalMenuMappingFinder: ExternalMenuMappingFinder,
+    private val jsonMapper: JsonMapper,
 ) {
-    private val objectMapper = JsonMapper.builder().findAndAddModules().build()
 
     fun processBaeminPayload(rawPayload: String): NewOrder {
         val payload = try {
-            objectMapper.readValue(rawPayload, BaeminOrderWebhookPayload::class.java)
+            jsonMapper.readValue(rawPayload, BaeminOrderWebhookPayload::class.java)
         } catch (_: Exception) {
             throw CoreException(ErrorType.INVALID_REQUEST, "배달의민족 웹훅 JSON 형식이 올바르지 않습니다.")
         }
@@ -51,7 +51,7 @@ class DeliveryWebhookPayloadProcessor(
 
     fun processCoupangEatsPayload(rawPayload: String): NewOrder {
         val payload = try {
-            objectMapper.readValue(rawPayload, CoupangEatsOrderWebhookPayload::class.java)
+            jsonMapper.readValue(rawPayload, CoupangEatsOrderWebhookPayload::class.java)
         } catch (_: Exception) {
             throw CoreException(ErrorType.INVALID_REQUEST, "쿠팡이츠 웹훅 JSON 형식이 올바르지 않습니다.")
         }
