@@ -48,6 +48,11 @@ class ArchitectureTest {
         uri.contains("partner-api")
     }
 
+    private val resideInStoreDeviceApi = DescribedPredicate.describe<JavaClass>("reside in store-device-api module") { javaClass ->
+        val uri = javaClass.source.orElse(null)?.uri?.toString() ?: ""
+        uri.contains("store-device-api")
+    }
+
     private val resideInDeliveryWebhookApi = DescribedPredicate.describe<JavaClass>("reside in delivery-webhook-api module") { javaClass ->
         val uri = javaClass.source.orElse(null)?.uri?.toString() ?: ""
         uri.contains("delivery-webhook-api")
@@ -60,6 +65,7 @@ class ArchitectureTest {
 
     private val resideInEntryPointModules = resideInCoreApi
         .or(resideInPartnerApi)
+        .or(resideInStoreDeviceApi)
         .or(resideInDeliveryWebhookApi)
         .or(resideInPaymentWebhookApi)
 
@@ -184,29 +190,35 @@ class ArchitectureTest {
     }
 
     @Test
-    @DisplayName("[규칙 10] 진입점 API 모듈(core-api, partner-api, delivery-webhook-api, payment-webhook-api)은 서로 직접 참조하지 않고 독립성을 유지해야 한다 (진입점 모듈 격리)")
+    @DisplayName("[규칙 10] 진입점 API 모듈(core-api, partner-api, store-device-api, delivery-webhook-api, payment-webhook-api)은 서로 직접 참조하지 않고 독립성을 유지해야 한다 (진입점 모듈 격리)")
     fun coreApiAndPartnerApiShouldBeIsolatedFromEachOther() {
         noClasses()
             .that(resideInCoreApi)
-            .should().dependOnClassesThat(resideInPartnerApi.or(resideInDeliveryWebhookApi).or(resideInPaymentWebhookApi))
+            .should().dependOnClassesThat(resideInPartnerApi.or(resideInStoreDeviceApi).or(resideInDeliveryWebhookApi).or(resideInPaymentWebhookApi))
             .because("고객용 API(core-api)는 타 진입점 모듈에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
             .check(importedClasses)
 
         noClasses()
             .that(resideInPartnerApi)
-            .should().dependOnClassesThat(resideInCoreApi.or(resideInDeliveryWebhookApi).or(resideInPaymentWebhookApi))
+            .should().dependOnClassesThat(resideInCoreApi.or(resideInStoreDeviceApi).or(resideInDeliveryWebhookApi).or(resideInPaymentWebhookApi))
             .because("점주 전용 파트너 모듈(partner-api)은 타 진입점 모듈에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
             .check(importedClasses)
 
         noClasses()
+            .that(resideInStoreDeviceApi)
+            .should().dependOnClassesThat(resideInCoreApi.or(resideInPartnerApi).or(resideInDeliveryWebhookApi).or(resideInPaymentWebhookApi))
+            .because("매장 고정 기기 API 모듈(store-device-api)은 타 진입점 모듈에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
+            .check(importedClasses)
+
+        noClasses()
             .that(resideInDeliveryWebhookApi)
-            .should().dependOnClassesThat(resideInCoreApi.or(resideInPartnerApi).or(resideInPaymentWebhookApi))
+            .should().dependOnClassesThat(resideInCoreApi.or(resideInPartnerApi).or(resideInStoreDeviceApi).or(resideInPaymentWebhookApi))
             .because("배달 웹훅 전용 어댑터 모듈(delivery-webhook-api)은 타 진입점 모듈에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
             .check(importedClasses)
 
         noClasses()
             .that(resideInPaymentWebhookApi)
-            .should().dependOnClassesThat(resideInCoreApi.or(resideInPartnerApi).or(resideInDeliveryWebhookApi))
+            .should().dependOnClassesThat(resideInCoreApi.or(resideInPartnerApi).or(resideInStoreDeviceApi).or(resideInDeliveryWebhookApi))
             .because("결제 웹훅 전용 어댑터 모듈(payment-webhook-api)은 타 진입점 모듈에 의존해서는 안 되며, 도메인 협력은 core-domain을 통해서만 이루어져야 합니다.")
             .check(importedClasses)
     }

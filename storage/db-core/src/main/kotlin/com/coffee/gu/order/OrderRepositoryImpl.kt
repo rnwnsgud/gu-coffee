@@ -34,6 +34,19 @@ class OrderRepositoryImpl(
             .map { it.toModel() }
     }
 
+    override fun findAllByStoreId(storeId: Long, state: OrderState?): List<Order> {
+        return jpaQueryFactory
+            .selectFrom(orderEntity)
+            .where(
+                orderEntity.storeId.eq(storeId),
+                state?.let { orderEntity.state.eq(it) },
+                orderEntity.entityStatus.eq(EntityStatus.ACTIVE),
+            )
+            .orderBy(orderEntity.createdAt.desc())
+            .fetch()
+            .map { it.toModel() }
+    }
+
     override fun findByOrderKey(orderKey: String): Order {
         return jpaQueryFactory
             .selectFrom(orderEntity)

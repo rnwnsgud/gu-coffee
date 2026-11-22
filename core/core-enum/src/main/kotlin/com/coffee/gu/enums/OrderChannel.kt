@@ -5,4 +5,5 @@ enum class OrderChannel {
     CART,
     DELIVERY_PARTNER,
     KIOSK,
+    POS,
 }

@@ -4,13 +4,15 @@ import com.coffee.gu.CoreException
 import com.coffee.gu.ErrorType
 import com.coffee.gu.Principal
 import com.coffee.gu.TestApplication
-import com.coffee.gu.api.controller.v1.ExternalOrderController
 import com.coffee.gu.api.controller.v1.MenuController
 import com.coffee.gu.api.controller.v1.OrderController
-import com.coffee.gu.api.controller.v1.request.CreateExternalOrderLineRequest
-import com.coffee.gu.api.controller.v1.request.CreateExternalOrderRequest
 import com.coffee.gu.api.controller.v1.request.CreateOrderFromCartRequest
 import com.coffee.gu.api.controller.v1.request.CreateOrderRequest
+import com.coffee.gu.enums.StoreDeviceType
+import com.coffee.gu.storedevice.auth.StoreDevicePrincipal
+import com.coffee.gu.storedevice.controller.v1.StoreDeviceOrderController
+import com.coffee.gu.storedevice.controller.v1.request.CreateDeviceOrderLineRequest
+import com.coffee.gu.storedevice.controller.v1.request.CreateDeviceOrderRequest
 import com.coffee.gu.partner.auth.PartnerPrincipal
 import com.coffee.gu.partner.controller.v1.PartnerIngredientController
 import com.coffee.gu.partner.controller.v1.request.UpdateIngredientAvailabilityRequest
@@ -60,7 +62,7 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
     private lateinit var orderController: OrderController
 
     @Autowired
-    private lateinit var externalOrderController: ExternalOrderController
+    private lateinit var storeDeviceOrderController: StoreDeviceOrderController
 
     @Autowired
     private lateinit var deliveryWebhookController: DeliveryWebhookController
@@ -236,15 +238,19 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
             .hasFieldOrPropertyWithValue("errorType", ErrorType.MENU_INGREDIENT_OUT_OF_STOCK)
 
         // [차단 검증 5] 매장 키오스크 주문 (OrderChannel.KIOSK) - 라떼 + 아메리카노 복합 주문 시 우유 품절로 전체 차단
+        val gangnamKiosk = StoreDevicePrincipal(
+            deviceId = 1L,
+            deviceCode = "KIOSK-GN-01",
+            storeId = gangnamStoreId,
+            deviceType = StoreDeviceType.KIOSK,
+        )
         assertThatThrownBy {
-            externalOrderController.createExternalOrder(
-                CreateExternalOrderRequest(
-                    storeId = gangnamStoreId,
-                    channel = OrderChannel.KIOSK,
-                    externalCustomerKey = "KIOSK-01",
+            storeDeviceOrderController.createDeviceOrder(
+                device = gangnamKiosk,
+                request = CreateDeviceOrderRequest(
                     lines = listOf(
-                        CreateExternalOrderLineRequest(menuId = americanoMenuId, quantity = 1L),
-                        CreateExternalOrderLineRequest(menuId = latteMenuId, quantity = 1L),
+                        CreateDeviceOrderLineRequest(menuId = americanoMenuId, quantity = 1L),
+                        CreateDeviceOrderLineRequest(menuId = latteMenuId, quantity = 1L),
                     ),
                 ),
             )
@@ -261,12 +267,16 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         assertThat(gangnamAmericanoOrder.storeId).isEqualTo(gangnamStoreId)
 
         // [정상 통과 검증 2] 타 매장(홍대점)은 우유가 가용 상태이므로 키오스크 및 장바구니를 통한 모닝세트 주문 모두 정상 통과
-        val hongdaeKioskOrderRes = externalOrderController.createExternalOrder(
-            CreateExternalOrderRequest(
-                storeId = hongdaeStoreId,
-                channel = OrderChannel.KIOSK,
-                externalCustomerKey = "KIOSK-HD-01",
-                lines = listOf(CreateExternalOrderLineRequest(menuId = morningSetMenuId, quantity = 1L)),
+        val hongdaeKiosk = StoreDevicePrincipal(
+            deviceId = 2L,
+            deviceCode = "KIOSK-HD-01",
+            storeId = hongdaeStoreId,
+            deviceType = StoreDeviceType.KIOSK,
+        )
+        val hongdaeKioskOrderRes = storeDeviceOrderController.createDeviceOrder(
+            device = hongdaeKiosk,
+            request = CreateDeviceOrderRequest(
+                lines = listOf(CreateDeviceOrderLineRequest(menuId = morningSetMenuId, quantity = 1L)),
             ),
         )
         val hongdaeKioskOrder = orderService.getOrder(hongdaeKioskOrderRes.data!!.orderKey)
@@ -295,15 +305,19 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         )
 
         // 2. 매장 키오스크를 통해 카페라떼 1잔 + 모닝세트 1개 복합 주문 인입 -> 우유 품절로 차단
+        val gangnamKiosk = StoreDevicePrincipal(
+            deviceId = 1L,
+            deviceCode = "KIOSK-GN-01",
+            storeId = gangnamStoreId,
+            deviceType = StoreDeviceType.KIOSK,
+        )
         assertThatThrownBy {
-            externalOrderController.createExternalOrder(
-                CreateExternalOrderRequest(
-                    storeId = gangnamStoreId,
-                    channel = OrderChannel.KIOSK,
-                    externalCustomerKey = "KIOSK-USER-1",
+            storeDeviceOrderController.createDeviceOrder(
+                device = gangnamKiosk,
+                request = CreateDeviceOrderRequest(
                     lines = listOf(
-                        CreateExternalOrderLineRequest(menuId = latteMenuId, quantity = 1L),
-                        CreateExternalOrderLineRequest(menuId = morningSetMenuId, quantity = 1L),
+                        CreateDeviceOrderLineRequest(menuId = latteMenuId, quantity = 1L),
+                        CreateDeviceOrderLineRequest(menuId = morningSetMenuId, quantity = 1L),
                     ),
                 ),
             )
@@ -319,14 +333,12 @@ class MultiChannelIngredientOutOfStockIntegrationTest {
         )
 
         // 4. 동일한 복합 주문 재시도 -> 정상 통과
-        val recoveredOrderRes = externalOrderController.createExternalOrder(
-            CreateExternalOrderRequest(
-                storeId = gangnamStoreId,
-                channel = OrderChannel.KIOSK,
-                externalCustomerKey = "KIOSK-USER-1",
+        val recoveredOrderRes = storeDeviceOrderController.createDeviceOrder(
+            device = gangnamKiosk,
+            request = CreateDeviceOrderRequest(
                 lines = listOf(
-                    CreateExternalOrderLineRequest(menuId = latteMenuId, quantity = 1L),
-                    CreateExternalOrderLineRequest(menuId = morningSetMenuId, quantity = 1L),
+                    CreateDeviceOrderLineRequest(menuId = latteMenuId, quantity = 1L),
+                    CreateDeviceOrderLineRequest(menuId = morningSetMenuId, quantity = 1L),
                 ),
             ),
         )

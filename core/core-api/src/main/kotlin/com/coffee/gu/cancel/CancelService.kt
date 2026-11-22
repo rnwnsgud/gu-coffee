@@ -2,6 +2,7 @@ package com.coffee.gu.cancel
 
 import com.coffee.gu.CancelEvent
 import com.coffee.gu.PaymentGatewayCancel
+import com.coffee.gu.order.ExternalOrderCanceler
 import com.coffee.gu.order.Order
 import com.coffee.gu.payment.PaymentGatewayProcessor
 import com.coffee.gu.payment.PaymentReader
@@ -13,8 +14,8 @@ class CancelService(
     private val paymentReader: PaymentReader,
     private val paymentGatewayProcessor: PaymentGatewayProcessor,
     private val cancelTxHandler: CancelTxHandler,
-) {
-    fun cancel(order: Order) {
+) : ExternalOrderCanceler {
+    override fun cancel(order: Order) {
         cancel(order, CancelEvent(order.key))
     }
 

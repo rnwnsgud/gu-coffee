@@ -162,3 +162,14 @@ INSERT IGNORE INTO external_menu_mapping (id, platform, external_menu_code, menu
 (6, 'COUPANG_EATS', 'CE-LATTE', 2, 'ACTIVE', NOW(6), NOW(6)),
 (7, 'COUPANG_EATS', 'CE-VANILLA-LATTE', 3, 'ACTIVE', NOW(6), NOW(6)),
 (8, 'COUPANG_EATS', 'CE-MORNING-SET', 6, 'ACTIVE', NOW(6), NOW(6));
+
+-- 18. 매장 고정 기기 (Store Device - 로컬 테스트용 키오스크·POS API Key SHA-256 해시)
+-- 강남본점 키오스크 1호기 원본 API Key: kiosk-gangnam-01-secret-key
+-- 판교역점 키오스크 1호기 원본 API Key: kiosk-pangyo-01-secret-key
+-- 강남본점 POS 1호기 원본 API Key: pos-gangnam-01-secret-key
+-- 판교역점 POS 1호기 원본 API Key: pos-pangyo-01-secret-key
+INSERT IGNORE INTO store_device (id, device_code, store_id, device_type, api_key_hash, is_active, entity_status, created_at, updated_at) VALUES
+(1, 'KIOSK-GANGNAM-01', 1, 'KIOSK', '47e2ee53db2daa07573e3fbea9a3991becebc80d1ef0ad43cf1135e2ce89d182', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(2, 'KIOSK-PANGYO-01', 2, 'KIOSK', 'c53e47206bf495788c2709d741102a45b9eefff5823638c61532a475e7f8c9cf', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(3, 'POS-GANGNAM-01', 1, 'POS', '611f74efb6adc16f32bc01d70fa874e1709b48857629b0ac890d458ef1e4f67d', TRUE, 'ACTIVE', NOW(6), NOW(6)),
+(4, 'POS-PANGYO-01', 2, 'POS', 'ff31aad244ce5a004a03a2578c2652c327e5e3633035416f537b65b1b00dedb0', TRUE, 'ACTIVE', NOW(6), NOW(6));

@@ -21,6 +21,8 @@ tags:
     description: 선착순 쿠폰 API
   - name: Partner Ingredient
     description: 점포 파트너 원자재 관리 API
+  - name: Store Device
+    description: 매장 고정 기기(키오스크·POS) API
   - name: External Webhook
     description: 외부 배달 플랫폼 주문 웹훅 API
   - name: AI Agent
@@ -99,33 +101,6 @@ paths:
               examples:
                 order-create-from-cart:
                   value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"0S6DXFAGW9999\"\
-                    },\"error\":null}"
-  /v1/external-orders:
-    post:
-      tags:
-      - Order
-      summary: 매장 키오스크 주문 인입 API
-      description: 매장 키오스크 주문 인입 API
-      operationId: external-order-create
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/v1-external-orders-2140262167"
-            examples:
-              external-order-create:
-                value: "{\"storeId\":1,\"channel\":\"KIOSK\",\"externalCustomerKey\"\
-                  :\"KIOSK-01\",\"lines\":[{\"menuId\":6,\"quantity\":1}]}"
-      responses:
-        "200":
-          description: "200"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/v1-cart-orders297784862"
-              examples:
-                external-order-create:
-                  value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"0S6DXFAGW286R\"\
                     },\"error\":null}"
   /v1/issued-coupons:
     get:
@@ -417,6 +392,41 @@ paths:
               examples:
                 cart-add-item:
                   value: "{\"status\":\"SUCCESS\",\"data\":null,\"error\":null}"
+  /v1/devices/orders:
+    post:
+      tags:
+      - Store Device
+      summary: 매장 기기(키오스크·POS) 주문 생성 API
+      description: 매장 고정 기기 API Key로 인증된 키오스크 또는 POS 단말이 현장 주문을 생성합니다. 매장(storeId)과
+        채널(KIOSK/POS)은 인증된 기기 정보로부터 서버에서 자동 바인딩됩니다.
+      operationId: device-order-create
+      parameters:
+      - name: Gu-Coffee-Device-Api-Key
+        in: header
+        description: "매장 고정 기기 API Key (예: kiosk-gangnam-01-secret-key)"
+        required: true
+        schema:
+          type: string
+        example: kiosk-gangnam-01-secret-key
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/v1-devices-orders19278581"
+            examples:
+              device-order-create:
+                value: "{\"lines\":[{\"menuId\":6,\"quantity\":1}]}"
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-cart-orders297784862"
+              examples:
+                device-order-create:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"0S6DXFAGW286R\"\
+                    },\"error\":null}"
   /v1/limited-coupons/{limitedCouponId}:
     get:
       tags:
@@ -677,6 +687,40 @@ paths:
               examples:
                 coupon-download:
                   value: "{\"status\":\"SUCCESS\",\"data\":null,\"error\":null}"
+  /v1/devices/pos/orders:
+    get:
+      tags:
+      - Store Device
+      summary: POS 매장 주문 목록 조회 API
+      description: POS 기기 API Key로 인증된 매장의 주문 목록을 조회합니다. state 쿼리 파라미터로 주문 상태별 필터링이
+        가능합니다.
+      operationId: pos-order-list
+      parameters:
+      - name: state
+        in: query
+        description: "주문 상태 필터 (CREATED, PAID, CANCELED — 미입력 시 전체 조회)"
+        required: false
+        schema:
+          type: string
+      - name: Gu-Coffee-Device-Api-Key
+        in: header
+        description: "매장 POS 기기 API Key (예: pos-gangnam-01-secret-key)"
+        required: true
+        schema:
+          type: string
+        example: pos-gangnam-01-secret-key
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-devices-pos-orders-844890822"
+              examples:
+                pos-order-list:
+                  value: "{\"status\":\"SUCCESS\",\"data\":[{\"orderKey\":\"0S6DXFAGW286R\"\
+                    ,\"name\":\"모닝세트 (카페라떼 + 베이글)\",\"storeId\":1,\"totalPrice\":7500.00,\"\
+                    state\":\"PAID\",\"channel\":\"POS\"}],\"error\":null}"
   /v1/limited-coupons/{limitedCouponId}/issue:
     post:
       tags:
@@ -971,6 +1015,39 @@ paths:
                     :100,\"name\":\"에스프레소 원두\",\"isAvailable\":true},{\"storeId\"\
                     :1,\"ingredientId\":200,\"name\":\"우유\",\"isAvailable\":true}],\"\
                     error\":null}"
+  /v1/devices/pos/orders/{orderKey}/cancel:
+    post:
+      tags:
+      - Store Device
+      summary: POS 매장 주문 취소 API
+      description: "POS 기기 API Key로 인증된 매장의 주문을 취소합니다. 결제 전 주문(CREATED)은 즉시 취소되며,\
+        \ 결제 완료 주문(PAID)은 PG 환불 및 롤백이 함께 수행됩니다."
+      operationId: pos-order-cancel
+      parameters:
+      - name: orderKey
+        in: path
+        description: 취소할 주문 고유 키 (TSID)
+        required: true
+        schema:
+          type: string
+      - name: Gu-Coffee-Device-Api-Key
+        in: header
+        description: "매장 POS 기기 API Key (예: pos-gangnam-01-secret-key)"
+        required: true
+        schema:
+          type: string
+        example: pos-gangnam-01-secret-key
+      responses:
+        "200":
+          description: "200"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/v1-devices-pos-orders-orderKey-cancel-458023549"
+              examples:
+                pos-order-cancel:
+                  value: "{\"status\":\"SUCCESS\",\"data\":{\"orderKey\":\"0S6DXFAGW286R\"\
+                    ,\"state\":\"CANCELED\"},\"error\":null}"
   /v1/partner/stores/{storeId}/ingredients/{ingredientId}/availability:
     patch:
       tags:
@@ -1301,36 +1378,6 @@ components:
         status:
           type: string
           description: 응답 상태
-    v1-external-orders-2140262167:
-      required:
-      - channel
-      - externalCustomerKey
-      - storeId
-      type: object
-      properties:
-        externalCustomerKey:
-          type: string
-          description: 매장 키오스크 단말/고객 식별 키
-        channel:
-          type: string
-          description: 주문 유입 채널 (KIOSK 전용 — 배달 플랫폼은 웹훅 API 사용)
-        lines:
-          type: array
-          items:
-            required:
-            - menuId
-            - quantity
-            type: object
-            properties:
-              quantity:
-                type: number
-                description: 주문 수량
-              menuId:
-                type: number
-                description: "주문 메뉴 식별자 (예: 2=카페라떼, 6=모닝세트)"
-        storeId:
-          type: number
-          description: "주문 대상 매장 식별자 (예: 1=강남본점, 2=판교역점)"
     v1-cart-items-1531752005:
       required:
       - menuId
@@ -1485,6 +1532,23 @@ components:
         eventType:
           type: string
           description: 웹훅 이벤트 타입 (PAYMENT_STATUS_CHANGED)
+    v1-devices-orders19278581:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            required:
+            - menuId
+            - quantity
+            type: object
+            properties:
+              quantity:
+                type: number
+                description: 주문 수량
+              menuId:
+                type: number
+                description: "주문 메뉴 식별자 (예: 2=카페라떼, 6=모닝세트)"
     v1-payments-178569976:
       required:
       - error
@@ -1633,6 +1697,45 @@ components:
               type: number
               description: 다음 페이지 마지막 ID
               nullable: true
+        status:
+          type: string
+          description: 응답 상태
+    v1-devices-pos-orders-844890822:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            required:
+            - channel
+            - name
+            - orderKey
+            - state
+            - storeId
+            - totalPrice
+            type: object
+            properties:
+              orderKey:
+                type: string
+                description: 주문 고유 키 (TSID)
+              totalPrice:
+                type: number
+                description: 주문 총 금액
+              channel:
+                type: string
+                description: "주문 유입 채널 (APP, CART, DELIVERY_PARTNER, KIOSK, POS)"
+              name:
+                type: string
+                description: 주문 대표명
+              state:
+                type: string
+                description: "주문 상태 (CREATED, PAID, CANCELED)"
+              storeId:
+                type: number
+                description: 매장 식별자
         status:
           type: string
           description: 응답 상태
@@ -1913,6 +2016,27 @@ components:
                 - type: boolean
                 - type: string
                 - type: number
+        status:
+          type: string
+          description: 응답 상태
+    v1-devices-pos-orders-orderKey-cancel-458023549:
+      required:
+      - error
+      - status
+      type: object
+      properties:
+        data:
+          required:
+          - orderKey
+          - state
+          type: object
+          properties:
+            orderKey:
+              type: string
+              description: 취소된 주문 고유 키
+            state:
+              type: string
+              description: 변경된 주문 상태 (CANCELED)
         status:
           type: string
           description: 응답 상태

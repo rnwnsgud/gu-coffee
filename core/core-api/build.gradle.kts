@@ -40,6 +40,7 @@ dependencies {
     testImplementation("com.epages:restdocs-api-spec-mockmvc:0.20.1")
     testImplementation(project(":storage:db-core"))
     testImplementation(project(":partner-api"))
+    testImplementation(project(":store-device-api"))
     testImplementation(project(":delivery-webhook-api"))
     testImplementation(project(":payment-webhook-api"))
     testImplementation("org.springframework.kafka:spring-kafka-test")
@@ -53,6 +54,12 @@ val snippetsDir = file("build/generated-snippets")
 val syncPartnerSnippets = tasks.register<Copy>("syncPartnerSnippets") {
     dependsOn(":partner-api:test")
     from(project(":partner-api").layout.buildDirectory.dir("generated-snippets"))
+    into(snippetsDir)
+}
+
+val syncStoreDeviceSnippets = tasks.register<Copy>("syncStoreDeviceSnippets") {
+    dependsOn(":store-device-api:test")
+    from(project(":store-device-api").layout.buildDirectory.dir("generated-snippets"))
     into(snippetsDir)
 }
 
@@ -87,6 +94,7 @@ tasks.asciidoctor {
     inputs.dir(snippetsDir)
     dependsOn(tasks.test)
     dependsOn(syncPartnerSnippets)
+    dependsOn(syncStoreDeviceSnippets)
     dependsOn(syncDeliveryWebhookSnippets)
     dependsOn(syncPaymentWebhookSnippets)
 }
@@ -104,6 +112,7 @@ project.afterEvaluate {
     tasks.matching { it.name == "openapi3" }.configureEach {
         dependsOn(tasks.test)
         dependsOn(syncPartnerSnippets)
+        dependsOn(syncStoreDeviceSnippets)
         dependsOn(syncDeliveryWebhookSnippets)
         dependsOn(syncPaymentWebhookSnippets)
         (this as? com.epages.restdocs.apispec.gradle.OpenApi3Task)?.servers = emptyList()
@@ -135,6 +144,8 @@ val copyDocs = tasks.register("copyDocs") {
     description: 선착순 쿠폰 API
   - name: Partner Ingredient
     description: 점포 파트너 원자재 관리 API
+  - name: Store Device
+    description: 매장 고정 기기(키오스크·POS) API
   - name: External Webhook
     description: 외부 배달 플랫폼 주문 웹훅 API
   - name: AI Agent

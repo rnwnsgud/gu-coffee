@@ -46,6 +46,7 @@ dependencies {
     runtimeOnly(project(":support:web"))
     runtimeOnly(project(":admin-api"))
     runtimeOnly(project(":partner-api"))
+    runtimeOnly(project(":store-device-api"))
     runtimeOnly(project(":delivery-webhook-api"))
     runtimeOnly(project(":payment-webhook-api"))
 

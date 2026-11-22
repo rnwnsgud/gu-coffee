@@ -381,9 +381,11 @@ sequenceDiagram
 | | `DELETE` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 삭제 |
 | **Order** | `POST` | `/v1/orders` | 앱 즉시 주문서 생성 (`APP`) |
 | | `POST` | `/v1/cart-orders` | 장바구니 기반 주문서 생성 (`CART`) |
-| | `POST` | `/v1/external-orders` | 매장 키오스크 주문 인입 (`KIOSK` 전용 — 배달 플랫폼은 웹훅 API 사용) |
 | | `GET` | `/v1/orders` | 주문 목록 조회 |
 | | `GET` | `/v1/orders/{orderKey}` | 단건 주문 상세 조회 |
+| **Store Device** | `POST` | `/v1/devices/orders` | 매장 고정 기기(키오스크·POS) 주문 생성 (`Gu-Coffee-Device-Api-Key` 인증) |
+| | `GET` | `/v1/devices/pos/orders` | POS 매장 주문 목록 조회 (`POS` 기기 전용) |
+| | `POST` | `/v1/devices/pos/orders/{orderKey}/cancel` | POS 매장 주문 취소 (`POS` 기기 전용, 결제 완료 건은 PG 환불·롤백 연계) |
 | **Payment** | `POST` | `/v1/payment/prepare` | 결제 사전 준비 및 금액 검증 |
 | | `POST` | `/v1/payment/approve` | PG 결제 승인 요청 |
 | **Cancel** | `POST` | `/v1/cancel` | 주문 및 결제 취소 요청 |

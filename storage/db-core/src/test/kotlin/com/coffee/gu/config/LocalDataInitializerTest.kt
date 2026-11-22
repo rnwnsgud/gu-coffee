@@ -62,6 +62,7 @@ class LocalDataInitializerTest {
         val ingredientCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ingredient", Long::class.java)
         val cartItemCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM cart_item WHERE principal_key = 'U1'", Long::class.java)
         val externalMenuMappingCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
+        val storeDeviceCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM store_device", Long::class.java)
 
         assertThat(categoryCount).isEqualTo(4L)
         assertThat(menuCount).isEqualTo(6L)
@@ -75,6 +76,7 @@ class LocalDataInitializerTest {
         assertThat(ingredientCount).isEqualTo(8L)
         assertThat(cartItemCount).isEqualTo(1L)
         assertThat(externalMenuMappingCount).isEqualTo(8L)
+        assertThat(storeDeviceCount).isEqualTo(4L)
     }
 
     @Test
@@ -101,5 +103,18 @@ class LocalDataInitializerTest {
 
         val afterCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
         assertThat(afterCount).isEqualTo(8L)
+    }
+
+    @Test
+    @DisplayName("기존 데이터가 있어도 store_device가 비어 있으면 시드 데이터를 보충 적재한다")
+    fun testBackfillWhenStoreDeviceMissing() {
+        jdbcTemplate.execute("DELETE FROM store_device")
+        val beforeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM store_device", Long::class.java)
+        assertThat(beforeCount).isEqualTo(0L)
+
+        localDataInitializer.run(org.springframework.boot.DefaultApplicationArguments())
+
+        val afterCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM store_device", Long::class.java)
+        assertThat(afterCount).isEqualTo(4L)
     }
 }

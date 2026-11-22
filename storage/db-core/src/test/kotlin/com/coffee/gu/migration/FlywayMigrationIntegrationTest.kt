@@ -82,16 +82,22 @@ class FlywayMigrationIntegrationTest {
         )
         assertThat(v6Count).isEqualTo(1)
 
+        val v7Count = jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM \"flyway_schema_history\" WHERE \"version\" = '7' AND \"success\" = TRUE",
+            Int::class.java
+        )
+        assertThat(v7Count).isEqualTo(1)
+
         // 2. Flyway info API로 마이그레이션 상태 검증
         val current = flyway.info().current()
         assertThat(current).isNotNull
-        assertThat(current?.version?.version).isEqualTo("6")
-        assertThat(current?.description).isEqualTo("add webhook idempotency and menu mapping")
+        assertThat(current?.version?.version).isEqualTo("7")
+        assertThat(current?.description).isEqualTo("add store device")
         assertThat(current?.state?.isApplied).isTrue()
     }
 
     @Test
-    @DisplayName("V1~V6 스키마에 정의된 핵심 테이블 및 컬럼, 인덱스가 실제 DB에 모두 생성된다")
+    @DisplayName("V1~V7 스키마에 정의된 핵심 테이블 및 컬럼, 인덱스가 실제 DB에 모두 생성된다")
     fun testKeyTablesAndIndexesExist() {
         val jdbcTemplate = JdbcTemplate(coreDataSource)
 
@@ -100,7 +106,7 @@ class FlywayMigrationIntegrationTest {
             "category", "menu", "store", "`order`", "payment",
             "coupon", "issued_coupon", "limited_coupon", "event_log",
             "stamp", "limited_menu", "ingredient", "menu_recipe",
-            "external_menu_mapping", "webhook_idempotency"
+            "external_menu_mapping", "webhook_idempotency", "store_device"
         )
         for (table in tables) {
             val rows = jdbcTemplate.queryForList("SELECT count(*) as cnt FROM $table")
