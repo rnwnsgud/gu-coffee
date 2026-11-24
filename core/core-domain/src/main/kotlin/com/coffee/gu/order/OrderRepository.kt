@@ -1,7 +1,6 @@
 package com.coffee.gu.order
 
 import com.coffee.gu.enums.OrderState
-import java.util.Optional
 
 interface OrderRepository {
     fun create(order: Order): Order

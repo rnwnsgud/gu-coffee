@@ -7,7 +7,6 @@ import com.coffee.gu.enums.OrderState
 import com.coffee.gu.order.QOrderEntity.orderEntity
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.stereotype.Repository
-import java.util.Optional
 
 @Repository
 class OrderRepositoryImpl(

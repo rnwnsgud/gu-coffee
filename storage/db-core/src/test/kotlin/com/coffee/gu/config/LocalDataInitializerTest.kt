@@ -1,7 +1,6 @@
 package com.coffee.gu.config
 
 import org.assertj.core.api.Assertions.assertThat
-import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -95,7 +94,7 @@ class LocalDataInitializerTest {
     @Test
     @DisplayName("기존 메뉴·원자재가 있어도 external_menu_mapping이 비어 있으면 시드 데이터를 보충 적재한다")
     fun testBackfillWhenExternalMenuMappingMissing() {
-        jdbcTemplate.execute("DELETE FROM external_menu_mapping")
+        jdbcTemplate.execute("DELETE FROM external_menu_mapping WHERE id > 0")
         val beforeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
         assertThat(beforeCount).isEqualTo(0L)
 
@@ -108,7 +107,7 @@ class LocalDataInitializerTest {
     @Test
     @DisplayName("기존 데이터가 있어도 store_device가 비어 있으면 시드 데이터를 보충 적재한다")
     fun testBackfillWhenStoreDeviceMissing() {
-        jdbcTemplate.execute("DELETE FROM store_device")
+        jdbcTemplate.execute("DELETE FROM store_device WHERE id > 0")
         val beforeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM store_device", Long::class.java)
         assertThat(beforeCount).isEqualTo(0L)
 

@@ -330,7 +330,7 @@ sequenceDiagram
 ## 4. 기술 스택
 
 ### Core & Framework
-- **Kotlin 2.1.0** (admin-api 모듈 제외 Java 21)
+- **Kotlin 2.2.21** (admin-api 모듈 제외 Java 21)
 - **Spring Boot 4.0.5**
 - **Spring Data JPA**, **QueryDSL 5.1.0 (KAPT)**
 - **Spring Data Redis 4.0.4**, **Redisson 3.45.0**
