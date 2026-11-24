@@ -23,24 +23,34 @@ class LocalDataInitializer(
     override fun run(args: ApplicationArguments) {
         val jdbcTemplate = JdbcTemplate(dataSource)
 
-        val menuCount = try {
-            jdbcTemplate.queryForObject<Long>("SELECT COUNT(*) FROM menu") ?: 0L
+        val (menuCount, ingredientCount, externalMenuMappingCount, storeDeviceCount) = try {
+            val menus = jdbcTemplate.queryForObject<Long>("SELECT COUNT(*) FROM menu") ?: 0L
+            val ingredients = jdbcTemplate.queryForObject<Long>("SELECT COUNT(*) FROM ingredient") ?: 0L
+            val mappings = jdbcTemplate.queryForObject<Long>("SELECT COUNT(*) FROM external_menu_mapping") ?: 0L
+            val devices = jdbcTemplate.queryForObject<Long>("SELECT COUNT(*) FROM store_device") ?: 0L
+            listOf(menus, ingredients, mappings, devices)
         } catch (e: Exception) {
             log.warn("☕ [LocalDataInitializer] 테이블 조회 실패 (테이블 미생성 등): {}", e.message)
             return
         }
 
-        if (menuCount > 0L) {
-            log.info("☕ [LocalDataInitializer] 이미 초기 데이터(메뉴 {}건)가 존재하므로 시드 데이터 투입을 건너뜁니다.", menuCount)
+        if (menuCount >= 6L && ingredientCount > 0L && externalMenuMappingCount > 0L && storeDeviceCount >= 4L) {
+            log.info(
+                "☕ [LocalDataInitializer] 이미 초기 데이터(메뉴 {}건, 원자재 {}건, 외부 메뉴 매핑 {}건, 매장 기기 {}건)가 존재하므로 시드 데이터 투입을 건너뜁니다.",
+                menuCount,
+                ingredientCount,
+                externalMenuMappingCount,
+                storeDeviceCount,
+            )
             return
         }
 
-        log.info("☕ [LocalDataInitializer] 빈 데이터베이스가 감지되었습니다. 로컬 개발/테스트용 초기 시드 데이터를 적재합니다...")
+        log.info("☕ [LocalDataInitializer] 로컬 개발/테스트용 초기 시드 데이터를 적재합니다...")
 
         try {
             val populator = ResourceDatabasePopulator(ClassPathResource("seed-data.sql"))
             populator.execute(dataSource)
-            log.info("☕ [LocalDataInitializer] 초기 시드 데이터 적재 완료! (카테고리 4건, 메뉴 5건, 옵션 9건, 매장 2건, 쿠폰 3건, 테스트유저(U1) 발급쿠폰 및 스탬프 적립)")
+            log.info("☕ [LocalDataInitializer] 초기 시드 데이터 적재 완료! (카테고리 4건, 메뉴 6건, 레시피 9건, 매장별 원자재 8건, 외부 메뉴 매핑 8건, 매장 기기 2건, 장바구니 1건, 쿠폰·스탬프 적립)")
         } catch (e: Exception) {
             log.error("☕ [LocalDataInitializer] 시드 데이터 적재 중 오류 발생: {}", e.message, e)
         }

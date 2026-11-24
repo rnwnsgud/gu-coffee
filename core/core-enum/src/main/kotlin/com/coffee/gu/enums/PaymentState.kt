@@ -4,5 +4,6 @@ enum class PaymentState {
     READY,
     PENDING_PG,
     SUCCESS,
-    FAILED
+    FAILED,
+    CANCELED
 }

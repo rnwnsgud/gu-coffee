@@ -2,7 +2,7 @@ package com.coffee.gu.cancel
 
 import com.coffee.gu.payment.Payment
 import org.springframework.stereotype.Repository
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Repository
 class CancelRepositoryImpl(
@@ -22,7 +22,7 @@ class CancelRepositoryImpl(
                 paidAmount = payment.amount,
                 canceledAmount = payment.amount,
                 externalCancelKey = externalCancelKey,
-                canceledAt = OffsetDateTime.now(),
+                canceledAt = LocalDateTime.now(),
             ),
         ).toModel()
     }

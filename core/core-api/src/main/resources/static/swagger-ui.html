@@ -2,6 +2,9 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Gu Coffee API Documentation</title>
   <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
   <link rel="icon" type="image/png" href="https://unpkg.com/swagger-ui-dist@5/favicon-32x32.png" sizes="32x32" />
@@ -30,7 +33,7 @@
 <script>
   window.onload = function() {
     window.ui = SwaggerUIBundle({
-      url: "/docs/openapi3.yaml",
+      url: "/docs/openapi3.yaml?v=" + new Date().getTime(),
       dom_id: '#swagger-ui',
       deepLinking: true,
       displayRequestDuration: true,

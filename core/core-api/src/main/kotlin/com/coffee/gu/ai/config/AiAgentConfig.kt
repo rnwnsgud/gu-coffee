@@ -9,20 +9,20 @@ import com.coffee.gu.ai.tool.AgentTool
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.core.StringRedisTemplate
-import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import java.time.Duration
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class AiAgentConfig {
 
     @Bean
     fun agentCheckpointStore(
         redisTemplate: StringRedisTemplate,
-        objectMapper: ObjectMapper
+        jsonMapper: JsonMapper
     ): AgentCheckpointStore {
         return RedisAgentCheckpointStore(
             redisTemplate = redisTemplate,
-            objectMapper = objectMapper,
+            jsonMapper = jsonMapper,
             ttl = Duration.ofMinutes(30)
         )
     }

@@ -62,15 +62,19 @@ class CartControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "cart-get",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.items").description("장바구니 아이템 목록"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "cart-get",
+                    tag = "Cart",
+                    summary = "장바구니 조회 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.items").description("장바구니 아이템 목록"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -94,19 +98,23 @@ class CartControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "cart-add-item",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    requestFields(
-                        fieldWithPath("menuId").description("메뉴 식별자"),
-                        fieldWithPath("quantity").description("수량")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data").description("응답 데이터 (null)"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "cart-add-item",
+                    tag = "Cart",
+                    summary = "장바구니 아이템 추가 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        requestFields(
+                            fieldWithPath("menuId").description("메뉴 식별자"),
+                            fieldWithPath("quantity").description("수량")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data").description("응답 데이터 (null)"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -130,21 +138,25 @@ class CartControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "cart-modify-item",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    pathParameters(
-                        parameterWithName("cartItemId").description("장바구니 아이템 식별자")
-                    ),
-                    requestFields(
-                        fieldWithPath("quantity").description("변경할 수량")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data").description("응답 데이터 (null)"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "cart-modify-item",
+                    tag = "Cart",
+                    summary = "장바구니 아이템 수정 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        pathParameters(
+                            parameterWithName("cartItemId").description("장바구니 아이템 식별자")
+                        ),
+                        requestFields(
+                            fieldWithPath("quantity").description("변경할 수량")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data").description("응답 데이터 (null)"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -163,18 +175,22 @@ class CartControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.status").value("SUCCESS"))
             .andDo(
                 document(
-                    "cart-delete-item",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    pathParameters(
-                        parameterWithName("cartItemId").description("장바구니 아이템 식별자")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data").description("응답 데이터 (null)"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "cart-delete-item",
+                    tag = "Cart",
+                    summary = "장바구니 아이템 삭제 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        pathParameters(
+                            parameterWithName("cartItemId").description("장바구니 아이템 식별자")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data").description("응답 데이터 (null)"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )

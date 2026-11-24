@@ -1,16 +1,13 @@
 package com.coffee.gu.ai.client
 
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
-import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.body
-import java.net.http.HttpClient
-import java.time.Duration
 import java.util.UUID
 
 /**
@@ -21,47 +18,19 @@ import java.util.UUID
  */
 @Component
 class GeminiRestClient(
+    @Qualifier("llmRestClient")
     private val restClient: RestClient,
+    @Value("\${gemini.api.base-url:https://generativelanguage.googleapis.com/v1beta}")
     private val baseUrl: String,
+    @Value("\${gemini.api.model:gemini-3.5-flash-lite}")
     private val model: String,
+    @Value("\${gemini.api.key:dummy-key}")
     private val apiKey: String
 ) : LlmClient {
-
-    /**
-     * Spring 컨테이너가 빈을 생성할 때 사용하는 생성자입니다.
-     * PG용 짧은 타임아웃(Read 5초)이 걸린 전역 RestClient 빈과 섞이지 않도록,
-     * LLM 추론 및 Thinking 시간을 고려한 전용 RestClient(Read 60초)를 생성하여 사용합니다.
-     */
-    @Autowired
-    constructor(
-        @Value("\${gemini.api.base-url:https://generativelanguage.googleapis.com/v1beta}")
-        baseUrl: String,
-        @Value("\${gemini.api.model:gemini-3.5-flash-lite}")
-        model: String,
-        @Value("\${gemini.api.key:dummy-key}")
-        apiKey: String
-    ) : this(
-        restClient = createDefaultLlmRestClient(),
-        baseUrl = baseUrl,
-        model = model,
-        apiKey = apiKey
-    )
 
     companion object {
         private val log = LoggerFactory.getLogger(GeminiRestClient::class.java)
         private const val FALLBACK_MODEL = "gemini-3.5-flash-lite"
-
-        private fun createDefaultLlmRestClient(): RestClient {
-            val httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5))
-                .build()
-            val factory = JdkClientHttpRequestFactory(httpClient).apply {
-                setReadTimeout(Duration.ofSeconds(60))
-            }
-            return RestClient.builder()
-                .requestFactory(factory)
-                .build()
-        }
     }
 
     override fun chat(

@@ -32,7 +32,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.ArrayList
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
@@ -92,7 +92,7 @@ class PaymentFastFailLockTest {
             .willReturn(PGPayment("PAY-KEY-100", orderKey, exactAmount, PaymentGatewayStatus.READY))
 
         given(paymentGateway.confirm(any()))
-            .willReturn(PGConfirmResult.success(orderKey, "PAY-KEY-100", PaymentMethod.CARD, "APPROVE-100", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success(orderKey, "PAY-KEY-100", PaymentMethod.CARD, "APPROVE-100", LocalDateTime.now()))
 
         val threadCount = 10
         val executorService = Executors.newFixedThreadPool(threadCount)

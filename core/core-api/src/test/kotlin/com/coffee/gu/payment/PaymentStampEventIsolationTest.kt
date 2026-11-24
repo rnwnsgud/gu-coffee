@@ -32,7 +32,7 @@ import org.springframework.test.annotation.DirtiesContext
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 import java.util.UUID
 
 @SpringBootTest
@@ -88,7 +88,7 @@ class PaymentStampEventIsolationTest {
         given(paymentGateway.getByOrderKey(orderKey))
             .willReturn(PGPayment("PAY-KEY-ISO", orderKey, amount, PaymentGatewayStatus.READY))
         given(paymentGateway.confirm(any()))
-            .willReturn(PGConfirmResult.success(orderKey, "PAY-KEY-ISO", PaymentMethod.CARD, "APPROVE-ISO", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success(orderKey, "PAY-KEY-ISO", PaymentMethod.CARD, "APPROVE-ISO", LocalDateTime.now()))
 
         // [핵심 시뮬레이션]: 스탬프 적립 도중 DB Deadlock 또는 런타임 장애 고의 발생
         doThrow(RuntimeException("스탬프 DB 장애 발생 시뮬레이션"))
@@ -135,7 +135,7 @@ class PaymentStampEventIsolationTest {
         given(paymentGateway.getByOrderKey(orderKey))
             .willReturn(PGPayment("PAY-KEY-NORMAL", orderKey, amount, PaymentGatewayStatus.READY))
         given(paymentGateway.confirm(any()))
-            .willReturn(PGConfirmResult.success(orderKey, "PAY-KEY-NORMAL", PaymentMethod.CARD, "APPROVE-NORMAL", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success(orderKey, "PAY-KEY-NORMAL", PaymentMethod.CARD, "APPROVE-NORMAL", LocalDateTime.now()))
 
         // when
         val result = paymentService.approvePayment(order)

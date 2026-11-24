@@ -96,4 +96,52 @@ class PrincipalArgumentResolverTest {
             .isInstanceOf(CoreException::class.java)
             .hasFieldOrPropertyWithValue("errorType", ErrorType.UNAUTHORIZED)
     }
+
+    @Test
+    @DisplayName("내부 토큰 검증이 활성화된 상태에서 Gu-Coffee-Internal-Token이 없거나 불일치하면 UNAUTHORIZED 에러가 발생한다")
+    fun testGatewayInternalTokenMismatchThrowsUnauthorized() {
+        val strictResolver = PrincipalArgumentResolver(
+            GatewayInternalTokenValidator(enabled = true, secret = "internal-secret-123"),
+        )
+        val httpRequest = mock<HttpServletRequest> {
+            on { getHeader("Gu-Coffee-com.coffee.gu.Principal-Id") } doReturn "user-1"
+            on { getHeader("Gu-Coffee-com.coffee.gu.Principal-Type") } doReturn "USER"
+            on { getHeader(GatewayInternalTokenValidator.INTERNAL_TOKEN_HEADER) } doReturn "forged-token"
+        }
+        val webRequest = mock<NativeWebRequest> {
+            on { getNativeRequest(HttpServletRequest::class.java) } doReturn httpRequest
+        }
+        val parameter = mock<MethodParameter>()
+
+        assertThatThrownBy { strictResolver.resolveArgument(parameter, null, webRequest, null) }
+            .isInstanceOf(CoreException::class.java)
+            .hasFieldOrPropertyWithValue("errorType", ErrorType.UNAUTHORIZED)
+    }
+
+    @Test
+    @DisplayName("내부 토큰 검증이 활성화된 상태에서 유효한 Gu-Coffee-Internal-Token이 전달되면 정상적으로 Principal이 생성된다")
+    fun testGatewayInternalTokenMatchesSuccess() {
+        val strictResolver = PrincipalArgumentResolver(
+            GatewayInternalTokenValidator(enabled = true, secret = "internal-secret-123"),
+        )
+        val httpRequest = mock<HttpServletRequest> {
+            on { getHeader("Gu-Coffee-com.coffee.gu.Principal-Id") } doReturn "user-1"
+            on { getHeader("Gu-Coffee-com.coffee.gu.Principal-Type") } doReturn "USER"
+            on { getHeader(GatewayInternalTokenValidator.INTERNAL_TOKEN_HEADER) } doReturn "internal-secret-123"
+        }
+        val webRequest = mock<NativeWebRequest> {
+            on { getNativeRequest(HttpServletRequest::class.java) } doReturn httpRequest
+        }
+        val annotation = mock<Authenticated> {
+            on { required } doReturn true
+        }
+        val parameter = mock<MethodParameter> {
+            on { getParameterAnnotation(Authenticated::class.java) } doReturn annotation
+        }
+
+        val result = strictResolver.resolveArgument(parameter, null, webRequest, null) as Principal
+
+        assertThat(result.key).isEqualTo("user-1")
+        assertThat(result.type).isEqualTo(PrincipalType.USER)
+    }
 }

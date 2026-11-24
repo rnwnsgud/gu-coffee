@@ -39,15 +39,14 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.client.RestClient
-import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.json.JsonMapper
 import tools.jackson.databind.node.JsonNodeType
-import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.math.BigDecimal
 
 class AiChatControllerTest : RestDocsTest() {
 
     private val agentLoopRunner: AgentLoopRunner = mock()
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
+    private val objectMapper: JsonMapper = JsonMapper.builder().findAndAddModules().build()
 
     override val controller: Any
         get() = AiChatController(agentLoopRunner)
@@ -84,19 +83,23 @@ class AiChatControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.data.pendingToolArguments.orderKey").value("ORD-101"))
             .andDo(
                 document(
-                    "ai-chat",
-                    requestFields(
-                        fieldWithPath("prompt").description("고객 자연어 질문 (예: 'ORD-101 주문 취소해줘')"),
-                        fieldWithPath("sessionId").description("세션 식별자 (생략 시 자동 생성)").optional().type(JsonNodeType.STRING)
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.sessionId").description("에이전트 대화 세션 ID"),
-                        fieldWithPath("data.status").description("에이전트 루프 상태 (COMPLETED / WAITING_FOR_APPROVAL / MAX_STEPS_EXCEEDED)"),
-                        fieldWithPath("data.answer").description("에이전트 최종 답변 (승인 대기 중일 때는 빈 문자열)"),
-                        fieldWithPath("data.pendingToolName").description("사람의 승인을 대기 중인 도구 이름").optional().type(JsonNodeType.STRING),
-                        subsectionWithPath("data.pendingToolArguments").description("승인 대기 중인 도구 호출 인자 Map").optional().type(JsonNodeType.OBJECT),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "ai-chat",
+                    tag = "AI Agent",
+                    summary = "AI 고객 상담 및 주문 처리 요청 API",
+                    snippets = arrayOf(
+                        requestFields(
+                            fieldWithPath("prompt").description("고객 자연어 질문 (예: 'ORD-101 주문 취소해줘')"),
+                            fieldWithPath("sessionId").description("세션 식별자 (생략 시 자동 생성)").optional().type(JsonNodeType.STRING)
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.sessionId").description("에이전트 대화 세션 ID"),
+                            fieldWithPath("data.status").description("에이전트 루프 상태 (COMPLETED / WAITING_FOR_APPROVAL / MAX_STEPS_EXCEEDED)"),
+                            fieldWithPath("data.answer").description("에이전트 최종 답변 (승인 대기 중일 때는 빈 문자열)"),
+                            fieldWithPath("data.pendingToolName").description("사람의 승인을 대기 중인 도구 이름").optional().type(JsonNodeType.STRING),
+                            subsectionWithPath("data.pendingToolArguments").description("승인 대기 중인 도구 호출 인자 Map").optional().type(JsonNodeType.OBJECT),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -132,20 +135,24 @@ class AiChatControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.data.answer").value("ORD-101 주문 취소 및 환불 처리가 완료되었습니다."))
             .andDo(
                 document(
-                    "ai-approve",
-                    requestFields(
-                        fieldWithPath("sessionId").description("승인 대기 중인 세션 ID"),
-                        fieldWithPath("approved").description("승인 여부 (true: 승인 및 실행, false: 거절)"),
-                        fieldWithPath("rejectionReason").description("거절 시 사유 메시지").optional().type(JsonNodeType.STRING)
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.sessionId").description("에이전트 대화 세션 ID"),
-                        fieldWithPath("data.status").description("에이전트 루프 상태 (COMPLETED)"),
-                        fieldWithPath("data.answer").description("에이전트 최종 답변"),
-                        fieldWithPath("data.pendingToolName").description("승인 대기 도구 이름 (완료 시 null)").optional().type(JsonNodeType.STRING),
-                        subsectionWithPath("data.pendingToolArguments").description("승인 대기 도구 인자 (완료 시 null)").optional().type(JsonNodeType.OBJECT),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "ai-approve",
+                    tag = "AI Agent",
+                    summary = "AI 위험 작업 실행 승인/거절 API",
+                    snippets = arrayOf(
+                        requestFields(
+                            fieldWithPath("sessionId").description("승인 대기 중인 세션 ID"),
+                            fieldWithPath("approved").description("승인 여부 (true: 승인 및 실행, false: 거절)"),
+                            fieldWithPath("rejectionReason").description("거절 시 사유 메시지").optional().type(JsonNodeType.STRING)
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.sessionId").description("에이전트 대화 세션 ID"),
+                            fieldWithPath("data.status").description("에이전트 루프 상태 (COMPLETED)"),
+                            fieldWithPath("data.answer").description("에이전트 최종 답변"),
+                            fieldWithPath("data.pendingToolName").description("승인 대기 도구 이름 (완료 시 null)").optional().type(JsonNodeType.STRING),
+                            subsectionWithPath("data.pendingToolArguments").description("승인 대기 도구 인자 (완료 시 null)").optional().type(JsonNodeType.OBJECT),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -193,8 +200,8 @@ class AiChatControllerTest : RestDocsTest() {
         val realRunner = AgentLoopRunner(
             llmClient = realGeminiClient,
             tools = listOf(
-                GetOrderStatusAgentTool(orderReader),
-                CancelOrderAgentTool(orderReader, cancelService)
+                GetOrderStatusAgentTool(orderReader, objectMapper),
+                CancelOrderAgentTool(orderReader, cancelService, objectMapper)
             )
         )
         val liveMockMvc = MockMvcBuilders.standaloneSetup(AiChatController(realRunner)).build()

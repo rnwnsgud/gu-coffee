@@ -2,6 +2,8 @@ package com.coffee.gu.api.controller
 
 import com.coffee.gu.auth.PrincipalArgumentResolver
 import com.epages.restdocs.apispec.MockMvcRestDocumentationWrapper
+import com.epages.restdocs.apispec.ResourceSnippetParameters
+import com.epages.restdocs.apispec.ResourceSnippetParametersBuilder
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.restdocs.RestDocumentationContextProvider
@@ -32,6 +34,26 @@ abstract class RestDocsTest {
         return MockMvcRestDocumentationWrapper.document(
             identifier = identifier,
             snippets = snippets
+        )
+    }
+
+    fun document(
+        identifier: String,
+        tag: String,
+        summary: String? = null,
+        description: String? = null,
+        vararg snippets: Snippet,
+    ): RestDocumentationResultHandler {
+        val resourceSnippet = ResourceSnippetParameters.builder()
+            .tag(tag)
+            .apply {
+                summary?.let { summary(it) }
+                description?.let { description(it) }
+            }
+        return MockMvcRestDocumentationWrapper.document(
+            identifier = identifier,
+            resourceDetails = resourceSnippet,
+            snippets = snippets,
         )
     }
 }

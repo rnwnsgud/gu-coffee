@@ -2,7 +2,7 @@ import org.springframework.boot.gradle.tasks.bundling.BootJar
 
 plugins {
     `java-library`
-    val kotlinVersion = "2.1.0"
+    val kotlinVersion = "2.2.21"
     kotlin("jvm") version kotlinVersion apply false
     kotlin("plugin.spring") version kotlinVersion apply false
     kotlin("plugin.jpa") version kotlinVersion apply false
@@ -39,7 +39,6 @@ subprojects {
     dependencies {
         implementation("org.jetbrains.kotlin:kotlin-stdlib")
         implementation("org.jetbrains:annotations:26.0.2")
-        implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
         implementation("tools.jackson.module:jackson-module-kotlin")
         implementation("io.hypersistence:hypersistence-tsid:2.1.4")
         testImplementation("org.springframework.boot:spring-boot-starter-test")

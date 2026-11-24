@@ -89,7 +89,7 @@ class MenuServiceIntegrationTest {
 
         // then
         assertThat(result.content).isNotEmpty
-        assertThat(result.content[0].name).isEqualTo("Americano")
+        assertThat(result.content[0].menu.name).isEqualTo("Americano")
     }
 
     @Test
@@ -116,7 +116,7 @@ class MenuServiceIntegrationTest {
         assertThat(firstPage.content).hasSize(2)
         assertThat(firstPage.hasNext).isTrue()
         assertThat(firstPage.nextCursor).isNotNull
-        assertThat(firstPage.nextLastId).isEqualTo(firstPage.content.last().id)
+        assertThat(firstPage.nextLastId).isEqualTo(firstPage.content.last().menu.id)
     }
 
     @Test
@@ -148,8 +148,8 @@ class MenuServiceIntegrationTest {
         assertThat(page2.hasNext).isTrue()
 
         // 1페이지와 2페이지 간 데이터 중복이 전혀 없음을 검증
-        val page1Ids = page1.content.map { it.id }.toSet()
-        val page2Ids = page2.content.map { it.id }.toSet()
+        val page1Ids = page1.content.map { it.menu.id }.toSet()
+        val page2Ids = page2.content.map { it.menu.id }.toSet()
         assertThat(page1Ids.intersect(page2Ids)).isEmpty()
 
         // 3페이지 조회 (마지막 페이지)
@@ -188,7 +188,7 @@ class MenuServiceIntegrationTest {
 
         while (hasNext) {
             val page = menuService.findMenus(categoryId, pageSize = 1, cursor = currentCursor, lastId = currentLastId)
-            fetchedIds.addAll(page.content.map { it.id })
+            fetchedIds.addAll(page.content.map { it.menu.id })
             currentCursor = page.nextCursor
             currentLastId = page.nextLastId
             hasNext = page.hasNext

@@ -7,7 +7,6 @@ import com.coffee.gu.enums.OrderState
 import com.coffee.gu.order.QOrderEntity.orderEntity
 import com.querydsl.jpa.impl.JPAQueryFactory
 import org.springframework.stereotype.Repository
-import java.util.Optional
 
 @Repository
 class OrderRepositoryImpl(
@@ -30,6 +29,19 @@ class OrderRepositoryImpl(
                 orderEntity.principalKey.eq(principalKey),
                 orderEntity.entityStatus.eq(EntityStatus.ACTIVE),
             )
+            .fetch()
+            .map { it.toModel() }
+    }
+
+    override fun findAllByStoreId(storeId: Long, state: OrderState?): List<Order> {
+        return jpaQueryFactory
+            .selectFrom(orderEntity)
+            .where(
+                orderEntity.storeId.eq(storeId),
+                state?.let { orderEntity.state.eq(it) },
+                orderEntity.entityStatus.eq(EntityStatus.ACTIVE),
+            )
+            .orderBy(orderEntity.createdAt.desc())
             .fetch()
             .map { it.toModel() }
     }

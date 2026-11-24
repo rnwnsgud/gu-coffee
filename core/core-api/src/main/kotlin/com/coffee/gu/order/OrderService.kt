@@ -12,8 +12,10 @@ class OrderService(
     private val orderReader: OrderReader,
     private val menuFinder: MenuFinder,
     private val limitedMenuStockManager: LimitedMenuStockManager,
-) {
-    fun create(newOrder: NewOrder): String {
+    private val recipeStockValidator: RecipeStockValidator,
+) : ExternalOrderCreator {
+    override fun create(newOrder: NewOrder): String {
+        recipeStockValidator.validateAvailability(newOrder.storeId, newOrder.menuIds)
         val menus = menuFinder.findAllByIdIn(newOrder.menuIds.toList())
         val orderMenus = OrderMenus.from(menus, newOrder.menuIds)
         val orderKey = Order.generateKey()

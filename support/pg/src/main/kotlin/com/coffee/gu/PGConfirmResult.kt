@@ -1,7 +1,7 @@
 package com.coffee.gu
 
 import com.coffee.gu.enums.PaymentMethod
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 data class PGConfirmResult(
     val orderId: String,
@@ -9,7 +9,7 @@ data class PGConfirmResult(
     val isConfirmed: Boolean,
     val paymentMethod: PaymentMethod? = null,
     val approveCode: String? = null,
-    val approvedAt: OffsetDateTime? = null,
+    val approvedAt: LocalDateTime? = null,
 ) {
     companion object {
         fun success(
@@ -17,7 +17,7 @@ data class PGConfirmResult(
             paymentKey: String,
             paymentMethod: PaymentMethod?,
             approveCode: String?,
-            approvedAt: OffsetDateTime?,
+            approvedAt: LocalDateTime?,
         ): PGConfirmResult = PGConfirmResult(
             orderId = orderId,
             paymentKey = paymentKey,

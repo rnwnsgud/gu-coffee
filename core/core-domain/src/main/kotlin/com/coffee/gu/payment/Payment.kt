@@ -7,7 +7,6 @@ import com.coffee.gu.order.Order
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
 
 class Payment(
     val id: Long = 0,
@@ -20,7 +19,7 @@ class Payment(
     var state: PaymentState,
     var externalPaymentKey: String? = null,
     var method: PaymentMethod? = null,
-    var paidAt: OffsetDateTime? = null,
+    var paidAt: LocalDateTime? = null,
     var approveCode: String? = null,
     val createdAt: LocalDateTime? = null,
     var retryCount: Int = 0,
@@ -34,6 +33,9 @@ class Payment(
     val isFailed: Boolean
         get() = state == PaymentState.FAILED
 
+    val isCanceled: Boolean
+        get() = state == PaymentState.CANCELED
+
     val hasAppliedCoupon: Boolean
         get() = issuedCouponId != null && issuedCouponId > 0
 
@@ -43,7 +45,7 @@ class Payment(
         externalPaymentKey: String,
         method: PaymentMethod,
         approveCode: String?,
-        paidAt: OffsetDateTime,
+        paidAt: LocalDateTime,
     ) {
         this.state = PaymentState.SUCCESS
         this.externalPaymentKey = externalPaymentKey
@@ -61,6 +63,10 @@ class Payment(
         if (!externalPaymentKey.isNullOrBlank()) {
             this.externalPaymentKey = externalPaymentKey
         }
+    }
+
+    fun cancel() {
+        this.state = PaymentState.CANCELED
     }
 
     fun increaseRetryCount() {

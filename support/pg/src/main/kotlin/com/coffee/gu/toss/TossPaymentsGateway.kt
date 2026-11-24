@@ -7,6 +7,7 @@ import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.client.body
 import java.nio.charset.StandardCharsets
+import java.time.ZoneId
 import java.util.Base64
 
 @Component
@@ -18,6 +19,7 @@ class TossPaymentsGateway(
 
     companion object {
         private val log = LoggerFactory.getLogger(TossPaymentsGateway::class.java)
+        private val KST = ZoneId.of("Asia/Seoul")
     }
 
     override fun provider(): PaymentGatewayProvider {
@@ -42,7 +44,7 @@ class TossPaymentsGateway(
                 paymentKey = response.paymentKey,
                 paymentMethod = methodMapper.map(response),
                 approveCode = response.card?.approveNo,
-                approvedAt = response.approvedAt
+                approvedAt = response.approvedAt?.atZoneSameInstant(KST)?.toLocalDateTime()
             )
         } catch (e: RestClientResponseException) {
             if (e.statusCode.is4xxClientError) {

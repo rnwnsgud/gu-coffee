@@ -11,7 +11,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.ThreadPoolExecutor
 
 @EnableAsync
-@Configuration
+@Configuration(proxyBeanMethods = false)
 class AsyncConfig : AsyncConfigurer {
 
     private val log = LoggerFactory.getLogger(AsyncConfig::class.java)

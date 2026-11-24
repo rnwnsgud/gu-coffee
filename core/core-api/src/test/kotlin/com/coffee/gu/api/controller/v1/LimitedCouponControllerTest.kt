@@ -73,21 +73,25 @@ class LimitedCouponControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.data.remainingQuantity").value(70))
             .andDo(
                 document(
-                    "limited-coupon-get",
-                    pathParameters(
-                        parameterWithName("limitedCouponId").description("선착순 쿠폰 식별자")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.id").description("선착순 쿠폰 식별자"),
-                        fieldWithPath("data.name").description("쿠폰 명칭"),
-                        fieldWithPath("data.type").description("쿠폰 할인 타입 (FIXED_AMOUNT / PERCENTAGE)"),
-                        fieldWithPath("data.discount").description("할인 금액 또는 할인율"),
-                        fieldWithPath("data.expiredAt").description("쿠폰 만료 일시"),
-                        fieldWithPath("data.totalQuantity").description("총 한정 수량"),
-                        fieldWithPath("data.issuedQuantity").description("현재 발급된 수량"),
-                        fieldWithPath("data.remainingQuantity").description("잔여 수량"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "limited-coupon-get",
+                    tag = "Limited Coupon",
+                    summary = "선착순 쿠폰 상세 및 잔여 재고 조회 API",
+                    snippets = arrayOf(
+                        pathParameters(
+                            parameterWithName("limitedCouponId").description("선착순 쿠폰 식별자")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.id").description("선착순 쿠폰 식별자"),
+                            fieldWithPath("data.name").description("쿠폰 명칭"),
+                            fieldWithPath("data.type").description("쿠폰 할인 타입 (FIXED_AMOUNT / PERCENTAGE)"),
+                            fieldWithPath("data.discount").description("할인 금액 또는 할인율"),
+                            fieldWithPath("data.expiredAt").description("쿠폰 만료 일시"),
+                            fieldWithPath("data.totalQuantity").description("총 한정 수량"),
+                            fieldWithPath("data.issuedQuantity").description("현재 발급된 수량"),
+                            fieldWithPath("data.remainingQuantity").description("잔여 수량"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -124,23 +128,27 @@ class LimitedCouponControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.data.name").value("선착순 3000원 할인 쿠폰"))
             .andDo(
                 document(
-                    "limited-coupon-issue",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    pathParameters(
-                        parameterWithName("limitedCouponId").description("선착순 쿠폰 식별자")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.id").description("발급된 쿠폰 식별자"),
-                        fieldWithPath("data.state").description("발급된 쿠폰 상태 (DOWNLOADED, USED, CANCELED)"),
-                        fieldWithPath("data.name").description("쿠폰 명칭"),
-                        fieldWithPath("data.type").description("쿠폰 할인 타입 (FIXED_AMOUNT / PERCENTAGE)"),
-                        fieldWithPath("data.discount").description("할인 금액 또는 할인율"),
-                        fieldWithPath("data.expiredAt").description("쿠폰 만료 일시"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "limited-coupon-issue",
+                    tag = "Limited Coupon",
+                    summary = "선착순 쿠폰 발급/응모 API",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        pathParameters(
+                            parameterWithName("limitedCouponId").description("선착순 쿠폰 식별자")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.id").description("발급된 쿠폰 식별자"),
+                            fieldWithPath("data.state").description("발급된 쿠폰 상태 (DOWNLOADED, USED, CANCELED)"),
+                            fieldWithPath("data.name").description("쿠폰 명칭"),
+                            fieldWithPath("data.type").description("쿠폰 할인 타입 (FIXED_AMOUNT / PERCENTAGE)"),
+                            fieldWithPath("data.discount").description("할인 금액 또는 할인율"),
+                            fieldWithPath("data.expiredAt").description("쿠폰 만료 일시"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )
@@ -165,20 +173,24 @@ class LimitedCouponControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.data.message").value("쿠폰 발급 요청이 성공적으로 접수되었습니다."))
             .andDo(
                 document(
-                    "limited-coupon-issue-v2",
-                    requestHeaders(
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
-                        headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
-                    ),
-                    pathParameters(
-                        parameterWithName("limitedCouponId").description("선착순 쿠폰 식별자")
-                    ),
-                    responseFields(
-                        fieldWithPath("status").description("응답 상태"),
-                        fieldWithPath("data.status").description("비동기 처리 상태 (ACCEPTED)"),
-                        fieldWithPath("data.eventId").description("비동기 이벤트 고유 식별자"),
-                        fieldWithPath("data.message").description("안내 메시지"),
-                        fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                    identifier = "limited-coupon-issue-v2",
+                    tag = "Limited Coupon",
+                    summary = "선착순 쿠폰 비동기 발급 요청 API (v2)",
+                    snippets = arrayOf(
+                        requestHeaders(
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Id").description("사용자 식별자"),
+                            headerWithName("Gu-Coffee-com.coffee.gu.Principal-Type").description("사용자 타입 (USER/GUEST)")
+                        ),
+                        pathParameters(
+                            parameterWithName("limitedCouponId").description("선착순 쿠폰 식별자")
+                        ),
+                        responseFields(
+                            fieldWithPath("status").description("응답 상태"),
+                            fieldWithPath("data.status").description("비동기 처리 상태 (ACCEPTED)"),
+                            fieldWithPath("data.eventId").description("비동기 이벤트 고유 식별자"),
+                            fieldWithPath("data.message").description("안내 메시지"),
+                            fieldWithPath("error").description("에러 정보 (정상 시 null)")
+                        )
                     )
                 )
             )

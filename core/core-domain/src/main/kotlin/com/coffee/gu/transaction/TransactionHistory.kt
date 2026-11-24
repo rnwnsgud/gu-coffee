@@ -5,7 +5,7 @@ import com.coffee.gu.enums.TransactionType
 import com.coffee.gu.order.Order
 import com.coffee.gu.payment.Payment
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 class TransactionHistory(
     val id: Long = 0,
@@ -16,7 +16,7 @@ class TransactionHistory(
     val externalTransactionKey: String? = null,
     val amount: BigDecimal,
     val message: String? = null,
-    val occurredAt: OffsetDateTime? = null,
+    val occurredAt: LocalDateTime? = null,
 ) {
     companion object {
         fun create(
@@ -24,7 +24,7 @@ class TransactionHistory(
             order: Order,
             payment: Payment,
             message: String?,
-            occurredAt: OffsetDateTime?,
+            occurredAt: LocalDateTime?,
         ): TransactionHistory {
             return TransactionHistory(
                 id = 0,

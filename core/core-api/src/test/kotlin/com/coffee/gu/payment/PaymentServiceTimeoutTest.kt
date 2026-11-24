@@ -24,7 +24,6 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.time.OffsetDateTime
 
 @ExtendWith(MockitoExtension::class)
 class PaymentServiceTimeoutTest {
@@ -138,7 +137,7 @@ class PaymentServiceTimeoutTest {
         given(paymentGatewayProcessor.approvePayment(any()))
             .willThrow(RuntimeException("SocketTimeoutException: Read timed out"))
 
-        val expectedResult = PaymentApprovalResult.approved("ORDER-TIMEOUT-1", "PAY-KEY-1", OffsetDateTime.now())
+        val expectedResult = PaymentApprovalResult.approved("ORDER-TIMEOUT-1", "PAY-KEY-1", LocalDateTime.now())
         given(paymentCompleter.complete(eq(order), eq(1L), any()))
             .willReturn(expectedResult)
 
@@ -191,7 +190,7 @@ class PaymentServiceTimeoutTest {
         given(paymentGatewayProcessor.cancelPayment(any()))
             .willThrow(RuntimeException("Cancel network error"))
         given(paymentCompleter.compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any()))
-            .willReturn(PaymentApprovalResult.failed("ORDER-TIMEOUT-1", "PAY-KEY-1", OffsetDateTime.now()))
+            .willReturn(PaymentApprovalResult.failed("ORDER-TIMEOUT-1", "PAY-KEY-1", LocalDateTime.now()))
 
         // when
         val result = paymentService.approvePayment(order)
@@ -213,7 +212,7 @@ class PaymentServiceTimeoutTest {
         given(paymentGatewayProcessor.getPGPayment("ORDER-TIMEOUT-1")).willReturn(initialPgPayment)
         given(paymentPreparer.prepare(order, initialPgPayment)).willReturn(preparedPayment)
         given(paymentGatewayProcessor.approvePayment(any()))
-            .willReturn(PGConfirmResult.success("ORDER-TIMEOUT-1", "PAY-KEY-1", PaymentMethod.CARD, "APPR-1", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success("ORDER-TIMEOUT-1", "PAY-KEY-1", PaymentMethod.CARD, "APPR-1", LocalDateTime.now()))
         given(paymentCompleter.complete(eq(order), eq(1L), any()))
             .willThrow(RuntimeException("Coupon expired exception"))
 
@@ -237,13 +236,13 @@ class PaymentServiceTimeoutTest {
         given(paymentGatewayProcessor.getPGPayment("ORDER-TIMEOUT-1")).willReturn(initialPgPayment)
         given(paymentPreparer.prepare(order, initialPgPayment)).willReturn(preparedPayment)
         given(paymentGatewayProcessor.approvePayment(any()))
-            .willReturn(PGConfirmResult.success("ORDER-TIMEOUT-1", "PAY-KEY-1", PaymentMethod.CARD, "APPR-1", OffsetDateTime.now()))
+            .willReturn(PGConfirmResult.success("ORDER-TIMEOUT-1", "PAY-KEY-1", PaymentMethod.CARD, "APPR-1", LocalDateTime.now()))
         given(paymentCompleter.complete(eq(order), eq(1L), any()))
             .willThrow(RuntimeException("Coupon expired exception"))
         given(paymentGatewayProcessor.cancelPayment(any()))
             .willThrow(RuntimeException("Cancel network error"))
         given(paymentCompleter.compensateApprovalFailure(eq(order), eq(1L), eq("PAY-KEY-1"), any()))
-            .willReturn(PaymentApprovalResult.failed("ORDER-TIMEOUT-1", "PAY-KEY-1", OffsetDateTime.now()))
+            .willReturn(PaymentApprovalResult.failed("ORDER-TIMEOUT-1", "PAY-KEY-1", LocalDateTime.now()))
 
         // when
         val result = paymentService.approvePayment(order)

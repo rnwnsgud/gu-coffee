@@ -26,6 +26,14 @@ tasks.jar {
     enabled = false
 }
 
+tasks.named<ProcessResources>("processResources") {
+    val coreApiProject = project(":core:core-api")
+    dependsOn(":core:core-api:copyDocs")
+    from("${coreApiProject.projectDir}/src/main/resources/static") {
+        into("static")
+    }
+}
+
 tasks.named("classes") {
     dependsOn(rootProject.subprojects.filter { it != project }.map { "${it.path}:classes" })
 }
@@ -37,6 +45,10 @@ dependencies {
     runtimeOnly(project(":support:monitoring"))
     runtimeOnly(project(":support:web"))
     runtimeOnly(project(":admin-api"))
+    runtimeOnly(project(":partner-api"))
+    runtimeOnly(project(":store-device-api"))
+    runtimeOnly(project(":delivery-webhook-api"))
+    runtimeOnly(project(":payment-webhook-api"))
 
     implementation("org.springframework.boot:spring-boot-starter-web")
 

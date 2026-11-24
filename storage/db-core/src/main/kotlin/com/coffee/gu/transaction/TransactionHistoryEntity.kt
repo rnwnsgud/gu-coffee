@@ -12,7 +12,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "transaction_history")
@@ -30,7 +30,7 @@ class TransactionHistoryEntity(
     val externalTransactionKey: String? = null,
     val amount: BigDecimal,
     val message: String? = null,
-    val occurredAt: OffsetDateTime? = null,
+    val occurredAt: LocalDateTime? = null,
 ) : BaseEntity() {
 
     fun toModel(): TransactionHistory {

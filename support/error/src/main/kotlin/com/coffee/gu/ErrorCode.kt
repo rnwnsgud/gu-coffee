@@ -4,6 +4,7 @@ enum class ErrorCode {
     E500,
     E400,
     E401,
+    E403,
     E404,
 
     // 주문
@@ -22,6 +23,7 @@ enum class ErrorCode {
     E3003,
     E3004,
     E3006,
+    E3007,
 
     // 쿠폰
     E4000,

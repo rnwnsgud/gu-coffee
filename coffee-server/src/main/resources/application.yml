@@ -10,6 +10,7 @@ spring:
   web.resources.add-mappings: true
 
 server:
+  forward-headers-strategy: native
   tomcat:
     max-connections: 20000
     threads:
@@ -21,6 +22,31 @@ gemini:
     base-url: https://generativelanguage.googleapis.com/v1beta
     model: gemini-3.5-flash-lite
     key: ${GEMINI_API_KEY:dummy-key}
+    connect-timeout-seconds: 5
+    read-timeout-seconds: 60
+
+security:
+  gateway:
+    internal-token:
+      enabled: false
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET:}
+  delivery-webhook:
+    ip-whitelist:
+      enabled: false
+      baemin: ${BAEMIN_WEBHOOK_ALLOWED_IPS:127.0.0.1,::1}
+      coupang-eats: ${COUPANG_EATS_WEBHOOK_ALLOWED_IPS:127.0.0.1,::1}
+    signature:
+      enabled: false
+      baemin-secret: ${BAEMIN_WEBHOOK_SECRET:local-baemin-webhook-secret}
+      coupang-eats-secret: ${COUPANG_EATS_WEBHOOK_SECRET:local-coupang-eats-webhook-secret}
+  payment-webhook:
+    toss:
+      ip-whitelist:
+        enabled: false
+        allowed-ips: ${TOSS_WEBHOOK_ALLOWED_IPS:127.0.0.1,::1}
+      signature:
+        enabled: false
+        secret: ${TOSS_WEBHOOK_SECRET:local-toss-webhook-secret}
 
 ---
 spring.config.activate.on-profile: local
@@ -70,12 +96,60 @@ payment:
 
 ---
 spring.config.activate.on-profile: dev
+security:
+  gateway:
+    internal-token:
+      enabled: true
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
+  delivery-webhook:
+    ip-whitelist:
+      enabled: true
+    signature:
+      enabled: true
+  payment-webhook:
+    toss:
+      ip-whitelist:
+        enabled: true
+      signature:
+        enabled: true
 
 
 ---
 spring.config.activate.on-profile: staging
+security:
+  gateway:
+    internal-token:
+      enabled: true
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
+  delivery-webhook:
+    ip-whitelist:
+      enabled: true
+    signature:
+      enabled: true
+  payment-webhook:
+    toss:
+      ip-whitelist:
+        enabled: true
+      signature:
+        enabled: true
 
 
 ---
 spring.config.activate.on-profile: live
+security:
+  gateway:
+    internal-token:
+      enabled: true
+      secret: ${GATEWAY_INTERNAL_TOKEN_SECRET}
+  delivery-webhook:
+    ip-whitelist:
+      enabled: true
+    signature:
+      enabled: true
+  payment-webhook:
+    toss:
+      ip-whitelist:
+        enabled: true
+      signature:
+        enabled: true
 

@@ -39,6 +39,10 @@ dependencies {
     testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
     testImplementation("com.epages:restdocs-api-spec-mockmvc:0.20.1")
     testImplementation(project(":storage:db-core"))
+    testImplementation(project(":partner-api"))
+    testImplementation(project(":store-device-api"))
+    testImplementation(project(":delivery-webhook-api"))
+    testImplementation(project(":payment-webhook-api"))
     testImplementation("org.springframework.kafka:spring-kafka-test")
 
     testImplementation("net.javacrumbs.shedlock:shedlock-spring:5.16.0")
@@ -46,6 +50,30 @@ dependencies {
 }
 
 val snippetsDir = file("build/generated-snippets")
+
+val syncPartnerSnippets = tasks.register<Copy>("syncPartnerSnippets") {
+    dependsOn(":partner-api:test")
+    from(project(":partner-api").layout.buildDirectory.dir("generated-snippets"))
+    into(snippetsDir)
+}
+
+val syncStoreDeviceSnippets = tasks.register<Copy>("syncStoreDeviceSnippets") {
+    dependsOn(":store-device-api:test")
+    from(project(":store-device-api").layout.buildDirectory.dir("generated-snippets"))
+    into(snippetsDir)
+}
+
+val syncDeliveryWebhookSnippets = tasks.register<Copy>("syncDeliveryWebhookSnippets") {
+    dependsOn(":delivery-webhook-api:test")
+    from(project(":delivery-webhook-api").layout.buildDirectory.dir("generated-snippets"))
+    into(snippetsDir)
+}
+
+val syncPaymentWebhookSnippets = tasks.register<Copy>("syncPaymentWebhookSnippets") {
+    dependsOn(":payment-webhook-api:test")
+    from(project(":payment-webhook-api").layout.buildDirectory.dir("generated-snippets"))
+    into(snippetsDir)
+}
 
 tasks.test {
     outputs.dir(snippetsDir)
@@ -65,10 +93,13 @@ tasks.asciidoctor {
     attributes(mapOf("snippets" to snippetsDir))
     inputs.dir(snippetsDir)
     dependsOn(tasks.test)
+    dependsOn(syncPartnerSnippets)
+    dependsOn(syncStoreDeviceSnippets)
+    dependsOn(syncDeliveryWebhookSnippets)
+    dependsOn(syncPaymentWebhookSnippets)
 }
 
 openapi3 {
-    setServer("http://localhost:8080")
     title = "Gu Coffee API Specification"
     description = "Gu Coffee REST API Specification (Generated from Spring RestDocs)"
     version = "0.0.1"
@@ -77,14 +108,52 @@ openapi3 {
     outputFileNamePrefix = "openapi3"
 }
 
-tasks.matching { it.name == "openapi3" }.configureEach {
-    dependsOn(tasks.test)
+project.afterEvaluate {
+    tasks.matching { it.name == "openapi3" }.configureEach {
+        dependsOn(tasks.test)
+        dependsOn(syncPartnerSnippets)
+        dependsOn(syncStoreDeviceSnippets)
+        dependsOn(syncDeliveryWebhookSnippets)
+        dependsOn(syncPaymentWebhookSnippets)
+        (this as? com.epages.restdocs.apispec.gradle.OpenApi3Task)?.servers = emptyList()
+    }
 }
 
 val copyDocs = tasks.register("copyDocs") {
     dependsOn(tasks.asciidoctor)
     dependsOn(tasks.matching { it.name == "openapi3" })
     doLast {
+        val openApiSpecFile = file("build/api-spec/openapi3.yaml")
+        if (openApiSpecFile.exists()) {
+            var content = openApiSpecFile.readText()
+            content = content.replace("servers: []", "servers:\n  - url: http://localhost:8080\n    description: Local Server")
+            content = content.replace("- url: http://localhost\n", "- url: http://localhost:8080\n")
+            if (content.contains("tags: []")) {
+                val tagsBlock = """tags:
+  - name: Cart
+    description: 장바구니 API
+  - name: Menu
+    description: 메뉴 조회 API
+  - name: Order
+    description: 주문 API
+  - name: Payment
+    description: 결제 API
+  - name: Coupon
+    description: 쿠폰 API
+  - name: Limited Coupon
+    description: 선착순 쿠폰 API
+  - name: Partner Ingredient
+    description: 점포 파트너 원자재 관리 API
+  - name: Store Device
+    description: 매장 고정 기기(키오스크·POS) API
+  - name: External Webhook
+    description: 외부 배달 플랫폼 주문 웹훅 API
+  - name: AI Agent
+    description: AI 상담 및 주문 처리 API"""
+                content = content.replace("tags: []", tagsBlock)
+            }
+            openApiSpecFile.writeText(content)
+        }
         copy {
             from(tasks.asciidoctor.get().outputDir)
             from("build/api-spec")
@@ -94,6 +163,25 @@ val copyDocs = tasks.register("copyDocs") {
             from(tasks.asciidoctor.get().outputDir)
             from("build/api-spec")
             into(layout.buildDirectory.dir("resources/main/static/docs"))
+        }
+        val serverBuildDocs = rootProject.file("coffee-server/build/resources/main/static/docs")
+        if (serverBuildDocs.parentFile.exists()) {
+            copy {
+                from(tasks.asciidoctor.get().outputDir)
+                from("build/api-spec")
+                into(serverBuildDocs)
+            }
+        }
+        copy {
+            from("src/main/resources/static/swagger-ui.html")
+            into(layout.buildDirectory.dir("resources/main/static"))
+        }
+        val serverBuildStatic = rootProject.file("coffee-server/build/resources/main/static")
+        if (serverBuildStatic.exists()) {
+            copy {
+                from("src/main/resources/static/swagger-ui.html")
+                into(serverBuildStatic)
+            }
         }
     }
 }

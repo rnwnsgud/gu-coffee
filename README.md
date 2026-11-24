@@ -35,27 +35,30 @@
 ```text
 gu-coffee
 ├── 🚀 coffee-server          # 메인 애플리케이션 실행 모듈 (Spring Boot Entry Point)
-├── 🛠️ admin-api              # 관리자 REST API (메뉴/옵션 등록 및 매핑)
+├── 🛠️ admin-api              # 본사 관리자 REST API (메뉴/옵션 등록 및 매핑)
+├── 🏪 partner-api            # 점포 파트너 POS REST API (점주 인증·소유권 인가 및 매장별 원자재 품절 관리)
+├── 🛵 delivery-webhook-api   # 외부 배달 플랫폼 B2B 주문 웹훅 어댑터 (IP·HMAC 검증, 외부 메뉴 매핑, 멱등성 보장)
+├── 💳 payment-webhook-api    # PG 결제 웹훅 어댑터 (토스페이먼츠 가상계좌 입금 완료 및 상점관리자 직접 취소 상태·재고 동기화)
 │
 ├── 🧠 core                   # 비즈니스 핵심 모듈 그룹
 │   ├── core-api              # 사용자 REST API & 오케스트레이션 서비스 (core-domain에만 의존)
-│   ├── core-domain           # 순수 비즈니스 모델, 영속성 포트(인터페이스), 도메인 이벤트 (외부 의존성 없음)
+│   ├── core-domain           # 순수 비즈니스 모델, 영속성 포트, 도메인 이벤트 (외부 의존성 없음)
 │   └── core-enum             # 공통 Enum 및 도메인 상수
 │
 ├── 💾 storage                # 영속성 구현 모듈 그룹
 │   └── db-core               # Spring Data JPA, QueryDSL 5.1, Entity, Repository 구현체
 │
 └── 🔌 support                # 공통 인프라 / 서포트 모듈 그룹
-    ├── support-auth          # Principal 기반 인증/인가 객체
-    ├── support-error         # 비즈니스 예외 계층 및 공통 ErrorType
+    ├── support-auth          # 인증/인가 주체 모델
+    ├── support-error         # 비즈니스 예외 계층 및 공통 에러 타입
     ├── support-event         # 트랜잭셔널 아웃박스 이벤트 디스패처 및 이벤트 로그
-    ├── support-lock          # Redisson 기반 분산 락 및 로컬 락 추상화(LockManager)
+    ├── support-lock          # Redisson 기반 분산 락 및 로컬 락 추상화
     ├── support-logging       # 분산 추적 로깅 모듈 (예정)
     ├── support-messaging     # Kafka Producer/Consumer 설정
     ├── support-monitoring    # 프로메테우스 메트릭 모니터링 (예정)
     ├── support-pagination    # 슬라이스/오프셋 페이징 유틸리티
     ├── support-pg            # Toss Payments PG 연동 및 WebClient 클라이언트
-    └── support-web           # 공통 ApiResponse 포맷, PrincipalArgumentResolver 및 Spring Web MVC 설정
+    └── support-web           # 공통 응답 포맷, 인증 리졸버, 게이트웨이 내부 토큰 검증 및 Web MVC 설정
 ```
 
 </details>
@@ -265,13 +268,69 @@ sequenceDiagram
 
 </details>
 
+<details>
+<summary><b>12. 레시피 기반 매장별 원자재 가용성 검증 및 다중 채널 주문 차단 설계</b></summary>
+
+- **문제 정의**:
+  - 판매 단위 메뉴에만 품절 상태를 개별 관리할 경우, 특정 원자재가 소진되었을 때 단품 메뉴만 품절 처리되어 동일 원자재를 공유하는 세트 메뉴나 다른 제조 메뉴로 주문이 유입되고 결제 후 주방에서 수동 취소해야 하는 문제 발생.
+  - 품절 처리 이전에 장바구니에 미리 담아둔 품목을 주문하거나, 메뉴판 캐시 동기화가 지연된 외부 배달 플랫폼 및 매장 키오스크 등 다른 경로로 주문이 인입될 때 품절 메뉴가 통과하는 정합성 공백 발생.
+- **해결 방안**:
+  - **점주 전용 모듈 분리, 매장 소유권 인가 및 게이트웨이 신뢰 경계**:
+    - 일반 고객용 API 및 본사 카탈로그 관리 모듈과 물리적으로 분리된 점포 파트너 전용 `partner-api` 모듈을 구성하고 도메인 계층을 공유하도록 설계.
+    - 점주 인증 리졸버에서 요청 매장에 대한 소유권을 검증해 타 매장의 원자재 품절 상태를 임의로 변경할 수 없도록 차단.
+    - 일반 사용자와 점주 리졸버 모두 앞단 게이트웨이나 인증 서버가 전달하는 내부 시크릿 토큰을 상수 시간 비교로 검증해, 운영 환경에서 게이트웨이를 우회한 직접 호출을 차단.
+  - **메뉴 레시피와 매장별 원자재 가용 상태 격리**:
+    - 메뉴별 레시피는 추후 발주 연동 등을 고려해 필요 수량 메타데이터를 유지하고, 매장별 원자재는 수기 수량 관리 없이 가용 여부 중심으로 단순화.
+    - 점포 파트너 API를 통해 특정 매장의 원자재를 품절로 전환하더라도 타 매장의 주문 처리에는 영향을 주지 않도록 매장 단위로 격리.
+  - **조회 시점 매장별 품절 상태 노출 및 주문 인입 시점 가용성 검증**:
+    - 메뉴 목록 조회 시 매장 식별자가 전달되면 레시피 원자재의 비가용 여부를 판별해 품절 상태를 반환.
+    - 주문 생성 진입 시점에 원자재 가용성 검증을 선행 호출해, 한정 메뉴 선점이나 주문 저장 이전에 매장별 품절 여부를 판별.
+  - **다중 주문 유입 경로 단일 파이프라인 통합**:
+    - 주문 채널 구분을 도입해 자체 앱 즉시 주문, 장바구니 주문, 외부 배달 플랫폼 및 키오스크 주문이 모두 동일한 주문 생성 검증 관문을 통과하도록 구성.
+
+</details>
+
+<details>
+<summary><b>13. 외부 배달 플랫폼 웹훅 어댑터 분리 및 B2B 수신 검증 설계</b></summary>
+
+- **문제 정의**:
+  - 외부 배달 플랫폼 웹훅은 일반 고객 인증 체계가 아닌 플랫폼별 IP 대역 제한과 페이로드 원문 기반 서명 검증이 필요하며, 플랫폼마다 상이한 JSON 스키마와 자체 상품 코드를 전송하므로 핵심 주문 도메인이 외부 스펙에 결합될 위험이 존재.
+  - 또한 네트워크 지연이나 타임아웃 발생 시 배달 플랫폼이 동일한 주문 웹훅을 반복 재전송하므로 중복 주문 생성을 방지할 장치가 필요.
+- **해결 방안**:
+  - **웹훅 전용 모듈 분리 및 도메인 포트 연결**:
+    - 고객용 API 및 점주용 파트너 API와 물리적으로 분리된 `delivery-webhook-api` 모듈을 구성하고, 도메인 계층의 주문 생성 포트 인터페이스를 통해 핵심 주문 파이프라인과 약결합으로 연동.
+  - **IP 화이트리스트 및 원문 기반 HMAC 서명 검증**:
+    - 플랫폼별 허용 단일 IP 및 CIDR 대역을 검증하여 비인가 발신지의 접근을 차단.
+    - JSON 역직렬화 이전의 요청 바디 원문을 기준으로 플랫폼별 시크릿 키 기반 `HmacSHA256` 서명을 생성하고 상수 시간 비교로 위변조 여부를 검증.
+  - **플랫폼별 페이로드 변환 및 외부 메뉴 코드 매핑**:
+    - 플랫폼마다 상이한 JSON 스키마를 가정한 모의 페이로드 기반 어댑터로 설계.
+    - 각 어댑터에서 플랫폼별 JSON 구조를 파싱하고 외부 메뉴 매핑 테이블을 조회해 상품 코드를 내부 메뉴 식별자로 변환한 뒤 표준 주문 명령으로 조합.
+  - **웹훅 멱등성 보장**:
+    - 플랫폼과 웹훅 멱등성 키의 복합 유니크 제약조건을 가진 멱등성 테이블을 통해, 동일 웹훅이 재전송되거나 동시 유입되더라도 중복 주문을 생성하지 않고 기존 주문 키를 반환.
+
+</details>
+
+<details>
+<summary><b>14. PG 결제 웹훅 어댑터 분리 및 비동기 상태·재고 동기화 설계</b></summary>
+
+- **문제 정의**:
+  - 가상계좌 입금 완료나 PG 상점관리자 대시보드에서의 직접 결제 취소는 고객 브라우저를 거치지 않고 PG 서버에서 인바운드 웹훅으로 통보되므로, 이를 수신해 내부 주문·결제 상태 및 한정 수량 재고를 일관되게 동기화해야 함.
+- **해결 방안**:
+  - **결제 웹훅 전용 모듈 분리**:
+    - 배달 주문 유입 어댑터와 역할을 구분하기 위해 `payment-webhook-api` 모듈을 별도 분리하고, 도메인 계층의 결제 상태 동기화 포트 인터페이스를 통해 핵심 결제·취소 파이프라인과 연결.
+  - **상태별 원자적 동기화 및 멱등 처리**:
+    - 비관적 락으로 대상 결제를 조회한 뒤, 입금 완료 통보 시에는 기존 결제 완료 파이프라인을 통해 주문 완료 및 한정 수량 DB 판매량을 확정.
+    - 상점관리자 직접 취소 통보 시에는 PG 취소 API 재호출 없이 결제·주문 취소, 한정 수량 Redis 및 DB 재고 복구, 쿠폰·스탬프 원복을 수행하며, 이미 처리된 웹훅 재전송은 상태 가드로 무시.
+
+</details>
+
 ---
 
 <a name="4-기술-스택"></a>
 ## 4. 기술 스택
 
 ### Core & Framework
-- **Kotlin 2.1.0** (admin-api 모듈 제외 Java 21)
+- **Kotlin 2.2.21** (admin-api 모듈 제외 Java 21)
 - **Spring Boot 4.0.5**
 - **Spring Data JPA**, **QueryDSL 5.1.0 (KAPT)**
 - **Spring Data Redis 4.0.4**, **Redisson 3.45.0**
@@ -292,8 +351,9 @@ sequenceDiagram
 ## 5. 주요 도메인 기능
 
 - **메뉴**: 카테고리별 메뉴 목록, 상세 정보(영양성분, 알레르기 유발물질) 조회 및 관리자 메뉴/옵션 매핑
+- **매장별 원자재 및 레시피**: 메뉴별 레시피 구성, 매장별 원자재 품절 상태 관리 및 주문 시점 가용성 검증
 - **장바구니**: 사용자/게스트별 장바구니 생성, 옵션별 메뉴 담기, 수량 변경 및 삭제
-- **주문**: 단일 메뉴 주문 및 장바구니 기반 주문서 생성 (TSID 고유 식별자 발급)
+- **주문**: 자체 앱 즉시 주문, 장바구니 주문, 외부 배달 플랫폼 및 키오스크 채널별 주문서 생성 (TSID 고유 식별자 발급)
 - **결제 및 PG 연동**: Toss Payments 결제 승인, 쿠폰 할인 금액 검증 및 멱등 결제 처리
 - **주문 및 결제 취소**: 주문 취소 요청 시 PG사 결제 취소 연동 및 쿠폰/스탬프 롤백
 - **스탬프 & 리워드 쿠폰**: 결제 완료 이벤트 기반 스탬프 자동 적립, 10개 적립 시 무료 음료 쿠폰 발급
@@ -319,9 +379,13 @@ sequenceDiagram
 | | `POST` | `/v1/cart/items` | 장바구니 아이템 담기 |
 | | `PUT` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 수량 변경 |
 | | `DELETE` | `/v1/cart/items/{cartItemId}` | 장바구니 아이템 삭제 |
-| **Order** | `POST` | `/v1/orders` | 주문서 생성 |
+| **Order** | `POST` | `/v1/orders` | 앱 즉시 주문서 생성 (`APP`) |
+| | `POST` | `/v1/cart-orders` | 장바구니 기반 주문서 생성 (`CART`) |
 | | `GET` | `/v1/orders` | 주문 목록 조회 |
 | | `GET` | `/v1/orders/{orderKey}` | 단건 주문 상세 조회 |
+| **Store Device** | `POST` | `/v1/devices/orders` | 매장 고정 기기(키오스크·POS) 주문 생성 (`Gu-Coffee-Device-Api-Key` 인증) |
+| | `GET` | `/v1/devices/pos/orders` | POS 매장 주문 목록 조회 (`POS` 기기 전용) |
+| | `POST` | `/v1/devices/pos/orders/{orderKey}/cancel` | POS 매장 주문 취소 (`POS` 기기 전용, 결제 완료 건은 PG 환불·롤백 연계) |
 | **Payment** | `POST` | `/v1/payment/prepare` | 결제 사전 준비 및 금액 검증 |
 | | `POST` | `/v1/payment/approve` | PG 결제 승인 요청 |
 | **Cancel** | `POST` | `/v1/cancel` | 주문 및 결제 취소 요청 |
@@ -337,9 +401,9 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><b>관리자 API & 문서 스펙 엔드포인트 보기</b></summary>
+<summary><b>관리자·파트너 API & 문서 스펙 엔드포인트 보기</b></summary>
 
-#### 관리자 API (`/admin/v1`)
+#### 본사 관리자 API (`/admin/v1`)
 | 도메인 | HTTP Method | Endpoint | 설명 |
 | :--- | :--- | :--- | :--- |
 | **Menu** | `POST` | `/admin/v1/menu` | 신규 메뉴 등록 |
@@ -347,6 +411,23 @@ sequenceDiagram
 | **Option** | `POST` | `/admin/v1/menu/option` | 세부 옵션(HOT/ICE, 샷 추가 등) 등록 |
 | **Mapping** | `POST` | `/admin/v1/menu/menu-option-group` | 메뉴에 옵션 그룹 매핑 |
 | | `PUT` | `/admin/v1/menu/{menuId}/option-groups` | 메뉴-옵션 그룹 매핑 일괄 변경 (`@CacheEvict`) |
+
+#### 점포 파트너 API (`/v1/partner`)
+| 도메인 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Ingredient** | `GET` | `/v1/partner/stores/{storeId}/ingredients` | 매장별 원자재 품절 상태 목록 조회 |
+| | `PATCH` | `/v1/partner/stores/{storeId}/ingredients/{ingredientId}/availability` | 매장 특정 원자재 품절 및 판매 가능 상태 변경 |
+
+#### 외부 배달 플랫폼 웹훅 API (`/v1/webhooks/orders`)
+| 플랫폼 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Baemin** | `POST` | `/v1/webhooks/orders/baemin` | 모의 배달의민족 주문 웹훅 수신 및 변환 |
+| **Coupang Eats** | `POST` | `/v1/webhooks/orders/coupang-eats` | 모의 쿠팡이츠 주문 웹훅 수신 및 변환 |
+
+#### PG 결제 웹훅 API (`/v1/webhooks/payments`)
+| PG사 | HTTP Method | Endpoint | 설명 |
+| :--- | :--- | :--- | :--- |
+| **Toss Payments** | `POST` | `/v1/webhooks/payments/toss` | 토스페이먼츠 결제 상태 변경 웹훅 수신 및 주문·결제·한정재고 동기화 |
 
 #### 문서 스펙
 | 문서 종류 | HTTP Method | Endpoint | 설명 |
@@ -395,6 +476,9 @@ MySQL 8.0, Redis 7.x, Kafka 3.8(KRaft) 컨테이너를 기동하고 `local-dev` 
 
 # 메뉴 캐시 및 Fail-Open 테스트
 ./gradlew :core:core-api:test --tests "com.coffee.gu.menu.*"
+
+# 레시피 기반 매장별 원자재 가용성 및 다중 채널 주문 차단 테스트
+./gradlew :core:core-api:test --tests "com.coffee.gu.order.*"
 
 # 결제 FOR UPDATE SKIP LOCKED 복구 파이프라인 테스트
 ./gradlew :core:core-api:test --tests "com.coffee.gu.payment.*"

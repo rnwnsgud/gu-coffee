@@ -19,7 +19,7 @@ import org.springframework.kafka.listener.DefaultErrorHandler
 import org.springframework.kafka.support.serializer.JacksonJsonDeserializer
 import org.springframework.util.backoff.FixedBackOff
 
-@Configuration
+@Configuration(proxyBeanMethods = false)
 @EnableKafka
 class KafkaConsumerConfig(
     @param:Value("\${spring.kafka.bootstrap-servers:localhost:9092}")

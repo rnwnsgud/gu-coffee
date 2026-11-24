@@ -2,7 +2,7 @@ package com.coffee.gu.payment
 
 import com.coffee.gu.enums.OrderState
 import com.coffee.gu.enums.PaymentState
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 class PaymentApprovalResult(
     val orderKey: String,
@@ -10,13 +10,13 @@ class PaymentApprovalResult(
     val paymentState: PaymentState,
     val orderState: OrderState,
     val idempotent: Boolean,
-    val approvedAt: OffsetDateTime?,
+    val approvedAt: LocalDateTime?,
 ) {
     companion object {
         fun approved(
             orderKey: String,
             paymentKey: String,
-            approvedAt: OffsetDateTime,
+            approvedAt: LocalDateTime,
         ): PaymentApprovalResult = PaymentApprovalResult(
             orderKey = orderKey,
             paymentKey = paymentKey,
@@ -29,7 +29,7 @@ class PaymentApprovalResult(
         fun alreadyApproved(
             orderKey: String,
             paymentKey: String,
-            approvedAt: OffsetDateTime,
+            approvedAt: LocalDateTime,
         ): PaymentApprovalResult = PaymentApprovalResult(
             orderKey = orderKey,
             paymentKey = paymentKey,
@@ -54,7 +54,7 @@ class PaymentApprovalResult(
         fun failed(
             orderKey: String,
             paymentKey: String,
-            approvedAt: OffsetDateTime,
+            approvedAt: LocalDateTime,
         ): PaymentApprovalResult = PaymentApprovalResult(
             orderKey = orderKey,
             paymentKey = paymentKey,

@@ -11,9 +11,14 @@ class CancelRecorder(
     private val cancelManager: CancelManager,
     private val transactionHistoryManager: TransactionHistoryManager,
 ) {
-    fun record(payment: Payment, order: Order): Cancel {
-        val cancel = cancelManager.cancel(payment, "PG_API_응답_취소_고유_값_저장")
-        transactionHistoryManager.record(TransactionType.CANCEL, order, payment, "Cancel processed", cancel.canceledAt)
+    fun record(
+        payment: Payment,
+        order: Order,
+        externalCancelKey: String = "PG_API_응답_취소_고유_값_저장",
+        reason: String = "Cancel processed",
+    ): Cancel {
+        val cancel = cancelManager.cancel(payment, externalCancelKey)
+        transactionHistoryManager.record(TransactionType.CANCEL, order, payment, reason, cancel.canceledAt)
         return cancel
     }
 }

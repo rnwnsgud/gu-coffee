@@ -25,6 +25,7 @@ import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
@@ -147,7 +148,7 @@ class PaymentApprovalFailureResolverTest {
         val donePgPayment = PGPayment("PAY-KEY-1", "ORD-TEST-1", BigDecimal.valueOf(10000), PaymentGatewayStatus.DONE)
         given(paymentGatewayProcessor.getPGPayment(order.key)).willReturn(donePgPayment)
 
-        val successResult = PaymentApprovalResult.approved(order.key, "PAY-KEY-1", java.time.OffsetDateTime.now())
+        val successResult = PaymentApprovalResult.approved(order.key, "PAY-KEY-1", java.time.LocalDateTime.now())
         given(paymentCompleter.complete(eq(order), eq(payment.id), any())).willReturn(successResult)
 
         val result = resolver.resolveApprovalFailure(order, payment, pgPayment, mapOf(100L to 1))
@@ -244,7 +245,7 @@ class PaymentApprovalFailureResolverTest {
             PaymentGatewayCancel("PAY-KEY-1", "DB 데드락 에러")
         )
         then(paymentCompleter).should().failProcess(order, payment, "COMPLETION_FAILED", "DB 데드락 에러")
-        then(paymentCompleter).should(org.mockito.Mockito.never()).compensateApprovalFailure(any(), any(), any(), any())
+        then(paymentCompleter).should(never()).compensateApprovalFailure(any(), any(), any(), any())
     }
 
     @Test

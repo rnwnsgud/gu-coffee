@@ -1,7 +1,6 @@
 package com.coffee.gu.config
 
 import org.assertj.core.api.Assertions.assertThat
-import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -58,15 +57,25 @@ class LocalDataInitializerTest {
         val couponCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM coupon", Long::class.java)
         val issuedCouponCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM issued_coupon WHERE principal_key = 'U1'", Long::class.java)
         val stampCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM stamp WHERE principal_key = 'U1'", Long::class.java)
+        val menuRecipeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM menu_recipe", Long::class.java)
+        val ingredientCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM ingredient", Long::class.java)
+        val cartItemCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM cart_item WHERE principal_key = 'U1'", Long::class.java)
+        val externalMenuMappingCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
+        val storeDeviceCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM store_device", Long::class.java)
 
         assertThat(categoryCount).isEqualTo(4L)
-        assertThat(menuCount).isEqualTo(5L)
+        assertThat(menuCount).isEqualTo(6L)
         assertThat(optionGroupCount).isEqualTo(4L)
         assertThat(optionCount).isEqualTo(9L)
         assertThat(storeCount).isEqualTo(2L)
         assertThat(couponCount).isEqualTo(3L)
         assertThat(issuedCouponCount).isEqualTo(2L)
         assertThat(stampCount).isEqualTo(3L)
+        assertThat(menuRecipeCount).isEqualTo(9L)
+        assertThat(ingredientCount).isEqualTo(8L)
+        assertThat(cartItemCount).isEqualTo(1L)
+        assertThat(externalMenuMappingCount).isEqualTo(8L)
+        assertThat(storeDeviceCount).isEqualTo(4L)
     }
 
     @Test
@@ -80,5 +89,31 @@ class LocalDataInitializerTest {
 
         val afterMenuCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM menu", Long::class.java) ?: 0L
         assertThat(afterMenuCount).isEqualTo(beforeMenuCount)
+    }
+
+    @Test
+    @DisplayName("기존 메뉴·원자재가 있어도 external_menu_mapping이 비어 있으면 시드 데이터를 보충 적재한다")
+    fun testBackfillWhenExternalMenuMappingMissing() {
+        jdbcTemplate.execute("DELETE FROM external_menu_mapping WHERE id > 0")
+        val beforeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
+        assertThat(beforeCount).isEqualTo(0L)
+
+        localDataInitializer.run(org.springframework.boot.DefaultApplicationArguments())
+
+        val afterCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM external_menu_mapping", Long::class.java)
+        assertThat(afterCount).isEqualTo(8L)
+    }
+
+    @Test
+    @DisplayName("기존 데이터가 있어도 store_device가 비어 있으면 시드 데이터를 보충 적재한다")
+    fun testBackfillWhenStoreDeviceMissing() {
+        jdbcTemplate.execute("DELETE FROM store_device WHERE id > 0")
+        val beforeCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM store_device", Long::class.java)
+        assertThat(beforeCount).isEqualTo(0L)
+
+        localDataInitializer.run(org.springframework.boot.DefaultApplicationArguments())
+
+        val afterCount = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM store_device", Long::class.java)
+        assertThat(afterCount).isEqualTo(4L)
     }
 }

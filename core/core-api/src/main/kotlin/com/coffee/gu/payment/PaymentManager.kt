@@ -5,7 +5,7 @@ import com.coffee.gu.enums.PaymentMethod
 import com.coffee.gu.order.Order
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Component
 class PaymentManager(
@@ -22,7 +22,7 @@ class PaymentManager(
             result.paymentKey,
             result.paymentMethod ?: PaymentMethod.CARD,
             result.approveCode,
-            result.approvedAt ?: OffsetDateTime.now()
+            result.approvedAt ?: LocalDateTime.now()
         )
         paymentRepository.save(payment)
     }

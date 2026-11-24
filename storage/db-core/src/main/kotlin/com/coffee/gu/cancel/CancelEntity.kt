@@ -11,7 +11,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.math.BigDecimal
-import java.time.OffsetDateTime
+import java.time.LocalDateTime
 
 @Entity
 @Table(name = "cancel")
@@ -30,7 +30,7 @@ class CancelEntity(
     val paidAmount: BigDecimal,
     val canceledAmount: BigDecimal,
     val externalCancelKey: String? = null,
-    val canceledAt: OffsetDateTime? = null,
+    val canceledAt: LocalDateTime? = null,
 ) : BaseEntity() {
 
     fun toModel(): Cancel {

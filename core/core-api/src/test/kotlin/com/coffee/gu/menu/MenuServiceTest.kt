@@ -27,6 +27,9 @@ class MenuServiceTest {
     @Mock
     private lateinit var optionFinder: OptionFinder
 
+    @Mock
+    private lateinit var menuAvailabilityReader: MenuAvailabilityReader
+
     private fun createMenu(id: Long, name: String): Menu {
         return Menu(
             id,
@@ -63,7 +66,8 @@ class MenuServiceTest {
 
             // then
             assertThat(result.content).hasSize(1)
-            assertThat(result.content[0].name).isEqualTo("Americano")
+            assertThat(result.content[0].menu.name).isEqualTo("Americano")
+            assertThat(result.content[0].isSoldOut).isFalse()
         }
 
         @Test
@@ -84,10 +88,36 @@ class MenuServiceTest {
 
             // then
             assertThat(result.content).hasSize(1)
-            assertThat(result.content[0].name).isEqualTo("Americano")
+            assertThat(result.content[0].menu.name).isEqualTo("Americano")
+            assertThat(result.content[0].isSoldOut).isFalse()
             assertThat(result.hasNext).isTrue()
             assertThat(result.nextCursor).isEqualTo(cursor)
             assertThat(result.nextLastId).isEqualTo(lastId)
+        }
+
+        @Test
+        @DisplayName("storeId가 주어지면 매장 원자재 상태에 따른 품절 여부를 계산하여 반환한다")
+        fun it_returns_menus_with_sold_out_status_when_store_id_provided() {
+            // given
+            val categoryId = 1L
+            val storeId = 100L
+            val offsetLimit = OffsetLimit(0, 10)
+            val menu1 = createMenu(1L, "Americano")
+            val menu2 = createMenu(2L, "Latte")
+            val page = Page(listOf(menu1, menu2), false, null, null)
+
+            given(menuFinder.findByCategory(categoryId, offsetLimit)).willReturn(page)
+            given(menuAvailabilityReader.findSoldOutMenuIds(storeId, listOf(1L, 2L))).willReturn(setOf(2L))
+
+            // when
+            val result = menuService.findMenus(categoryId, offsetLimit, storeId)
+
+            // then
+            assertThat(result.content).hasSize(2)
+            assertThat(result.content[0].menu.id).isEqualTo(1L)
+            assertThat(result.content[0].isSoldOut).isFalse()
+            assertThat(result.content[1].menu.id).isEqualTo(2L)
+            assertThat(result.content[1].isSoldOut).isTrue()
         }
     }
 
